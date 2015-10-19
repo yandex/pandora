@@ -1,7 +1,8 @@
 package main
 
 import (
-	"http"
+	"encoding/json"
+	"net/http"
 )
 
 type HttpAmmo struct {
@@ -11,15 +12,15 @@ type HttpAmmo struct {
 	Headers map[string]string
 }
 
-func NewAmmoFromJson(jsonDoc string) (a *Ammo, err error) {
-	err = json.Unmarshal([]byte(txt), &a)
+func (ha *HttpAmmo) FromJson(jsonDoc string) (err error) {
+	err = json.Unmarshal([]byte(jsonDoc), &ha)
 	return
 }
 
 func (ha *HttpAmmo) Request() (req *http.Request, err error) {
 	//make a request
-	req, err = http.NewRequest(a.Method, "https://"+a.Host+a.Uri, nil)
-	for k, v := range a.Headers {
+	req, err = http.NewRequest(ha.Method, "https://"+ha.Host+ha.Uri, nil)
+	for k, v := range ha.Headers {
 		req.Header.Set(k, v)
 	}
 	return

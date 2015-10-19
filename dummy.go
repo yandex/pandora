@@ -1,18 +1,24 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 )
 
 type LogGun struct{}
 
-type LogJob struct {
-	message string
+type LogAmmo struct {
+	Message string
 }
 
-func (l *LogGun) Run(j Job, results chan<- Sample) {
-	log.Println("Log message: ", j.(*LogJob).message)
+func (a *LogAmmo) FromJson(jsonDoc string) (err error) {
+	err = json.Unmarshal([]byte(jsonDoc), &a)
+	return
+}
+
+func (l *LogGun) Run(a Ammo, results chan<- Sample) {
+	log.Println("Log message: ", a.(*LogAmmo).Message)
 	results <- &DummySample{0}
 }
 

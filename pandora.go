@@ -60,18 +60,18 @@ type PhoutSample struct {
 
 func main() {
 	u := &User{
-		name:    "Example user",
-		jobs:    make(chan Job, 10),
-		results: make(chan Sample),
-		limiter: make(chan bool),
-		done:    make(chan bool),
-		gun:     &LogGun{},
+		name:       "Example user",
+		ammunition: make(chan Ammo, 10),
+		results:    make(chan Sample),
+		limiter:    make(chan bool),
+		done:       make(chan bool),
+		gun:        &LogGun{},
 	}
 	go u.run()
 	for i := 0; i < 5; i++ {
-		u.jobs <- &LogJob{fmt.Sprintf("Job #%d", i)}
+		u.ammunition <- &LogAmmo{fmt.Sprintf("{'message': 'Job #%d'", i)}
 	}
-	close(u.jobs)
+	close(u.ammunition)
 	go func() {
 		for range time.NewTicker(time.Second).C {
 			u.limiter <- true

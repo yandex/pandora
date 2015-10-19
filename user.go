@@ -1,12 +1,12 @@
 package main
 
 type User struct {
-	name    string
-	jobs    chan Job
-	results chan Sample
-	limiter chan bool
-	done    chan bool
-	gun     Gun
+	name       string
+	ammunition chan Ammo
+	results    chan Sample
+	limiter    chan bool
+	done       chan bool
+	gun        Gun
 }
 
 type Sample interface {
@@ -15,13 +15,11 @@ type Sample interface {
 }
 
 type Gun interface {
-	Run(Job, chan<- Sample)
+	Run(Ammo, chan<- Sample)
 }
 
-type Job interface{}
-
 func (u *User) run() {
-	for j := range u.jobs {
+	for j := range u.ammunition {
 		<-u.limiter
 		u.gun.Run(j, u.results)
 	}

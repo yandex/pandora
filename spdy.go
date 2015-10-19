@@ -1,30 +1,23 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/direvius/spdy"
-	"http"
+	"io"
+	"io/ioutil"
 	"log"
 	"time"
 )
-
-type SpdyAmmo interface {
-	Request() (req *http.Request, err error)
-}
 
 type SpdyGun struct {
 	target string
 	client *spdy.Client
 }
 
-type SpdyJob struct {
-	ammo SpdyAmmo
-	tag  string
-}
-
-func (sg *SpdyGun) Run(j Job, results chan<- Sample) {
+func (sg *SpdyGun) Run(a Ammo, results chan<- Sample) {
 	if sg.client == nil {
-		sg.Connect()
+		sg.Connect(results)
 	}
 	start := time.Now()
 	ss := &SpdySample{ts: float64(start.UnixNano()) / 1e9, tag: "REQUEST"}
@@ -33,31 +26,24 @@ func (sg *SpdyGun) Run(j Job, results chan<- Sample) {
 		results <- ss
 	}()
 	// now send the request to obtain a http response
-	if req, err := j.ammo.Request(); err != nil {
+	if req, err := a.(*HttpAmmo).Request(); err != nil {
 		log.Printf("Could not convert ammo to HTTP request: %s\n", err)
 		ss.err = err
-		return
-	}
-
-	if res, err := u.client.Do(req); err != nil {
+	} else if res, err := sg.client.Do(req); err != nil {
 		log.Printf("Error performing a request: %s\n", err)
 		ss.err = err
-		return
-	}
-	// now handle the response
-	if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
+	} else if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
 		log.Printf("Error reading response body: %s\n", err)
 		ss.err = err
-		return
+	} else {
+
+		// TODO: make this an optional verbose answ_log output
+		//data := make([]byte, int(res.ContentLength))
+		// _, err = res.Body.(io.Reader).Read(data)
+		// fmt.Println(string(data))
+		res.Body.Close()
+		ss.StatusCode = res.StatusCode
 	}
-
-	// TODO: make this an optional verbose answ_log output
-	//data := make([]byte, int(res.ContentLength))
-	// _, err = res.Body.(io.Reader).Read(data)
-	// fmt.Println(string(data))
-	res.Body.Close()
-	ss.StatusCode = res.StatusCode
-
 	return
 }
 
@@ -76,12 +62,12 @@ func (sg *SpdyGun) Connect(results chan<- Sample) {
 		NextProtos:         []string{"spdy/3.1"},
 	}
 
-	conn, err := tls.Dial("tcp", u.target, &config)
+	conn, err := tls.Dial("tcp", sg.target, &config)
 	if err != nil {
 		fmt.Printf("client: dial: %s\n", err)
 		return
 	}
-	u.client, err = spdy.NewClientConn(conn)
+	sg.client, err = spdy.NewClientConn(conn)
 	if err != nil {
 		fmt.Printf("client: connect: %s\n", err)
 		return
@@ -94,7 +80,7 @@ func (sg *SpdyGun) Connect(results chan<- Sample) {
 
 type SpdySample struct {
 	ts         float64 // Unix Timestamp in seconds
-	rt         float64 // response time in milliseconds
+	rt         int     // response time in milliseconds
 	StatusCode int     // protocol status code
 	tag        string
 	err        error
@@ -105,5 +91,5 @@ func (ds *SpdySample) PhoutSample() *PhoutSample {
 }
 
 func (ds *SpdySample) String() string {
-	return fmt.Sprintf("My value is %d", ds.value)
+	return fmt.Sprintf("rt: %d (%d)", ds.rt, ds.StatusCode)
 }
