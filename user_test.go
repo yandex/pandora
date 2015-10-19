@@ -22,7 +22,7 @@ func ExampleUser() {
 	}
 	close(u.ammunition)
 	go func() {
-		for range time.NewTicker(time.Second).C {
+		for range time.NewTicker(time.Second / 4).C {
 			u.limiter <- true
 		}
 	}()

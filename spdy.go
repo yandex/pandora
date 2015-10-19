@@ -91,5 +91,5 @@ func (ds *SpdySample) PhoutSample() *PhoutSample {
 }
 
 func (ds *SpdySample) String() string {
-	return fmt.Sprintf("rt: %d (%d)", ds.rt, ds.StatusCode)
+	return fmt.Sprintf("rt: %d [%d] %s", ds.rt, ds.StatusCode, ds.tag)
 }
