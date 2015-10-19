@@ -7,23 +7,24 @@ import (
 	"time"
 )
 
-func ExampleUser() {
-
-	pl := NewPeriodicLimiter(time.Second / 4)
+func ExampleBatchLimiter() {
+	bl := NewBatchLimiter(10, NewPeriodicLimiter(time.Second))
 	u := &User{
 		name:       "Example user",
 		ammunition: make(chan Ammo, 10),
 		results:    make(chan Sample),
-		limiter:    pl,
+		limiter:    bl,
 		done:       make(chan bool),
 		gun:        &LogGun{},
 	}
 	go u.run()
-	for i := 0; i < 5; i++ {
-		u.ammunition <- &LogAmmo{fmt.Sprintf("{'message': 'Job #%d'}", i)}
-	}
-	close(u.ammunition)
-	pl.Start()
+	go func() {
+		for i := 0; i < 50; i++ {
+			u.ammunition <- &LogAmmo{fmt.Sprintf("{'message': 'Job #%d'}", i)}
+		}
+		close(u.ammunition)
+	}()
+	bl.Start()
 	go func() {
 		for r := range u.results {
 			log.Println(r)

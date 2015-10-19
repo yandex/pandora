@@ -4,7 +4,7 @@ type User struct {
 	name       string
 	ammunition chan Ammo
 	results    chan Sample
-	limiter    chan bool
+	limiter    Limiter
 	done       chan bool
 	gun        Gun
 }
@@ -19,8 +19,9 @@ type Gun interface {
 }
 
 func (u *User) run() {
+	control := u.limiter.Control()
 	for j := range u.ammunition {
-		<-u.limiter
+		<-control
 		u.gun.Run(j, u.results)
 	}
 	u.done <- true
