@@ -12,8 +12,11 @@ type LogAmmo struct {
 	Message string
 }
 
-func (a *LogAmmo) FromJson(jsonDoc string) (err error) {
-	err = json.Unmarshal([]byte(jsonDoc), &a)
+type LogAmmoJsonDecoder struct{}
+
+func (la *LogAmmoJsonDecoder) FromString(jsonDoc string) (a Ammo, err error) {
+	a = &LogAmmo{}
+	err = json.Unmarshal([]byte(jsonDoc), a)
 	return
 }
 

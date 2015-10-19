@@ -12,8 +12,11 @@ type HttpAmmo struct {
 	Headers map[string]string
 }
 
-func (ha *HttpAmmo) FromJson(jsonDoc string) (err error) {
-	err = json.Unmarshal([]byte(jsonDoc), &ha)
+type HttpAmmoJsonDecoder struct{}
+
+func (ha *HttpAmmoJsonDecoder) FromString(jsonDoc string) (a Ammo, err error) {
+	a = &HttpAmmo{}
+	err = json.Unmarshal([]byte(jsonDoc), a)
 	return
 }
 

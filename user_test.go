@@ -10,6 +10,7 @@ import (
 func ExampleUser() {
 
 	pl := NewPeriodicLimiter(time.Second / 4)
+	ammoDecoder := &LogAmmoJsonDecoder{}
 	u := &User{
 		name:       "Example user",
 		ammunition: make(chan Ammo, 10),
@@ -20,7 +21,9 @@ func ExampleUser() {
 	}
 	go u.run()
 	for i := 0; i < 5; i++ {
-		u.ammunition <- &LogAmmo{fmt.Sprintf("{'message': 'Job #%d'}", i)}
+		if a, err := ammoDecoder.FromString(fmt.Sprintf("{'message': 'Job #%d'}", i)); err == nil {
+			u.ammunition <- a
+		}
 	}
 	close(u.ammunition)
 	pl.Start()
