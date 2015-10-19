@@ -8,11 +8,13 @@ import (
 )
 
 func ExampleUser() {
+
+	pl := NewPeriodicLimiter(time.Second / 4)
 	u := &User{
 		name:       "Example user",
 		ammunition: make(chan Ammo, 10),
 		results:    make(chan Sample),
-		limiter:    make(chan bool),
+		limiter:    pl.Control(),
 		done:       make(chan bool),
 		gun:        &LogGun{},
 	}
@@ -21,11 +23,7 @@ func ExampleUser() {
 		u.ammunition <- &LogAmmo{fmt.Sprintf("{'message': 'Job #%d'}", i)}
 	}
 	close(u.ammunition)
-	go func() {
-		for range time.NewTicker(time.Second / 4).C {
-			u.limiter <- true
-		}
-	}()
+	pl.Start()
 	go func() {
 		for r := range u.results {
 			log.Println(r)
