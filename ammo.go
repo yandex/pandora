@@ -1,7 +1,8 @@
 package main
 
 type AmmoProvider interface {
-	FromFile(string) <-chan Ammo
+	Start()
+	Source() chan Ammo
 }
 
 type AmmoDecoder interface {
