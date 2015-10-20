@@ -11,19 +11,15 @@ func ExampleSpdy() {
 	u := &User{
 		name:       "Example user",
 		ammunition: ap,
-		results:    make(chan Sample),
+		results:    NewLoggingResultListener(),
 		limiter:    NewPeriodicLimiter(time.Second / 4),
 		done:       make(chan bool),
 		gun:        &SpdyGun{target: "localhost:3000"},
 	}
 	go u.run()
-	ap.Start()
+	u.ammunition.Start()
+	u.results.Start()
 	u.limiter.Start()
-	go func() {
-		for r := range u.results {
-			log.Println(r)
-		}
-	}()
 	<-u.done
 
 	log.Println("Done")

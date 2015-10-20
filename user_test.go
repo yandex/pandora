@@ -13,19 +13,15 @@ func ExampleUser() {
 	u := &User{
 		name:       "Example user",
 		ammunition: ap,
-		results:    make(chan Sample),
+		results:    NewLoggingResultListener(),
 		limiter:    pl,
 		done:       make(chan bool),
 		gun:        &LogGun{},
 	}
 	go u.run()
-	ap.Start()
-	pl.Start()
-	go func() {
-		for r := range u.results {
-			log.Println(r)
-		}
-	}()
+	u.ammunition.Start()
+	u.results.Start()
+	u.limiter.Start()
 	<-u.done
 
 	log.Println("Done")

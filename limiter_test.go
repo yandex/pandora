@@ -7,24 +7,19 @@ import (
 )
 
 func ExampleBatchLimiter() {
-	bl := NewBatchLimiter(10, NewPeriodicLimiter(time.Second))
 	ap, _ := NewLogAmmoProvider(30)
 	u := &User{
 		name:       "Example user",
 		ammunition: ap,
-		results:    make(chan Sample),
-		limiter:    bl,
+		results:    NewLoggingResultListener(),
+		limiter:    NewBatchLimiter(10, NewPeriodicLimiter(time.Second)),
 		done:       make(chan bool),
 		gun:        &LogGun{},
 	}
 	go u.run()
-	ap.Start()
-	bl.Start()
-	go func() {
-		for r := range u.results {
-			log.Println(r)
-		}
-	}()
+	u.ammunition.Start()
+	u.results.Start()
+	u.limiter.Start()
 	<-u.done
 
 	log.Println("Done")

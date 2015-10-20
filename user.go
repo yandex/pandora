@@ -3,15 +3,10 @@ package main
 type User struct {
 	name       string
 	ammunition AmmoProvider
-	results    chan Sample
+	results    ResultListener
 	limiter    Limiter
 	done       chan bool
 	gun        Gun
-}
-
-type Sample interface {
-	PhoutSample() *PhoutSample
-	String() string
 }
 
 type Gun interface {
@@ -20,9 +15,10 @@ type Gun interface {
 
 func (u *User) run() {
 	control := u.limiter.Control()
+	sink := u.results.Sink()
 	for j := range u.ammunition.Source() {
 		<-control
-		u.gun.Run(j, u.results)
+		u.gun.Run(j, sink)
 	}
 	u.done <- true
 }
