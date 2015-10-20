@@ -45,7 +45,7 @@ func (ap *HttpAmmoProvider) Start() {
 		for scanner.Scan() {
 			txt := scanner.Text()
 			if a, err := ap.decoder.FromString(txt); err != nil {
-				log.Println("Failed to decode ammo: %s", err)
+				log.Fatal("Failed to decode ammo", err)
 			} else {
 				ap.source <- a
 			}

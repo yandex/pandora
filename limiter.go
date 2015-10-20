@@ -81,8 +81,12 @@ func (cl *compositeLimiter) Start() {
 	}()
 }
 
+func NewPeriodicLimiterFromConfig(c *LimiterConfig) (l Limiter, err error) {
+	return nil, errors.New("Not implemented")
+}
+
 func NewCompositeLimiterFromConfig(c *LimiterConfig) (l Limiter, err error) {
-	return nil, nil
+	return nil, errors.New("Not implemented")
 }
 
 func NewLimiterFromConfig(c *LimiterConfig) (l Limiter, err error) {
@@ -90,10 +94,10 @@ func NewLimiterFromConfig(c *LimiterConfig) (l Limiter, err error) {
 		return
 	}
 	switch c.LimiterType {
-	case "composite":
-		return NewCompositeLimiterFromConfig(c)
+	case "periodic":
+		return NewPeriodicLimiterFromConfig(c)
 	default:
-		err = errors.New(fmt.Sprintf("limiter type not implemented: %s", c.LimiterType))
+		err = errors.New(fmt.Sprintf("No such limiter type: %s", c.LimiterType))
 	}
 	return
 }

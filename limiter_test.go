@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	_ "testing"
+	"testing"
 	"time"
 )
 
@@ -26,12 +26,48 @@ func ExampleBatchLimiter() {
 	// Output:
 }
 
-func ExampleLimiterConfig() {
+func TestNotExistentLimiterConfig(t *testing.T) {
 	lc := &LimiterConfig{
-		LimiterType: "dummy",
+		LimiterType: "NOT_EXISTENT",
 		Parameters:  nil,
 	}
 	l, err := NewLimiterFromConfig(lc)
-	log.Println(l, err)
-	// Output:
+
+	if err == nil {
+		t.Errorf("No error on non existent limiter type")
+	}
+	if l != nil {
+		t.Errorf("Returned non-nil limiter for non existent limiter type")
+	}
+}
+
+func TestEmptyLimiterConfig(t *testing.T) {
+	l, err := NewLimiterFromConfig(nil)
+
+	if err != nil {
+		t.Errorf("Error on empty limiter config: %s", err)
+	}
+	if l != nil {
+		t.Errorf("Returned non-nil limiter for empty config")
+	}
+}
+
+func TestLimiterTypes(t *testing.T) {
+	limiterTypes := []string{
+		"periodic",
+	}
+	for _, limiterType := range limiterTypes {
+		lc := &LimiterConfig{
+			LimiterType: limiterType,
+			Parameters:  nil,
+		}
+		l, err := NewLimiterFromConfig(lc)
+
+		if err != nil {
+			t.Errorf("Got an error while creating limiter of type '%s': %s", limiterType, err)
+		}
+		if l == nil {
+			t.Errorf("Returned 'nil' as limiter of type: %s", limiterType)
+		}
+	}
 }
