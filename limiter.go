@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"time"
 )
 
@@ -51,6 +53,7 @@ func (bl *batchLimiter) Start() {
 				bl.control <- true
 			}
 		}
+		close(bl.control)
 	}()
 }
 
@@ -60,4 +63,37 @@ func NewBatchLimiter(batchSize int, master Limiter) (l Limiter) {
 		master:    master,
 		batchSize: batchSize,
 	}
+}
+
+type compositeLimiter struct {
+	limiter
+	steps []Limiter
+}
+
+func (cl *compositeLimiter) Start() {
+	go func() {
+		for _, l := range cl.steps {
+			for range l.Control() {
+				cl.control <- true
+			}
+		}
+		close(cl.control)
+	}()
+}
+
+func NewCompositeLimiterFromConfig(c *LimiterConfig) (l Limiter, err error) {
+	return nil, nil
+}
+
+func NewLimiterFromConfig(c *LimiterConfig) (l Limiter, err error) {
+	if c == nil {
+		return
+	}
+	switch c.LimiterType {
+	case "composite":
+		return NewCompositeLimiterFromConfig(c)
+	default:
+		err = errors.New(fmt.Sprintf("limiter type not implemented: %s", c.LimiterType))
+	}
+	return
 }

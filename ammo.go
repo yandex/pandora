@@ -1,5 +1,9 @@
 package main
 
+import (
+	"errors"
+)
+
 type AmmoProvider interface {
 	Start()
 	Source() chan Ammo
@@ -19,4 +23,8 @@ type AmmoDecoder interface {
 }
 
 type Ammo interface {
+}
+
+func NewAmmoProviderFromConfig(c *AmmoProviderConfig) (ap AmmoProvider, err error) {
+	return nil, errors.New("Not implemented")
 }

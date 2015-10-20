@@ -6,20 +6,31 @@ type AmmoProviderConfig struct{}
 
 type GunConfig struct{}
 
-type ScheduleStepConfig struct {
-	StepType   string
-	Parameters map[string]int
-}
+type ResultListenerConfig struct{}
 
 type LimiterConfig struct {
-	Schedule []ScheduleStep
+	LimiterType string
+	Parameters  map[string]int
+}
+
+type CompositeLimiterConfig struct {
+	Steps []LimiterConfig
 }
 
 type UserConfig struct {
-	GunConfig GunConfig
+	Name           string
+	Gun            *GunConfig
+	AmmoProvider   *AmmoProviderConfig
+	ResultListener *ResultListenerConfig
+	Limiter        *LimiterConfig
 }
 
 type UserPoolConfig struct {
-	StartupSchedule LimiterConfig
-	UserConfig      UserConfig
+	Name           string
+	Gun            *GunConfig
+	AmmoProvider   *AmmoProviderConfig
+	ResultListener *ResultListenerConfig
+	UserLimiter    *LimiterConfig
+	StartupLimiter *LimiterConfig
+	UserConfig     *UserConfig
 }

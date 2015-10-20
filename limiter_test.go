@@ -25,3 +25,13 @@ func ExampleBatchLimiter() {
 	log.Println("Done")
 	// Output:
 }
+
+func ExampleLimiterConfig() {
+	lc := &LimiterConfig{
+		LimiterType: "dummy",
+		Parameters:  nil,
+	}
+	l, err := NewLimiterFromConfig(lc)
+	log.Println(l, err)
+	// Output:
+}

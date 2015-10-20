@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 )
 
@@ -40,4 +41,8 @@ func NewLoggingResultListener() ResultListener {
 			sink: make(chan Sample, 32),
 		},
 	}
+}
+
+func NewResultListenerFromConfig(c *ResultListenerConfig) (rl ResultListener, err error) {
+	return nil, errors.New("Not implemented")
 }
