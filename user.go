@@ -2,7 +2,7 @@ package main
 
 type User struct {
 	name       string
-	ammunition chan Ammo
+	ammunition AmmoProvider
 	results    chan Sample
 	limiter    Limiter
 	done       chan bool
@@ -20,7 +20,7 @@ type Gun interface {
 
 func (u *User) run() {
 	control := u.limiter.Control()
-	for j := range u.ammunition {
+	for j := range u.ammunition.Source() {
 		<-control
 		u.gun.Run(j, u.results)
 	}

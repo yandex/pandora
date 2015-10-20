@@ -33,13 +33,8 @@ func (ha *HttpAmmo) Request() (req *http.Request, err error) {
 }
 
 type HttpAmmoProvider struct {
-	decoder  AmmoDecoder
+	ammoProvider
 	ammoFile *os.File
-	source   chan Ammo
-}
-
-func (ap *HttpAmmoProvider) Source() (s chan Ammo) {
-	return ap.source
 }
 
 func (ap *HttpAmmoProvider) Start() {
@@ -63,9 +58,11 @@ func (ap *HttpAmmoProvider) Start() {
 func NewHttpAmmoProvider(filename string) (ap AmmoProvider, err error) {
 	if file, err := os.Open(filename); err == nil {
 		ap = &HttpAmmoProvider{
-			decoder:  &HttpAmmoJsonDecoder{},
 			ammoFile: file,
-			source:   make(chan Ammo, 128),
+			ammoProvider: ammoProvider{
+				decoder: &HttpAmmoJsonDecoder{},
+				source:  make(chan Ammo, 128),
+			},
 		}
 	}
 	return

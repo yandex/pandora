@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"time"
 )
 
 // import (
@@ -59,27 +57,6 @@ type PhoutSample struct {
 }
 
 func main() {
-	u := &User{
-		name:       "Example user",
-		ammunition: make(chan Ammo, 10),
-		results:    make(chan Sample),
-		limiter:    NewPeriodicLimiter(time.Second / 4),
-		done:       make(chan bool),
-		gun:        &LogGun{},
-	}
-	go u.run()
-	for i := 0; i < 5; i++ {
-		u.ammunition <- &LogAmmo{fmt.Sprintf("{'message': 'Job #%d'", i)}
-	}
-	close(u.ammunition)
-	u.limiter.Start()
-	go func() {
-		for r := range u.results {
-			log.Println(r)
-		}
-	}()
-	<-u.done
-
 	log.Println("Done")
 }
 

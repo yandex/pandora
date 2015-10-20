@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	_ "testing"
 	"time"
@@ -9,21 +8,17 @@ import (
 
 func ExampleBatchLimiter() {
 	bl := NewBatchLimiter(10, NewPeriodicLimiter(time.Second))
+	ap, _ := NewLogAmmoProvider(30)
 	u := &User{
 		name:       "Example user",
-		ammunition: make(chan Ammo, 10),
+		ammunition: ap,
 		results:    make(chan Sample),
 		limiter:    bl,
 		done:       make(chan bool),
 		gun:        &LogGun{},
 	}
 	go u.run()
-	go func() {
-		for i := 0; i < 50; i++ {
-			u.ammunition <- &LogAmmo{fmt.Sprintf("{'message': 'Job #%d'}", i)}
-		}
-		close(u.ammunition)
-	}()
+	ap.Start()
 	bl.Start()
 	go func() {
 		for r := range u.results {
