@@ -2,11 +2,16 @@ package main
 
 type GlobalConfig struct{}
 
-type AmmoProviderConfig struct{}
+type AmmoProviderConfig struct {
+	AmmoType   string
+	AmmoSource string
+}
 
 type GunConfig struct{}
 
-type ResultListenerConfig struct{}
+type ResultListenerConfig struct {
+	ListenerType string
+}
 
 type LimiterConfig struct {
 	LimiterType string

@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 )
 
 type AmmoProvider interface {
@@ -26,5 +27,14 @@ type Ammo interface {
 }
 
 func NewAmmoProviderFromConfig(c *AmmoProviderConfig) (ap AmmoProvider, err error) {
-	return nil, errors.New("Not implemented")
+	if c == nil {
+		return
+	}
+	switch c.AmmoType {
+	case "jsonline/http":
+		ap, err = NewHttpAmmoProvider(c.AmmoSource)
+	default:
+		err = errors.New(fmt.Sprintf("No such limiter type: %s", c.AmmoType))
+	}
+	return
 }

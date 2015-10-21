@@ -139,3 +139,33 @@ func TestPeriodicLimiterBatchMaxCount(t *testing.T) {
 		log.Println("Next tick")
 	}
 }
+
+func ExampleBatchLimiterConfig() {
+	ap, _ := NewLogAmmoProvider(30)
+	lc := &LimiterConfig{
+		LimiterType: "periodic",
+		Parameters: map[string]interface{}{
+			"Period":    0.46,
+			"BatchSize": 3.0,
+			"MaxCount":  5.0,
+		},
+	}
+	l, _ := NewLimiterFromConfig(lc)
+
+	u := &User{
+		name:       "Example user",
+		ammunition: ap,
+		results:    NewLoggingResultListener(),
+		limiter:    l,
+		done:       make(chan bool),
+		gun:        &LogGun{},
+	}
+	go u.run()
+	u.ammunition.Start()
+	u.results.Start()
+	u.limiter.Start()
+	<-u.done
+
+	log.Println("Done")
+	// Output:
+}
