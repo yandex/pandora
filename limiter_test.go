@@ -52,22 +52,90 @@ func TestEmptyLimiterConfig(t *testing.T) {
 	}
 }
 
-func TestLimiterTypes(t *testing.T) {
-	limiterTypes := []string{
-		"periodic",
+func TestEmptyPeriodicLimiterConfig(t *testing.T) {
+	lc := &LimiterConfig{
+		LimiterType: "periodic",
+		Parameters:  nil,
 	}
-	for _, limiterType := range limiterTypes {
-		lc := &LimiterConfig{
-			LimiterType: limiterType,
-			Parameters:  nil,
-		}
-		l, err := NewLimiterFromConfig(lc)
+	l, err := NewLimiterFromConfig(lc)
 
-		if err != nil {
-			t.Errorf("Got an error while creating limiter of type '%s': %s", limiterType, err)
-		}
-		if l == nil {
-			t.Errorf("Returned 'nil' as limiter of type: %s", limiterType)
-		}
+	if err == nil {
+		t.Errorf("Should return error if empty config")
+	}
+	if l != nil {
+		t.Errorf("Should return 'nil' if empty config")
+	}
+}
+
+func TestPeriodicLimiterNoBatch(t *testing.T) {
+	lc := &LimiterConfig{
+		LimiterType: "periodic",
+		Parameters: map[string]interface{}{
+			"Period": 0.46,
+		},
+	}
+	l, err := NewLimiterFromConfig(lc)
+
+	if err != nil {
+		t.Errorf("Got an error while creating periodic limiter: %s", err)
+	}
+	if l == nil {
+		t.Errorf("Returned 'nil' with valid config")
+	}
+	switch tt := l.(type) {
+	case *periodicLimiter:
+	default:
+		t.Errorf("Wrong limiter type returned (expected periodicLimiter): %T", tt)
+	}
+}
+
+func TestPeriodicLimiterBatch(t *testing.T) {
+	lc := &LimiterConfig{
+		LimiterType: "periodic",
+		Parameters: map[string]interface{}{
+			"Period":    0.46,
+			"BatchSize": 3.0,
+		},
+	}
+	l, err := NewLimiterFromConfig(lc)
+
+	if err != nil {
+		t.Errorf("Got an error while creating periodic limiter: %s", err)
+	}
+	if l == nil {
+		t.Errorf("Returned 'nil' with valid config")
+	}
+	switch tt := l.(type) {
+	case *batchLimiter:
+	default:
+		t.Errorf("Wrong limiter type returned (expected batchLimiter): %T", tt)
+	}
+}
+
+func TestPeriodicLimiterBatchMaxCount(t *testing.T) {
+	lc := &LimiterConfig{
+		LimiterType: "periodic",
+		Parameters: map[string]interface{}{
+			"Period":    0.46,
+			"BatchSize": 3.0,
+			"MaxCount":  5.0,
+		},
+	}
+	l, err := NewLimiterFromConfig(lc)
+
+	if err != nil {
+		t.Errorf("Got an error while creating periodic limiter: %s", err)
+	}
+	if l == nil {
+		t.Errorf("Returned 'nil' with valid config")
+	}
+	switch tt := l.(type) {
+	case *batchLimiter:
+	default:
+		t.Errorf("Wrong limiter type returned (expected batchLimiter): %T", tt)
+	}
+	l.Start()
+	for range l.Control() {
+		log.Println("Next tick")
 	}
 }

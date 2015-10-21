@@ -10,7 +10,7 @@ type ResultListenerConfig struct{}
 
 type LimiterConfig struct {
 	LimiterType string
-	Parameters  map[string]int
+	Parameters  map[string]interface{}
 }
 
 type CompositeLimiterConfig struct {
