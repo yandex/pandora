@@ -19,7 +19,6 @@ type HttpAmmoJsonDecoder struct{}
 
 func (ha *HttpAmmoJsonDecoder) FromString(jsonDoc string) (a Ammo, err error) {
 	a = &HttpAmmo{}
-	log.Println(jsonDoc)
 	err = json.Unmarshal([]byte(jsonDoc), a)
 	return
 }
@@ -57,7 +56,8 @@ func (ap *HttpAmmoProvider) Start() {
 }
 
 func NewHttpAmmoProvider(filename string) (ap AmmoProvider, err error) {
-	if file, err := os.Open(filename); err == nil {
+	file, err := os.Open(filename)
+	if err == nil {
 		ap = &HttpAmmoProvider{
 			ammoFile: file,
 			ammoProvider: ammoProvider{

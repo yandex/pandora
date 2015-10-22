@@ -1,6 +1,12 @@
 package main
 
-type GlobalConfig struct{}
+import (
+	"encoding/json"
+)
+
+type GlobalConfig struct {
+	Pools []UserPoolConfig
+}
 
 type AmmoProviderConfig struct {
 	AmmoType   string
@@ -41,4 +47,10 @@ type UserPoolConfig struct {
 	ResultListener *ResultListenerConfig
 	UserLimiter    *LimiterConfig
 	StartupLimiter *LimiterConfig
+}
+
+func ConfigFromJson(jsonDoc string) (gc *GlobalConfig, err error) {
+	gc = &GlobalConfig{}
+	err = json.Unmarshal([]byte(jsonDoc), gc)
+	return
 }

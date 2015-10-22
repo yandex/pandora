@@ -8,7 +8,7 @@ import (
 )
 
 func ExampleSpdy() {
-	ap, _ := NewHttpAmmoProvider("./ammo.jsonline")
+	ap, _ := NewHttpAmmoProvider("./example/data/ammo.jsonline")
 	rl, _ := NewLoggingResultListener()
 	u := &User{
 		name:       "Example user",
@@ -43,7 +43,7 @@ func ExampleSpdyConfig() {
 	}
 	apc := &AmmoProviderConfig{
 		AmmoType:   "jsonline/spdy",
-		AmmoSource: "./ammo.jsonline",
+		AmmoSource: "./example/data/ammo.jsonline",
 	}
 	ap, err := NewAmmoProviderFromConfig(apc)
 	if err != nil {

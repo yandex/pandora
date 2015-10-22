@@ -1,35 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"testing"
-	"time"
 )
 
-func ExampleUser() {
-
-	pl := NewPeriodicLimiter(time.Second / 4)
-	ap, _ := NewLogAmmoProvider(8)
-	rl, _ := NewLoggingResultListener()
-	u := &User{
-		name:       "Example user",
-		ammunition: ap,
-		results:    rl,
-		limiter:    pl,
-		done:       make(chan bool),
-		gun:        &LogGun{},
-	}
-	go u.run()
-	u.ammunition.Start()
-	u.results.Start()
-	u.limiter.Start()
-	<-u.done
-
-	log.Println("Done")
-	// Output:
-}
-
-func TestUserPoolConfig(t *testing.T) {
+func TestGlobalConfig(t *testing.T) {
 	lc := &LimiterConfig{
 		LimiterType: "periodic",
 		Parameters: map[string]interface{}{
@@ -67,13 +44,11 @@ func TestUserPoolConfig(t *testing.T) {
 		UserLimiter:    lc,
 		StartupLimiter: slc,
 	}
-	up, err := NewUserPoolFromConfig(upc)
+	jsonDoc, err := json.Marshal(upc)
 	if err != nil {
-		t.Errorf("Could not create user pool: %s", err)
+		t.Errorf("Could not marshal config to json: %s", err)
 		return
 	}
-	up.Start()
-	<-up.done
 
-	log.Println("Done")
+	log.Println(string(jsonDoc))
 }
