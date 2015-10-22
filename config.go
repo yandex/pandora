@@ -41,5 +41,4 @@ type UserPoolConfig struct {
 	ResultListener *ResultListenerConfig
 	UserLimiter    *LimiterConfig
 	StartupLimiter *LimiterConfig
-	UserConfig     *UserConfig
 }

@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	_ "testing"
+	"testing"
 	"time"
 )
 
@@ -27,4 +27,52 @@ func ExampleUser() {
 
 	log.Println("Done")
 	// Output:
+}
+
+func TestUserPoolConfig(t *testing.T) {
+	lc := &LimiterConfig{
+		LimiterType: "periodic",
+		Parameters: map[string]interface{}{
+			"Period":    1.0,
+			"BatchSize": 3.0,
+			"MaxCount":  9.0,
+		},
+	}
+	slc := &LimiterConfig{
+		LimiterType: "periodic",
+		Parameters: map[string]interface{}{
+			"Period":    0.1,
+			"BatchSize": 2.0,
+			"MaxCount":  5.0,
+		},
+	}
+	apc := &AmmoProviderConfig{
+		AmmoType:   "jsonline/spdy",
+		AmmoSource: "./ammo.jsonline",
+	}
+	rlc := &ResultListenerConfig{
+		ListenerType: "log/simple",
+	}
+	gc := &GunConfig{
+		GunType: "spdy",
+		Parameters: map[string]interface{}{
+			"Target": "localhost:3000",
+		},
+	}
+	upc := &UserPoolConfig{
+		Name:           "Pool#0",
+		Gun:            gc,
+		AmmoProvider:   apc,
+		ResultListener: rlc,
+		UserLimiter:    lc,
+		StartupLimiter: slc,
+	}
+	up, err := NewUserPoolFromConfig(upc)
+	if err != nil {
+		t.Errorf("Could not create user pool: %s", err)
+	}
+	up.Start()
+	<-up.done
+
+	log.Println("Done")
 }

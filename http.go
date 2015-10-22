@@ -19,6 +19,7 @@ type HttpAmmoJsonDecoder struct{}
 
 func (ha *HttpAmmoJsonDecoder) FromString(jsonDoc string) (a Ammo, err error) {
 	a = &HttpAmmo{}
+	log.Println(jsonDoc)
 	err = json.Unmarshal([]byte(jsonDoc), a)
 	return
 }
@@ -45,7 +46,7 @@ func (ap *HttpAmmoProvider) Start() {
 		for scanner.Scan() {
 			txt := scanner.Text()
 			if a, err := ap.decoder.FromString(txt); err != nil {
-				log.Fatal("Failed to decode ammo", err)
+				log.Fatal("Failed to decode ammo: ", err)
 			} else {
 				ap.source <- a
 			}

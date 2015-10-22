@@ -35,13 +35,28 @@ func NewGunFromConfig(c *GunConfig) (g Gun, err error) {
 }
 
 func (u *User) run() {
+	log.Printf("Starting user: %s\n", u.name)
+	defer func() {
+		log.Printf("Exit user: %s\n", u.name)
+		u.done <- true
+	}()
 	control := u.limiter.Control()
+	source := u.ammunition.Source()
 	sink := u.results.Sink()
-	for j := range u.ammunition.Source() {
-		<-control
-		u.gun.Run(j, sink)
+	for {
+		j, more := <-source
+		if !more {
+			log.Println("Ammo ended")
+			return
+		}
+		_, more = <-control
+		if more {
+			u.gun.Run(j, sink)
+		} else {
+			log.Println("Limiter ended.")
+			return
+		}
 	}
-	u.done <- true
 }
 
 func NewUserFromConfig(c *UserConfig) (u *User, err error) {
@@ -77,7 +92,6 @@ func NewUserFromConfig(c *UserConfig) (u *User, err error) {
 
 type UserPool struct {
 	name              string
-	userConfig        *UserConfig
 	userLimiterConfig *LimiterConfig
 	gunConfig         *GunConfig
 	ammunition        AmmoProvider
@@ -90,25 +104,43 @@ type UserPool struct {
 func (up *UserPool) Start() {
 	up.users = make([]*User, 0, 128)
 	go func() {
+		i := 0
 		for range up.startupLimiter.Control() {
-			u, err := NewUserFromConfig(up.userConfig)
+			l, err := NewLimiterFromConfig(up.userLimiterConfig)
 			if err != nil {
-				log.Fatal("could not make a user from config", err)
+				log.Fatal("could not make a user limiter from config", err)
 				break
 			}
-			u.ammunition = up.ammunition
-			u.results = up.results
-			u.run()
+			g, err := NewGunFromConfig(up.gunConfig)
+			if err != nil {
+				log.Fatal("could not make a gun from config", err)
+				break
+			}
+			u := &User{
+				name:       fmt.Sprintf("%s/%d", up.name, i),
+				ammunition: up.ammunition,
+				results:    up.results,
+				limiter:    l,
+				done:       make(chan bool),
+				gun:        g,
+			}
+			l.Start()
+			go u.run()
 			up.users = append(up.users, u)
+			i += 1
 		}
+		log.Println("Started all users. Waiting for them")
 		for _, u := range up.users {
 			<-u.done
 		}
 		up.done <- true
 	}()
+	up.ammunition.Start()
+	up.results.Start()
+	up.startupLimiter.Start()
 }
 
-func NewUserPoolFromConfig(c *UserPoolConfig) (u *UserPool, err error) {
+func NewUserPoolFromConfig(c *UserPoolConfig) (up *UserPool, err error) {
 	if c == nil {
 		return nil, errors.New("no pool config provided")
 	}
@@ -124,7 +156,7 @@ func NewUserPoolFromConfig(c *UserPoolConfig) (u *UserPool, err error) {
 	if err != nil {
 		return nil, err
 	}
-	u = &UserPool{
+	up = &UserPool{
 		name:              c.Name,
 		ammunition:        ammunition,
 		results:           results,
