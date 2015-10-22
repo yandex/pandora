@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/direvius/spdy"
+	"github.com/amahi/spdy"
 	"io"
 	"io/ioutil"
 	"log"

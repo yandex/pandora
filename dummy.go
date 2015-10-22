@@ -9,7 +9,7 @@ import (
 type LogGun struct{}
 
 type LogAmmo struct {
-	message string
+	Message string
 }
 
 type LogAmmoJsonDecoder struct{}
@@ -21,7 +21,7 @@ func (la *LogAmmoJsonDecoder) FromString(jsonDoc string) (a Ammo, err error) {
 }
 
 func (l *LogGun) Run(a Ammo, results chan<- Sample) {
-	log.Println("Log message: ", a.(*LogAmmo).message)
+	log.Println("Log message: ", a.(*LogAmmo).Message)
 	results <- &DummySample{0}
 }
 

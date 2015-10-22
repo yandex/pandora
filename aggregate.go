@@ -6,9 +6,28 @@ import (
 	"log"
 )
 
+type PhoutSample struct {
+	ts             float64
+	tag            string
+	rt             int
+	connect        int
+	send           int
+	latency        int
+	receive        int
+	interval_event int
+	egress         int
+	igress         int
+	netCode        int
+	protoCode      int
+}
+
 type Sample interface {
-	PhoutSample() *PhoutSample
 	String() string
+}
+
+type PhantomCompatible interface {
+	Sample
+	PhoutSample() *PhoutSample
 }
 
 type ResultListener interface {
