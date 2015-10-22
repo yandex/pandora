@@ -10,10 +10,11 @@ func ExampleUser() {
 
 	pl := NewPeriodicLimiter(time.Second / 4)
 	ap, _ := NewLogAmmoProvider(8)
+	rl, _ := NewLoggingResultListener()
 	u := &User{
 		name:       "Example user",
 		ammunition: ap,
-		results:    NewLoggingResultListener(),
+		results:    rl,
 		limiter:    pl,
 		done:       make(chan bool),
 		gun:        &LogGun{},

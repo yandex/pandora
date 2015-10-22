@@ -7,10 +7,14 @@ type AmmoProviderConfig struct {
 	AmmoSource string
 }
 
-type GunConfig struct{}
+type GunConfig struct {
+	GunType    string
+	Parameters map[string]interface{}
+}
 
 type ResultListenerConfig struct {
 	ListenerType string
+	Destination  string
 }
 
 type LimiterConfig struct {

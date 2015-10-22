@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"github.com/direvius/spdy"
 	"io"
@@ -92,4 +93,23 @@ func (ds *SpdySample) PhoutSample() *PhoutSample {
 
 func (ds *SpdySample) String() string {
 	return fmt.Sprintf("rt: %d [%d] %s", ds.rt, ds.StatusCode, ds.tag)
+}
+
+func NewSpdyGunFromConfig(c *GunConfig) (g Gun, err error) {
+	params := c.Parameters
+	if params == nil {
+		return nil, errors.New("Parameters not specified")
+	}
+	target, ok := params["Target"]
+	if !ok {
+		return nil, errors.New("Target not specified")
+	}
+	switch t := target.(type) {
+	case string:
+		g = &SpdyGun{target: target.(string)}
+	default:
+		return nil, errors.New(fmt.Sprintf("Target is of the wrong type."+
+			" Expected 'string' got '%T'", t))
+	}
+	return g, nil
 }

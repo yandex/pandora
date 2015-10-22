@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	_ "testing"
 	"time"
@@ -8,10 +9,11 @@ import (
 
 func ExampleSpdy() {
 	ap, _ := NewHttpAmmoProvider("./ammo.jsonline")
+	rl, _ := NewLoggingResultListener()
 	u := &User{
 		name:       "Example user",
 		ammunition: ap,
-		results:    NewLoggingResultListener(),
+		results:    rl,
 		limiter:    NewPeriodicLimiter(time.Second / 4),
 		done:       make(chan bool),
 		gun:        &SpdyGun{target: "localhost:3000"},
@@ -35,19 +37,42 @@ func ExampleSpdyConfig() {
 			"MaxCount":  5.0,
 		},
 	}
-	l, _ := NewLimiterFromConfig(lc)
+	l, err := NewLimiterFromConfig(lc)
+	if err != nil {
+		panic(fmt.Sprintf("Error configuring limiter: %s", err))
+	}
 	apc := &AmmoProviderConfig{
-		AmmoType:   "dummy",
+		AmmoType:   "jsonline/spdy",
 		AmmoSource: "./ammo.jsonline",
 	}
-	ap, _ := NewHttpAmmoProvider("./ammo.jsonline")
+	ap, err := NewAmmoProviderFromConfig(apc)
+	if err != nil {
+		panic(fmt.Sprintf("Error configuring ammo provider: %s", err))
+	}
+	rc := &ResultListenerConfig{
+		ListenerType: "log/simple",
+	}
+	r, err := NewResultListenerFromConfig(rc)
+	if err != nil {
+		panic(fmt.Sprintf("Error configuring result listener: %s", err))
+	}
+	gc := &GunConfig{
+		GunType: "spdy",
+		Parameters: map[string]interface{}{
+			"Target": "localhost:3000",
+		},
+	}
+	g, err := NewGunFromConfig(gc)
+	if err != nil {
+		panic(fmt.Sprintf("Error configuring gun: %s", err))
+	}
 	u := &User{
 		name:       "Example user",
 		ammunition: ap,
-		results:    NewLoggingResultListener(),
-		limiter:    NewPeriodicLimiter(time.Second / 4),
+		results:    r,
+		limiter:    l,
 		done:       make(chan bool),
-		gun:        &SpdyGun{target: "localhost:3000"},
+		gun:        g,
 	}
 	go u.run()
 	u.ammunition.Start()

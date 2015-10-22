@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 )
 
@@ -19,7 +20,18 @@ type Gun interface {
 }
 
 func NewGunFromConfig(c *GunConfig) (g Gun, err error) {
-	return nil, errors.New("Not implemented")
+	if c == nil {
+		return
+	}
+	switch c.GunType {
+	case "spdy":
+		return NewSpdyGunFromConfig(c)
+	case "log":
+		return NewLogGunFromConfig(c)
+	default:
+		err = errors.New(fmt.Sprintf("No such gun type: %s", c.GunType))
+	}
+	return
 }
 
 func (u *User) run() {

@@ -8,10 +8,11 @@ import (
 
 func ExampleBatchLimiter() {
 	ap, _ := NewLogAmmoProvider(30)
+	rl, _ := NewLoggingResultListener()
 	u := &User{
 		name:       "Example user",
 		ammunition: ap,
-		results:    NewLoggingResultListener(),
+		results:    rl,
 		limiter:    NewBatchLimiter(10, NewPeriodicLimiter(time.Second)),
 		done:       make(chan bool),
 		gun:        &LogGun{},
@@ -151,11 +152,12 @@ func ExampleBatchLimiterConfig() {
 		},
 	}
 	l, _ := NewLimiterFromConfig(lc)
+	rl, _ := NewLoggingResultListener()
 
 	u := &User{
 		name:       "Example user",
 		ammunition: ap,
-		results:    NewLoggingResultListener(),
+		results:    rl,
 		limiter:    l,
 		done:       make(chan bool),
 		gun:        &LogGun{},

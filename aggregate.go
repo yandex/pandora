@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 )
 
@@ -35,14 +36,25 @@ func (rl *LoggingResultListener) Start() {
 	}()
 }
 
-func NewLoggingResultListener() ResultListener {
+func NewLoggingResultListener() (rl ResultListener, err error) {
 	return &LoggingResultListener{
 		resultListener: resultListener{
 			sink: make(chan Sample, 32),
 		},
-	}
+	}, nil
 }
 
 func NewResultListenerFromConfig(c *ResultListenerConfig) (rl ResultListener, err error) {
-	return nil, errors.New("Not implemented")
+	if c == nil {
+		return
+	}
+	switch c.ListenerType {
+	case "log/simple":
+		rl, err = NewLoggingResultListener()
+	case "log/phout":
+		err = errors.New(fmt.Sprintf("phout not implemented"))
+	default:
+		err = errors.New(fmt.Sprintf("No such listener type: %s", c.ListenerType))
+	}
+	return
 }

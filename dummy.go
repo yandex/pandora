@@ -9,7 +9,7 @@ import (
 type LogGun struct{}
 
 type LogAmmo struct {
-	Message string
+	message string
 }
 
 type LogAmmoJsonDecoder struct{}
@@ -21,7 +21,7 @@ func (la *LogAmmoJsonDecoder) FromString(jsonDoc string) (a Ammo, err error) {
 }
 
 func (l *LogGun) Run(a Ammo, results chan<- Sample) {
-	log.Println("Log message: ", a.(*LogAmmo).Message)
+	log.Println("Log message: ", a.(*LogAmmo).message)
 	results <- &DummySample{0}
 }
 
@@ -65,4 +65,8 @@ func NewLogAmmoProvider(size int) (ap AmmoProvider, err error) {
 		},
 	}
 	return
+}
+
+func NewLogGunFromConfig(c *GunConfig) (g Gun, err error) {
+	return &LogGun{}, nil
 }
