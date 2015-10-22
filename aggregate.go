@@ -6,6 +6,10 @@ import (
 	"log"
 )
 
+type Sample interface {
+	String() string
+}
+
 type PhoutSample struct {
 	ts             float64
 	tag            string
@@ -21,8 +25,21 @@ type PhoutSample struct {
 	protoCode      int
 }
 
-type Sample interface {
-	String() string
+func (ps *PhoutSample) String() string {
+	return fmt.Sprintf(
+		"%.3f\t%s\t%d\t"+
+			"%d\t%d\t"+
+			"%d\t%d\t"+
+			"%d\t"+
+			"%d\t%d\t"+
+			"%d\t%d",
+		ps.ts, ps.tag, ps.rt,
+		ps.connect, ps.send,
+		ps.latency, ps.receive,
+		ps.interval_event,
+		ps.egress, ps.igress,
+		ps.netCode, ps.protoCode,
+	)
 }
 
 type PhantomCompatible interface {
@@ -63,6 +80,32 @@ func NewLoggingResultListener() (rl ResultListener, err error) {
 	}, nil
 }
 
+type PhoutResultListener struct {
+	resultListener
+}
+
+func (rl *PhoutResultListener) Start() {
+	go func() {
+		for r := range rl.sink {
+			pc, ok := r.(PhantomCompatible)
+			if ok {
+				log.Println(pc.PhoutSample())
+			} else {
+				log.Panic("Not phantom compatible sample")
+				return
+			}
+		}
+	}()
+}
+
+func NewPhoutResultListener() (rl ResultListener, err error) {
+	return &PhoutResultListener{
+		resultListener: resultListener{
+			sink: make(chan Sample, 32),
+		},
+	}, nil
+}
+
 func NewResultListenerFromConfig(c *ResultListenerConfig) (rl ResultListener, err error) {
 	if c == nil {
 		return
@@ -71,7 +114,7 @@ func NewResultListenerFromConfig(c *ResultListenerConfig) (rl ResultListener, er
 	case "log/simple":
 		rl, err = NewLoggingResultListener()
 	case "log/phout":
-		err = errors.New(fmt.Sprintf("phout not implemented"))
+		rl, err = NewPhoutResultListener()
 	default:
 		err = errors.New(fmt.Sprintf("No such listener type: %s", c.ListenerType))
 	}

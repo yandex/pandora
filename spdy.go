@@ -76,6 +76,9 @@ func (sg *SpdyGun) Connect(results chan<- Sample) {
 	ss := &SpdySample{ts: float64(connectStart.UnixNano()) / 1e9, tag: "CONNECT"}
 	ss.rt = int(time.Since(connectStart).Seconds() * 1e6)
 	ss.err = err
+	if ss.err == nil {
+		ss.StatusCode = 200
+	}
 	results <- ss
 }
 
@@ -88,7 +91,28 @@ type SpdySample struct {
 }
 
 func (ds *SpdySample) PhoutSample() *PhoutSample {
-	return &PhoutSample{}
+	var protoCode, netCode int
+	if ds.err != nil {
+		protoCode = 500
+		netCode = 999
+	} else {
+		netCode = 0
+		protoCode = ds.StatusCode
+	}
+	return &PhoutSample{
+		ts:             ds.ts,
+		tag:            ds.tag,
+		rt:             ds.rt,
+		connect:        0,
+		send:           0,
+		latency:        0,
+		receive:        0,
+		interval_event: 0,
+		egress:         0,
+		igress:         0,
+		netCode:        netCode,
+		protoCode:      protoCode,
+	}
 }
 
 func (ds *SpdySample) String() string {
