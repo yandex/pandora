@@ -49,8 +49,8 @@ type UserPoolConfig struct {
 	StartupLimiter *LimiterConfig
 }
 
-func ConfigFromJson(jsonDoc string) (gc *GlobalConfig, err error) {
+func NewConfigFromJson(jsonDoc []byte) (gc *GlobalConfig, err error) {
 	gc = &GlobalConfig{}
-	err = json.Unmarshal([]byte(jsonDoc), gc)
+	err = json.Unmarshal(jsonDoc, gc)
 	return
 }
