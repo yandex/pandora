@@ -32,9 +32,9 @@ func NewAmmoProviderFromConfig(c *AmmoProviderConfig) (ap AmmoProvider, err erro
 	}
 	switch c.AmmoType {
 	case "jsonline/http", "jsonline/spdy":
-		ap, err = NewHttpAmmoProvider(c.AmmoSource)
+		ap, err = NewHttpAmmoProvider(c.AmmoSource, c.AmmoLimit, c.Loop)
 	case "dummy/log":
-		ap, err = NewLogAmmoProvider(15)
+		ap, err = NewLogAmmoProvider(c.AmmoLimit)
 	default:
 		err = errors.New(fmt.Sprintf("No such ammo type: %s", c.AmmoType))
 	}

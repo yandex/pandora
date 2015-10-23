@@ -35,32 +35,46 @@ func (ha *HttpAmmo) Request() (req *http.Request, err error) {
 
 type HttpAmmoProvider struct {
 	ammoProvider
-	ammoFile *os.File
+	ammoFile  *os.File
+	ammoLimit int
+	loopLimit int
 }
 
 func (ap *HttpAmmoProvider) Start() {
 	go func() { // requests reader/generator
-		scanner := bufio.NewScanner(ap.ammoFile)
-		scanner.Split(bufio.ScanLines)
-
-		for scanner.Scan() {
-			txt := scanner.Text()
-			if a, err := ap.decoder.FromString(txt); err != nil {
-				log.Fatal("Failed to decode ammo: ", err)
-			} else {
-				ap.source <- a
+		ammoNumber := 0
+		loops := 0
+		for {
+			scanner := bufio.NewScanner(ap.ammoFile)
+			scanner.Split(bufio.ScanLines)
+			for scanner.Scan() && (ap.ammoLimit == 0 || ammoNumber < ap.ammoLimit) {
+				txt := scanner.Text()
+				if a, err := ap.decoder.FromString(txt); err != nil {
+					log.Fatal("Failed to decode ammo: ", err)
+				} else {
+					ammoNumber += 1
+					ap.source <- a
+				}
 			}
+			if loops > ap.loopLimit {
+				break
+			}
+			ap.ammoFile.Seek(0, 0)
+			log.Printf("Restarted ammo the beginning. Loops left: %d\n", ap.loopLimit-loops)
+			loops++
 		}
 		close(ap.source)
 		log.Println("Ran out of ammo")
 	}()
 }
 
-func NewHttpAmmoProvider(filename string) (ap AmmoProvider, err error) {
+func NewHttpAmmoProvider(filename string, ammoLimit int, loopLimit int) (ap AmmoProvider, err error) {
 	file, err := os.Open(filename)
 	if err == nil {
 		ap = &HttpAmmoProvider{
-			ammoFile: file,
+			ammoLimit: ammoLimit,
+			loopLimit: loopLimit,
+			ammoFile:  file,
 			ammoProvider: ammoProvider{
 				decoder: &HttpAmmoJsonDecoder{},
 				source:  make(chan Ammo, 128),

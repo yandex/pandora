@@ -11,6 +11,8 @@ type GlobalConfig struct {
 type AmmoProviderConfig struct {
 	AmmoType   string
 	AmmoSource string
+	AmmoLimit  int
+	Loop       int
 }
 
 type GunConfig struct {

@@ -10,7 +10,8 @@
       },
       "AmmoProvider": {
         "AmmoType": "jsonline/spdy",
-        "AmmoSource": "./example/data/ammo.jsonline"
+        "AmmoSource": "./example/data/ammo.jsonline",
+        "Loop": 10
       },
       "ResultListener": {
         "ListenerType": "log/simple",
