@@ -13,6 +13,7 @@ type HttpAmmo struct {
 	Method  string
 	Uri     string
 	Headers map[string]string
+	Tag     string
 }
 
 type HttpAmmoJsonDecoder struct{}

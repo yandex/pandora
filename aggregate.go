@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 )
 
 type Sample interface {
@@ -82,6 +83,7 @@ func NewLoggingResultListener() (rl ResultListener, err error) {
 
 type PhoutResultListener struct {
 	resultListener
+	phout *os.File
 }
 
 func (rl *PhoutResultListener) Start() {
@@ -89,7 +91,7 @@ func (rl *PhoutResultListener) Start() {
 		for r := range rl.sink {
 			pc, ok := r.(PhantomCompatible)
 			if ok {
-				log.Println(pc.PhoutSample())
+				rl.phout.WriteString(fmt.Sprintf("%s\n", pc.PhoutSample()))
 			} else {
 				log.Panic("Not phantom compatible sample")
 				return
@@ -98,12 +100,40 @@ func (rl *PhoutResultListener) Start() {
 	}()
 }
 
-func NewPhoutResultListener() (rl ResultListener, err error) {
+func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
+	var phoutFile *os.File
+	if filename == "" {
+		phoutFile = os.Stdout
+	} else {
+		phoutFile, err = os.Create(filename)
+	}
 	return &PhoutResultListener{
 		resultListener: resultListener{
 			sink: make(chan Sample, 32),
 		},
+		phout: phoutFile,
 	}, nil
+}
+
+type phoutResultListenerFactory struct {
+	listeners map[string]ResultListener
+}
+
+func (prls *phoutResultListenerFactory) Create(c *ResultListenerConfig) (rl ResultListener, err error) {
+	rl, ok := prls.listeners[c.Destination]
+	if !ok {
+		rl, err = NewPhoutResultListener(c.Destination)
+		if err != nil {
+			return nil, err
+		} else {
+			prls.listeners[c.Destination] = rl
+		}
+	}
+	return
+}
+
+var PhoutResultListenerFactory *phoutResultListenerFactory = &phoutResultListenerFactory{
+	make(map[string]ResultListener),
 }
 
 func NewResultListenerFromConfig(c *ResultListenerConfig) (rl ResultListener, err error) {
@@ -114,7 +144,7 @@ func NewResultListenerFromConfig(c *ResultListenerConfig) (rl ResultListener, er
 	case "log/simple":
 		rl, err = NewLoggingResultListener()
 	case "log/phout":
-		rl, err = NewPhoutResultListener()
+		rl, err = PhoutResultListenerFactory.Create(c)
 	default:
 		err = errors.New(fmt.Sprintf("No such listener type: %s", c.ListenerType))
 	}

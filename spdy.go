@@ -27,24 +27,41 @@ func (sg *SpdyGun) Run(a Ammo, results chan<- Sample) {
 		results <- ss
 	}()
 	// now send the request to obtain a http response
-	if req, err := a.(*HttpAmmo).Request(); err != nil {
-		log.Printf("Could not convert ammo to HTTP request: %s\n", err)
+	ha, ok := a.(*HttpAmmo)
+	if !ok {
+		errStr := fmt.Sprintf("Got '%T' instead of 'HttpAmmo'", a)
+		log.Println(errStr)
+		ss.err = errors.New(errStr)
+		return
+	}
+	if ha.Tag != "" {
+		ss.tag += "|" + ha.Tag
+	}
+	req, err := ha.Request()
+	if err != nil {
+		log.Printf("Error making HTTP request: %s\n", err)
 		ss.err = err
-	} else if res, err := sg.client.Do(req); err != nil {
+		return
+	}
+	res, err := sg.client.Do(req)
+	if err != nil {
 		log.Printf("Error performing a request: %s\n", err)
 		ss.err = err
-	} else if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
+		return
+	}
+	defer res.Body.Close()
+	_, err = io.Copy(ioutil.Discard, res.Body)
+	if err != nil {
 		log.Printf("Error reading response body: %s\n", err)
 		ss.err = err
-	} else {
-
-		// TODO: make this an optional verbose answ_log output
-		//data := make([]byte, int(res.ContentLength))
-		// _, err = res.Body.(io.Reader).Read(data)
-		// fmt.Println(string(data))
-		res.Body.Close()
-		ss.StatusCode = res.StatusCode
+		return
 	}
+
+	// TODO: make this an optional verbose answ_log output
+	//data := make([]byte, int(res.ContentLength))
+	// _, err = res.Body.(io.Reader).Read(data)
+	// fmt.Println(string(data))
+	ss.StatusCode = res.StatusCode
 	return
 }
 
