@@ -105,7 +105,7 @@ func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
 	if filename == "" {
 		phoutFile = os.Stdout
 	} else {
-		phoutFile, err = os.Create(filename)
+		phoutFile, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0666)
 	}
 	return &PhoutResultListener{
 		resultListener: resultListener{
