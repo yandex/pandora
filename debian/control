@@ -1,0 +1,19 @@
+Source: pandora
+Section: devel
+Priority: extra
+Maintainer: Alexey Lavrenuke (load testing) <direvius@yandex-team.ru>
+Build-Depends: debhelper (>= 9),
+               dh-golang,
+               golang-go,
+               golang-github-amahi-spdy-dev
+Standards-Version: 3.9.6
+Homepage: https://github.com/yandex/pandora
+XS-Go-Import-Path: github.com/yandex/pandora
+
+Package: pandora
+Architecture: any
+Built-Using: ${misc:Built-Using}
+Depends: ${shlibs:Depends},
+         ${misc:Depends}
+Description: an extensible load generation tool
+ 
