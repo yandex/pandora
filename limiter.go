@@ -26,6 +26,7 @@ func (l *limiter) Control() chan bool {
 
 func (pl *periodicLimiter) Start() {
 	go func() {
+		pl.control <- true // first tick just after the start
 		for range pl.ticker.C {
 			pl.control <- true
 		}
