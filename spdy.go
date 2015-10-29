@@ -109,14 +109,18 @@ func (sg *SpdyGun) Connect(results chan<- Sample) {
 }
 
 func (sg *SpdyGun) Ping(results chan<- Sample) {
-	sg.Close()
+	if sg.client == nil { // TODO: this might be a faulty behaviour
+		sg.Connect(results)
+	}
 	pingStart := time.Now()
 
-	pinged, err := sg.client.Ping()
+	pinged, err := sg.client.Ping(time.Second * 15)
 	if err != nil {
 		log.Printf("client: ping: %s\n", err)
 	}
-
+	if !pinged {
+		log.Printf("client: ping: timed out\n")
+	}
 	ss := &SpdySample{ts: float64(pingStart.UnixNano()) / 1e9, tag: "PING"}
 	ss.rt = int(time.Since(pingStart).Seconds() * 1e6)
 	ss.err = err
@@ -177,10 +181,10 @@ func NewSpdyGunFromConfig(c *GunConfig) (g Gun, err error) {
 	if !ok {
 		return nil, errors.New("Target not specified")
 	}
-	var pingPeriod float64
-	paramPingPeriod, ok = params["PingPeriod"]
+	var pingPeriod time.Duration
+	paramPingPeriod, ok := params["PingPeriod"]
 	if !ok {
-		pingPeriod = 120.0 // TODO: move this default elsewhere
+		paramPingPeriod = 120.0 // TODO: move this default elsewhere
 	}
 	switch t := paramPingPeriod.(type) {
 	case float64:
