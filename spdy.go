@@ -12,13 +12,22 @@ import (
 )
 
 type SpdyGun struct {
-	target string
-	client *spdy.Client
+	pingPeriod time.Duration
+	target     string
+	client     *spdy.Client
 }
 
 func (sg *SpdyGun) Run(a Ammo, results chan<- Sample) {
 	if sg.client == nil {
 		sg.Connect(results)
+	}
+	if sg.pingPeriod > 0 {
+		pingTimer := time.NewTicker(sg.pingPeriod)
+		go func() {
+			for range pingTimer.C {
+				sg.Ping(results)
+			}
+		}()
 	}
 	start := time.Now()
 	ss := &SpdySample{ts: float64(start.UnixNano()) / 1e9, tag: "REQUEST"}
@@ -82,12 +91,12 @@ func (sg *SpdyGun) Connect(results chan<- Sample) {
 
 	conn, err := tls.Dial("tcp", sg.target, &config)
 	if err != nil {
-		fmt.Printf("client: dial: %s\n", err)
+		log.Printf("client: dial: %s\n", err)
 		return
 	}
 	sg.client, err = spdy.NewClientConn(conn)
 	if err != nil {
-		fmt.Printf("client: connect: %s\n", err)
+		log.Printf("client: connect: %s\n", err)
 		return
 	}
 	ss := &SpdySample{ts: float64(connectStart.UnixNano()) / 1e9, tag: "CONNECT"}
@@ -97,6 +106,29 @@ func (sg *SpdyGun) Connect(results chan<- Sample) {
 		ss.StatusCode = 200
 	}
 	results <- ss
+}
+
+func (sg *SpdyGun) Ping(results chan<- Sample) {
+	sg.Close()
+	pingStart := time.Now()
+
+	pinged, err := sg.client.Ping()
+	if err != nil {
+		log.Printf("client: ping: %s\n", err)
+	}
+
+	ss := &SpdySample{ts: float64(pingStart.UnixNano()) / 1e9, tag: "PING"}
+	ss.rt = int(time.Since(pingStart).Seconds() * 1e6)
+	ss.err = err
+	if ss.err == nil && pinged {
+		ss.StatusCode = 200
+	} else {
+		ss.StatusCode = 500
+	}
+	results <- ss
+	if err != nil {
+		sg.Connect(results)
+	}
 }
 
 type SpdySample struct {
@@ -145,9 +177,24 @@ func NewSpdyGunFromConfig(c *GunConfig) (g Gun, err error) {
 	if !ok {
 		return nil, errors.New("Target not specified")
 	}
+	var pingPeriod float64
+	paramPingPeriod, ok = params["PingPeriod"]
+	if !ok {
+		pingPeriod = 120.0 // TODO: move this default elsewhere
+	}
+	switch t := paramPingPeriod.(type) {
+	case float64:
+		pingPeriod = time.Duration(paramPingPeriod.(float64)*1e3) * time.Millisecond
+	default:
+		return nil, errors.New(fmt.Sprintf("Period is of the wrong type."+
+			" Expected 'float64' got '%T'", t))
+	}
 	switch t := target.(type) {
 	case string:
-		g = &SpdyGun{target: target.(string)}
+		g = &SpdyGun{
+			pingPeriod: pingPeriod,
+			target:     target.(string),
+		}
 	default:
 		return nil, errors.New(fmt.Sprintf("Target is of the wrong type."+
 			" Expected 'string' got '%T'", t))
