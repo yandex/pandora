@@ -1,7 +1,7 @@
 {
   "Pools": [
     {
-      "Name": "Pool#0",
+      "Name": "SPDY pool",
       "Gun": {
         "GunType": "spdy",
         "Parameters": {
@@ -34,20 +34,20 @@
       }
     },
     {
-      "Name": "Pool#2",
+      "Name": "HTTP pool",
       "Gun": {
-        "GunType": "spdy",
+        "GunType": "http",
         "Parameters": {
           "Target": "localhost:3000"
         }
       },
       "AmmoProvider": {
-        "AmmoType": "jsonline/spdy",
+        "AmmoType": "jsonline/http",
         "AmmoSource": "./example/data/ammo.jsonline"
       },
       "ResultListener": {
         "ListenerType": "log/phout",
-        "Destination": "./phout.log"
+        "Destination": "./http_phout.log"
       },
       "UserLimiter": {
         "LimiterType": "periodic",
@@ -80,7 +80,7 @@
       },
       "ResultListener": {
         "ListenerType": "log/phout",
-        "Destination": "./phout1.log"
+        "Destination": "./phout.log"
       },
       "UserLimiter": {
         "LimiterType": "periodic",
