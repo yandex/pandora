@@ -26,6 +26,8 @@ func NewGunFromConfig(c *GunConfig) (g Gun, err error) {
 	switch c.GunType {
 	case "spdy":
 		return NewSpdyGunFromConfig(c)
+	case "http":
+		return NewHttpGunFromConfig(c)
 	case "log":
 		return NewLogGunFromConfig(c)
 	default:
