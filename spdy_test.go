@@ -7,7 +7,7 @@ import (
 )
 
 func ExampleSpdy() {
-	ap, _ := NewHttpAmmoProvider("./example/data/ammo.jsonline")
+	ap, _ := NewHttpAmmoProvider("./example/data/ammo.jsonline", 10, 10)
 	rl, _ := NewLoggingResultListener()
 	u := &User{
 		name:       "Example user",
