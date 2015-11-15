@@ -7,7 +7,7 @@ import (
 )
 
 func ExampleSpdy() {
-	ap, _ := NewHttpAmmoProvider("./example/data/ammo.jsonline", 10, 10)
+	ap, _ := NewHttpAmmoProvider("./testdata/ammo.jsonline", 10, 10)
 	rl, _ := NewLoggingResultListener()
 	u := &User{
 		name:       "Example user",
@@ -42,7 +42,7 @@ func TestSpdyConfig(t *testing.T) {
 	}
 	apc := &AmmoProviderConfig{
 		AmmoType:   "jsonline/spdy",
-		AmmoSource: "./example/data/ammo.jsonline",
+		AmmoSource: "./testdata/ammo.jsonline",
 	}
 	ap, err := NewAmmoProviderFromConfig(apc)
 	if err != nil {
@@ -99,7 +99,7 @@ func TestSpdyPhout(t *testing.T) {
 	}
 	apc := &AmmoProviderConfig{
 		AmmoType:   "jsonline/spdy",
-		AmmoSource: "./example/data/ammo.jsonline",
+		AmmoSource: "./testdata/ammo.jsonline",
 	}
 	ap, err := NewAmmoProviderFromConfig(apc)
 	if err != nil {

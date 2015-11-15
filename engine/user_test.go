@@ -48,7 +48,7 @@ func TestUserPoolConfig(t *testing.T) {
 	}
 	apc := &AmmoProviderConfig{
 		AmmoType:   "jsonline/spdy",
-		AmmoSource: "./example/data/ammo.jsonline",
+		AmmoSource: "./testdata/ammo.jsonline",
 	}
 	rlc := &ResultListenerConfig{
 		ListenerType: "log/simple",

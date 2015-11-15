@@ -6,7 +6,7 @@ import (
 )
 
 func ExampleHttp() {
-	ap, _ := NewHttpAmmoProvider("./example/data/ammo.jsonline", 10, 10)
+	ap, _ := NewHttpAmmoProvider("./testdata/ammo.jsonline", 10, 10)
 	rl, _ := NewLoggingResultListener()
 	u := &User{
 		name:       "Example user",
