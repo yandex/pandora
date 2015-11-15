@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"bufio"
@@ -230,7 +230,7 @@ func NewHttpGunFromConfig(c *GunConfig) (g Gun, err error) {
 		}
 	default:
 		return nil, errors.New(fmt.Sprintf("Target is of the wrong type."+
-			" Expected 'string' got '%T'", t))
+		" Expected 'string' got '%T'", t))
 	}
 	return g, nil
 }

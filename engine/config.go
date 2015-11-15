@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"encoding/json"
@@ -51,8 +51,7 @@ type UserPoolConfig struct {
 	StartupLimiter *LimiterConfig
 }
 
-func NewConfigFromJson(jsonDoc []byte) (gc *GlobalConfig, err error) {
-	gc = &GlobalConfig{}
-	err = json.Unmarshal(jsonDoc, gc)
+func NewConfigFromJson(jsonDoc []byte) (gc GlobalConfig, err error) {
+	err = json.Unmarshal(jsonDoc, &gc)
 	return
 }

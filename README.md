@@ -4,10 +4,10 @@ A load generator in Go language.
 ## Install
 Compile a binary with go tool:
 ```
-go get github.com/yandex-load/pandora
-go build github.com/yandex-load/pandora
+go get github.com/yandex/pandora
+go build github.com/yandex/pandora
 ```
-Run this binary with your .json config (see [examples](https://github.com/yandex-load/pandora/tree/master/example/config)):
+Run this binary with your .json config (see [examples](https://github.com/yandex/pandora/tree/master/example/config)):
 ```
 ./pandora myconfig.json
 ```
