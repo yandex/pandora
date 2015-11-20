@@ -11,7 +11,7 @@
       "AmmoProvider": {
         "AmmoType": "jsonline/spdy",
         "AmmoSource": "./example/data/ammo.jsonline",
-        "Loop": 10
+        "Passes": 10
       },
       "ResultListener": {
         "ListenerType": "log/simple",

@@ -15,3 +15,26 @@ Or let [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/configuration.h
 
 ## Get help
 Ask direvius@ in Yandex.Tank's chat room [![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/yandex/yandex-tank?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+
+
+## Extension points
+
+You can write plugins with the next extension points:
+
+ammo.Provider
+aggregate.ResultListener
+limiter.Limiter
+gun.Gun
+
+## Build tags
+
+If you don want to build pandora without http gun:
+```
+go build -tags 'noHttpGun' github.com/yandex/pandora
+```
+
+If you don want to build pandora without spdy gun:
+```
+go build -tags 'noSpdyGun' github.com/yandex/pandora
+```

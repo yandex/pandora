@@ -1,4 +1,4 @@
-package engine
+package config
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 )
 
 func TestGlobalConfig(t *testing.T) {
-	lc := &LimiterConfig{
+	lc := &Limiter{
 		LimiterType: "periodic",
 		Parameters: map[string]interface{}{
 			"Period":    1.0,
@@ -15,7 +15,7 @@ func TestGlobalConfig(t *testing.T) {
 			"MaxCount":  9.0,
 		},
 	}
-	slc := &LimiterConfig{
+	slc := &Limiter{
 		LimiterType: "periodic",
 		Parameters: map[string]interface{}{
 			"Period":    0.1,
@@ -23,21 +23,21 @@ func TestGlobalConfig(t *testing.T) {
 			"MaxCount":  5.0,
 		},
 	}
-	apc := &AmmoProviderConfig{
+	apc := &AmmoProvider{
 		AmmoType:   "jsonline/spdy",
 		AmmoSource: "./example/data/ammo.jsonline",
 	}
-	rlc := &ResultListenerConfig{
+	rlc := &ResultListener{
 		ListenerType: "log/simple",
 	}
-	gc := &GunConfig{
+	gc := &Gun{
 		GunType: "spdy",
 		Parameters: map[string]interface{}{
 			"Target": "localhost:3000",
 		},
 	}
-	globalConfig := &GlobalConfig{
-		Pools: []UserPoolConfig{
+	globalConfig := &Global{
+		Pools: []UserPool{
 			{
 				Name:           "Pool#0",
 				Gun:            gc,
@@ -64,7 +64,7 @@ func TestGlobalConfig(t *testing.T) {
 
 	log.Println(string(jsonDoc))
 
-	newgc, err := NewConfigFromJson(jsonDoc)
+	newgc, err := NewGlobalFromJSON(jsonDoc)
 	if err != nil {
 		t.Errorf("Could not unmarshal config from json: %s", err)
 		return

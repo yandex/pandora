@@ -1,171 +1,144 @@
 package engine
 
 import (
-	"errors"
 	"fmt"
 	"log"
+
+	"golang.org/x/net/context"
+
+	"github.com/yandex/pandora/aggregate"
+	"github.com/yandex/pandora/ammo"
+	"github.com/yandex/pandora/config"
+	"github.com/yandex/pandora/gun"
+	"github.com/yandex/pandora/limiter"
+	"github.com/yandex/pandora/utils"
+)
+
+const (
+	MaximumUsers = 100
 )
 
 type User struct {
-	name       string
-	ammunition AmmoProvider
-	results    ResultListener
-	limiter    Limiter
-	done       chan bool
-	gun        Gun
+	Name       string
+	Ammunition ammo.Provider
+	Results    aggregate.ResultListener
+	Limiter    limiter.Limiter
+	Gun        gun.Gun
 }
 
-type Gun interface {
-	Run(Ammo, chan<- Sample)
-}
-
-func NewGunFromConfig(c *GunConfig) (g Gun, err error) {
-	if c == nil {
-		return
-	}
-	switch c.GunType {
-	case "spdy":
-		return NewSpdyGunFromConfig(c)
-	case "http":
-		return NewHttpGunFromConfig(c)
-	case "log":
-		return NewLogGunFromConfig(c)
-	default:
-		err = errors.New(fmt.Sprintf("No such gun type: %s", c.GunType))
-	}
-	return
-}
-
-func (u *User) run() {
-	log.Printf("Starting user: %s\n", u.name)
+func (u *User) Run(ctx context.Context) error {
+	log.Printf("Starting user: %s\n", u.Name)
 	defer func() {
-		log.Printf("Exit user: %s\n", u.name)
-		u.done <- true
+		log.Printf("Exit user: %s\n", u.Name)
 	}()
-	control := u.limiter.Control()
-	source := u.ammunition.Source()
-	sink := u.results.Sink()
+	control := u.Limiter.Control()
+	source := u.Ammunition.Source()
+	sink := u.Results.Sink()
+loop:
 	for {
-		j, more := <-source
-		if !more {
-			log.Println("Ammo ended")
-			return
+		select {
+		case j, more := <-source:
+			if !more {
+				log.Println("Ammo ended")
+				break loop
+			}
+			_, more = <-control
+			if more {
+				u.Gun.Shoot(ctx, j, sink)
+			} else {
+				log.Println("Limiter ended.")
+				break loop
+			}
+		case <-ctx.Done():
+			break loop
 		}
-		_, more = <-control
-		if more {
-			u.gun.Run(j, sink)
-		} else {
-			log.Println("Limiter ended.")
-			return
-		}
 	}
-}
-
-func NewUserFromConfig(c *UserConfig) (u *User, err error) {
-	if c == nil {
-		return
-	}
-	gun, err := NewGunFromConfig(c.Gun)
-	if err != nil {
-		return nil, err
-	}
-	ammunition, err := NewAmmoProviderFromConfig(c.AmmoProvider)
-	if err != nil {
-		return nil, err
-	}
-	results, err := NewResultListenerFromConfig(c.ResultListener)
-	if err != nil {
-		return nil, err
-	}
-	limiter, err := NewLimiterFromConfig(c.Limiter)
-	if err != nil {
-		return nil, err
-	}
-	u = &User{
-		name:       c.Name,
-		ammunition: ammunition,
-		results:    results,
-		limiter:    limiter,
-		done:       make(chan bool, 1),
-		gun:        gun,
-	}
-	return
+	return nil
 }
 
 type UserPool struct {
 	name              string
-	userLimiterConfig *LimiterConfig
-	gunConfig         *GunConfig
-	ammunition        AmmoProvider
-	results           ResultListener
-	startupLimiter    Limiter
+	userLimiterConfig *config.Limiter
+	gunConfig         *config.Gun
+	ammunition        ammo.Provider
+	results           aggregate.ResultListener
+	startupLimiter    limiter.Limiter
 	users             []*User
 	done              chan bool
 }
 
-func (up *UserPool) Start() {
-	up.users = make([]*User, 0, 128)
-	go func() {
-		i := 0
-		for range up.startupLimiter.Control() {
-			l, err := NewLimiterFromConfig(up.userLimiterConfig)
-			if err != nil {
-				log.Fatal("could not make a user limiter from config", err)
-				break
-			}
-			g, err := NewGunFromConfig(up.gunConfig)
-			if err != nil {
-				log.Fatal("could not make a gun from config", err)
-				break
-			}
-			u := &User{
-				name:       fmt.Sprintf("%s/%d", up.name, i),
-				ammunition: up.ammunition,
-				results:    up.results,
-				limiter:    l,
-				done:       make(chan bool),
-				gun:        g,
-			}
-			l.Start()
-			go u.run()
-			up.users = append(up.users, u)
-			i += 1
-		}
-		log.Println("Started all users. Waiting for them")
-		for _, u := range up.users {
-			<-u.done
-		}
-		up.done <- true
-	}()
-	up.ammunition.Start()
-	up.results.Start()
-	up.startupLimiter.Start()
-}
+func NewUserPoolFromConfig(cfg *config.UserPool) (up *UserPool, err error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("no pool config provided")
+	}
 
-func NewUserPoolFromConfig(c *UserPoolConfig) (up *UserPool, err error) {
-	if c == nil {
-		return nil, errors.New("no pool config provided")
-	}
-	ammunition, err := NewAmmoProviderFromConfig(c.AmmoProvider)
+	ammunition, err := GetAmmoProvider(cfg.AmmoProvider)
 	if err != nil {
 		return nil, err
 	}
-	results, err := NewResultListenerFromConfig(c.ResultListener)
+	results, err := GetResultListener(cfg.ResultListener)
 	if err != nil {
 		return nil, err
 	}
-	startupLimiter, err := NewLimiterFromConfig(c.StartupLimiter)
+	startupLimiter, err := GetLimiter(cfg.StartupLimiter)
 	if err != nil {
 		return nil, err
 	}
 	up = &UserPool{
-		name:              c.Name,
+		name:              cfg.Name,
 		ammunition:        ammunition,
 		results:           results,
 		startupLimiter:    startupLimiter,
-		done:              make(chan bool, 1),
-		gunConfig:         c.Gun,
-		userLimiterConfig: c.UserLimiter,
+		gunConfig:         cfg.Gun,
+		userLimiterConfig: cfg.UserLimiter,
 	}
 	return
+}
+
+func (up *UserPool) Start(ctx context.Context) error {
+	// userCtx will be canceled when all users finished their execution
+	userCtx, resultCancel := context.WithCancel(ctx)
+
+	userPromises := utils.Promises{}
+	utilsPromises := utils.Promises{
+		utils.PromiseCtx(ctx, up.ammunition.Start),
+		utils.PromiseCtx(userCtx, up.results.Start),
+		utils.PromiseCtx(ctx, up.startupLimiter.Start),
+	}
+
+	i := 0
+	for range up.startupLimiter.Control() {
+		if i > MaximumUsers {
+			return fmt.Errorf("Maximum users %d exceeded", MaximumUsers)
+		}
+		l, err := GetLimiter(up.userLimiterConfig)
+		if err != nil {
+			return fmt.Errorf("could not make a user limiter from config due to %s", err)
+		}
+		g, err := GetGun(up.gunConfig)
+		if err != nil {
+			return fmt.Errorf("could not make a gun from config due to %s", err)
+		}
+		u := &User{
+			Name:       fmt.Sprintf("%s/%d", up.name, i),
+			Ammunition: up.ammunition,
+			Results:    up.results,
+			Limiter:    l,
+			Gun:        g,
+		}
+		utilsPromises = append(utilsPromises, utils.PromiseCtx(userCtx, l.Start))
+		userPromises = append(userPromises, utils.PromiseCtx(ctx, u.Run))
+
+		i++
+	}
+	// FIXME: wrong logic here
+	log.Println("Started all users. Waiting for them")
+	err := <-userPromises.All()
+	resultCancel() // stop result listener when all users finished
+
+	err2 := utilsPromises.All()
+	if err2 != nil {
+		fmt.Printf("%v", err2)
+	}
+	return err
 }

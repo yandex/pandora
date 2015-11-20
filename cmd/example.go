@@ -1,4 +1,4 @@
-package main
+package cmd
 
 const exampleConfig string = `
 {
@@ -14,6 +14,7 @@ const exampleConfig string = `
       "AmmoProvider": {
         "AmmoType": "jsonline/spdy",
         "AmmoSource": "./example/data/ammo.jsonline"
+        "Passes": 10,
       },
       "ResultListener": {
         "ListenerType": "log/simple",

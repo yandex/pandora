@@ -1,16 +1,22 @@
 package engine
 
 import (
-	"golang.org/x/net/context"
 	"log"
+
+	"golang.org/x/net/context"
+
+	"github.com/yandex/pandora/config"
+	"github.com/yandex/pandora/utils"
 )
 
 type Engine struct {
-	cfg GlobalConfig
+	cfg config.Global
 }
 
-func New(cfg GlobalConfig) *Engine {
-	return &Engine{cfg}
+func New(cfg config.Global) *Engine {
+	return &Engine{
+		cfg: cfg,
+	}
 }
 
 func (e *Engine) Serve(ctx context.Context) error {
@@ -23,13 +29,17 @@ func (e *Engine) Serve(ctx context.Context) error {
 		}
 		pools = append(pools, up)
 	}
+	promises := utils.Promises{}
 	for _, up := range pools {
-		up.Start()
+		promises = append(promises, utils.PromiseCtx(ctx, up.Start))
 	}
-	for _, up := range pools {
-		<-up.done
+	select {
+	case err := <-promises.All():
+		if err != nil {
+			return err
+		}
+	case <-ctx.Done():
 	}
-
 	log.Println("Done")
 	return nil
 }

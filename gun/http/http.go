@@ -1,102 +1,42 @@
-package engine
+package http
 
 import (
-	"bufio"
-	"encoding/json"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"time"
+
+	"golang.org/x/net/context"
+
+	"net"
+
+	"github.com/yandex/pandora/aggregate"
+	"github.com/yandex/pandora/ammo"
+	"github.com/yandex/pandora/config"
+	"github.com/yandex/pandora/gun"
 )
-
-type HttpAmmo struct {
-	Host    string
-	Method  string
-	Uri     string
-	Headers map[string]string
-	Tag     string
-}
-
-type HttpAmmoJsonDecoder struct{}
-
-func (ha *HttpAmmoJsonDecoder) FromString(jsonDoc string) (a Ammo, err error) {
-	a = &HttpAmmo{}
-	err = json.Unmarshal([]byte(jsonDoc), a)
-	return
-}
-
-func (ha *HttpAmmo) Request() (req *http.Request, err error) {
-	//make a request
-	req, err = http.NewRequest(ha.Method, "https://"+ha.Host+ha.Uri, nil)
-	for k, v := range ha.Headers {
-		req.Header.Set(k, v)
-	}
-	return
-}
-
-type HttpAmmoProvider struct {
-	ammoProvider
-	ammoFile  *os.File
-	ammoLimit int
-	loopLimit int
-}
-
-func (ap *HttpAmmoProvider) Start() {
-	go func() { // requests reader/generator
-		ammoNumber := 0
-		loops := 0
-		for {
-			scanner := bufio.NewScanner(ap.ammoFile)
-			scanner.Split(bufio.ScanLines)
-			for scanner.Scan() && (ap.ammoLimit == 0 || ammoNumber < ap.ammoLimit) {
-				txt := scanner.Text()
-				if a, err := ap.decoder.FromString(txt); err != nil {
-					log.Fatal("Failed to decode ammo: ", err)
-				} else {
-					ammoNumber += 1
-					ap.source <- a
-				}
-			}
-			if loops > ap.loopLimit {
-				break
-			}
-			ap.ammoFile.Seek(0, 0)
-			log.Printf("Restarted ammo the beginning. Loops left: %d\n", ap.loopLimit-loops)
-			loops++
-		}
-		close(ap.source)
-		log.Println("Ran out of ammo")
-	}()
-}
-
-func NewHttpAmmoProvider(filename string, ammoLimit int, loopLimit int) (ap AmmoProvider, err error) {
-	file, err := os.Open(filename)
-	if err == nil {
-		ap = &HttpAmmoProvider{
-			ammoLimit: ammoLimit,
-			loopLimit: loopLimit,
-			ammoFile:  file,
-			ammoProvider: ammoProvider{
-				decoder: &HttpAmmoJsonDecoder{},
-				source:  make(chan Ammo, 128),
-			},
-		}
-	}
-	return
-}
 
 // === Gun ===
 
+const (
+	// TODO: extract to config?
+	dialTimeout = 3 // in sec
+)
+
 type HttpGun struct {
 	target string
+	ssl    bool
 	client *http.Client
 }
 
-func (hg *HttpGun) Run(a Ammo, results chan<- Sample) {
+// Shoot to target, this method is not thread safe
+func (hg *HttpGun) Shoot(ctx context.Context, a ammo.Ammo,
+	results chan<- aggregate.Sample) error {
+
 	if hg.client == nil {
 		hg.Connect(results)
 	}
@@ -107,12 +47,12 @@ func (hg *HttpGun) Run(a Ammo, results chan<- Sample) {
 		results <- ss
 	}()
 	// now send the request to obtain a http response
-	ha, ok := a.(*HttpAmmo)
+	ha, ok := a.(*ammo.Http)
 	if !ok {
 		errStr := fmt.Sprintf("Got '%T' instead of 'HttpAmmo'", a)
 		log.Println(errStr)
 		ss.err = errors.New(errStr)
-		return
+		return ss.err
 	}
 	if ha.Tag != "" {
 		ss.tag += "|" + ha.Tag
@@ -121,20 +61,20 @@ func (hg *HttpGun) Run(a Ammo, results chan<- Sample) {
 	if err != nil {
 		log.Printf("Error making HTTP request: %s\n", err)
 		ss.err = err
-		return
+		return err
 	}
 	res, err := hg.client.Do(req)
 	if err != nil {
 		log.Printf("Error performing a request: %s\n", err)
 		ss.err = err
-		return
+		return err
 	}
 	defer res.Body.Close()
 	_, err = io.Copy(ioutil.Discard, res.Body)
 	if err != nil {
 		log.Printf("Error reading response body: %s\n", err)
 		ss.err = err
-		return
+		return err
 	}
 
 	// TODO: make this an optional verbose answ_log output
@@ -142,16 +82,31 @@ func (hg *HttpGun) Run(a Ammo, results chan<- Sample) {
 	// _, err = res.Body.(io.Reader).Read(data)
 	// fmt.Println(string(data))
 	ss.StatusCode = res.StatusCode
-	return
+	return nil
 }
 
 func (hg *HttpGun) Close() {
 	hg.client = nil
 }
 
-func (hg *HttpGun) Connect(results chan<- Sample) {
+func (hg *HttpGun) Connect(results chan<- aggregate.Sample) {
 	hg.Close()
-	hg.client = &http.Client{}
+	config := tls.Config{
+		InsecureSkipVerify: true,
+	}
+	dialer := &net.Dialer{
+		Timeout:   dialTimeout * time.Second,
+		KeepAlive: 120 * time.Second,
+	}
+	tr := &http.Transport{
+		Proxy:           http.ProxyFromEnvironment,
+		TLSClientConfig: &config,
+		Dial: func(network, address string) (net.Conn, error) {
+			return dialer.Dial(network, hg.target)
+		},
+		TLSHandshakeTimeout: dialTimeout * time.Second,
+	}
+	hg.client = &http.Client{Transport: tr}
 	// 	connectStart := time.Now()
 	// 	config := tls.Config{
 	// 		InsecureSkipVerify: true,
@@ -185,7 +140,7 @@ type HttpSample struct {
 	err        error
 }
 
-func (ds *HttpSample) PhoutSample() *PhoutSample {
+func (ds *HttpSample) PhoutSample() *aggregate.PhoutSample {
 	var protoCode, netCode int
 	if ds.err != nil {
 		protoCode = 500
@@ -194,19 +149,19 @@ func (ds *HttpSample) PhoutSample() *PhoutSample {
 		netCode = 0
 		protoCode = ds.StatusCode
 	}
-	return &PhoutSample{
-		ts:             ds.ts,
-		tag:            ds.tag,
-		rt:             ds.rt,
-		connect:        0,
-		send:           0,
-		latency:        0,
-		receive:        0,
-		interval_event: 0,
-		egress:         0,
-		igress:         0,
-		netCode:        netCode,
-		protoCode:      protoCode,
+	return &aggregate.PhoutSample{
+		TS:            ds.ts,
+		Tag:           ds.tag,
+		RT:            ds.rt,
+		Connect:       0,
+		Send:          0,
+		Latency:       0,
+		Receive:       0,
+		IntervalEvent: 0,
+		Egress:        0,
+		Igress:        0,
+		NetCode:       netCode,
+		ProtoCode:     protoCode,
 	}
 }
 
@@ -214,7 +169,7 @@ func (ds *HttpSample) String() string {
 	return fmt.Sprintf("rt: %d [%d] %s", ds.rt, ds.StatusCode, ds.tag)
 }
 
-func NewHttpGunFromConfig(c *GunConfig) (g Gun, err error) {
+func New(c *config.Gun) (gun.Gun, error) {
 	params := c.Parameters
 	if params == nil {
 		return nil, errors.New("Parameters not specified")
@@ -223,14 +178,23 @@ func NewHttpGunFromConfig(c *GunConfig) (g Gun, err error) {
 	if !ok {
 		return nil, errors.New("Target not specified")
 	}
+	if !ok {
+		return nil, errors.New("Target not specified")
+	}
+	g := &HttpGun{}
 	switch t := target.(type) {
 	case string:
-		g = &HttpGun{
-			target: target.(string),
-		}
+		g.target = target.(string)
 	default:
-		return nil, errors.New(fmt.Sprintf("Target is of the wrong type."+
-		" Expected 'string' got '%T'", t))
+		return nil, fmt.Errorf("Target is of the wrong type."+
+			" Expected 'string' got '%T'", t)
+	}
+	if ssl, ok := params["SSL"]; ok {
+		if sslVal, casted := ssl.(bool); casted {
+			g.ssl = sslVal
+		} else {
+			return nil, fmt.Errorf("SSL should be boolean type.")
+		}
 	}
 	return g, nil
 }
