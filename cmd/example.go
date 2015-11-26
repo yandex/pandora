@@ -1,3 +1,6 @@
+package cmd
+
+const exampleConfig string = `
 {
   "Pools": [
     {
@@ -10,8 +13,8 @@
       },
       "AmmoProvider": {
         "AmmoType": "jsonline/spdy",
-        "AmmoSource": "./example/data/ammo.jsonline",
-        "Passes": 10
+        "AmmoSource": "./example/data/ammo.jsonline"
+        "Passes": 10,
       },
       "ResultListener": {
         "ListenerType": "log/simple",
@@ -66,3 +69,4 @@
     }
   ]
 }
+`
