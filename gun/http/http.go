@@ -178,9 +178,6 @@ func New(c *config.Gun) (gun.Gun, error) {
 	if !ok {
 		return nil, errors.New("Target not specified")
 	}
-	if !ok {
-		return nil, errors.New("Target not specified")
-	}
 	g := &HttpGun{}
 	switch t := target.(type) {
 	case string:

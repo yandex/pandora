@@ -20,7 +20,7 @@ Ask direvius@ in Yandex.Tank's chat room [![Gitter](https://badges.gitter.im/Joi
 
 ## Extension points
 
-You can write plugins with the next extension points:
+You can write plugins with the next [extension points](https://github.com/progrium/go-extpoints):
 
 ammo.Provider
 aggregate.ResultListener
