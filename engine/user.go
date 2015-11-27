@@ -14,10 +14,6 @@ import (
 	"github.com/yandex/pandora/utils"
 )
 
-const (
-	MaximumUsers = 100
-)
-
 type User struct {
 	Name       string
 	Ammunition ammo.Provider
@@ -63,6 +59,7 @@ type UserPool struct {
 	ammunition        ammo.Provider
 	results           aggregate.ResultListener
 	startupLimiter    limiter.Limiter
+	sharedSchedule    bool
 	users             []*User
 	done              chan bool
 }
@@ -91,6 +88,7 @@ func NewUserPoolFromConfig(cfg *config.UserPool) (up *UserPool, err error) {
 		startupLimiter:    startupLimiter,
 		gunConfig:         cfg.Gun,
 		userLimiterConfig: cfg.UserLimiter,
+		sharedSchedule:    cfg.SharedSchedule,
 	}
 	return
 }
@@ -105,15 +103,25 @@ func (up *UserPool) Start(ctx context.Context) error {
 		utils.PromiseCtx(userCtx, up.results.Start),
 		utils.PromiseCtx(ctx, up.startupLimiter.Start),
 	}
+	var sharedLimiter Limiter
 
-	i := 0
-	for range up.startupLimiter.Control() {
-		if i > MaximumUsers {
-			return fmt.Errorf("Maximum users %d exceeded", MaximumUsers)
-		}
-		l, err := GetLimiter(up.userLimiterConfig)
+	if up.sharedLimiter {
+		var err error
+		sharedLimiter, err = GetLimiter(up.userLimiterConfig)
 		if err != nil {
 			return fmt.Errorf("could not make a user limiter from config due to %s", err)
+		}
+	}
+
+	for range up.startupLimiter.Control() {
+		var l Limiter
+		if up.sharedLimiter {
+			l = sharedLimiter
+		} else {
+			l, err := GetLimiter(up.userLimiterConfig)
+			if err != nil {
+				return fmt.Errorf("could not make a user limiter from config due to %s", err)
+			}
 		}
 		g, err := GetGun(up.gunConfig)
 		if err != nil {
@@ -128,8 +136,6 @@ func (up *UserPool) Start(ctx context.Context) error {
 		}
 		utilsPromises = append(utilsPromises, utils.PromiseCtx(userCtx, l.Start))
 		userPromises = append(userPromises, utils.PromiseCtx(ctx, u.Run))
-
-		i++
 	}
 	// FIXME: wrong logic here
 	log.Println("Started all users. Waiting for them")

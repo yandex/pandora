@@ -49,6 +49,7 @@ type UserPool struct {
 	ResultListener *ResultListener
 	UserLimiter    *Limiter
 	StartupLimiter *Limiter
+	SharedSchedule bool // wether or not will all Users from this pool have shared schedule
 }
 
 func NewGlobalFromJSON(jsonDoc []byte) (gc Global, err error) {
