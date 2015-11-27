@@ -48,3 +48,29 @@ See architectural scheme source in ```docs/architecture.graphml```. It was creat
 need it to open the file.
 
 ![Architectural scheme](/docs/architecture.png)
+
+Pandora is made of components. Components talk to each other over the channels. There are different types of components.
+
+### Component types
+
+#### Ammo provider and decoder
+
+Ammo decoder knows how to make an ammo object from an ammo file or other external resource. Ammo provider uses a decoder
+to decode ammo and passes ammo objects to the Users.
+
+#### User pool
+
+User pool controls the creation of Users. All users from one user pool will get ammo from one ammo provider. User creation
+schedule is controlled with Startup Limiter. All users from one user pool will also have guns of the same type.
+
+#### Limiters
+
+Limiters are objects that will put messages to its underlying channel according to a schedule. User creation, shooting or
+other processes thus can be controlled by a Limiter.
+
+#### Users and Guns
+User takes an ammo, waits for a limiter tick and then shoots with a Gun it has. Guns are the tools to send a request to your
+service and measure the parameters of the response.
+
+#### Result Listener
+Result listener's task is to collect measured samples and save them somewhere.
