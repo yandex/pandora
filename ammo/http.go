@@ -70,9 +70,9 @@ func (ap *HttpProvider) Start(ctx context.Context) error {
 		}
 		ap.ammoFile.Seek(0, 0)
 		if ap.passes == 0 {
-			log.Printf("Restarted ammo the beginning. Infinite passes.\n")
+			log.Printf("Restarted ammo from the beginning. Infinite passes.\n")
 		} else {
-			log.Printf("Restarted ammo the beginning. Passes left: %d\n", ap.passes-passNum)
+			log.Printf("Restarted ammo from the beginning. Passes left: %d\n", ap.passes-passNum)
 		}
 	}
 	log.Println("Ran out of ammo")

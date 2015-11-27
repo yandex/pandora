@@ -38,3 +38,13 @@ If you don want to build pandora without spdy gun:
 ```
 go build -tags 'noSpdyGun' github.com/yandex/pandora
 ```
+
+## Basic concepts
+
+### Architectural scheme
+
+See architectural scheme source in ```docs/architecture.graphml```. It was created with
+[YeD](https://www.yworks.com/en/products/yfiles/yed/) editor, so you’ll probably
+need it to open the file.
+
+![Architectural scheme](/docs/architecture.png)
