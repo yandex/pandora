@@ -35,6 +35,7 @@ func init() {
 }
 
 func Run() {
+	fmt.Printf("Pandora v0.1.1\n")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of Pandora: pandora [<config_filename>]\n"+
 			"<config_filename> is './load.json' by default\n")

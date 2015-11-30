@@ -99,7 +99,6 @@ func (hg *HttpGun) Connect(results chan<- aggregate.Sample) {
 		KeepAlive: 120 * time.Second,
 	}
 	tr := &http.Transport{
-		Proxy:           http.ProxyFromEnvironment,
 		TLSClientConfig: &config,
 		Dial: func(network, address string) (net.Conn, error) {
 			return dialer.Dial(network, hg.target)
@@ -145,6 +144,7 @@ func (ds *HttpSample) PhoutSample() *aggregate.PhoutSample {
 	if ds.err != nil {
 		protoCode = 500
 		netCode = 999
+		log.Printf("Error code. %v\n", ds.err)
 	} else {
 		netCode = 0
 		protoCode = ds.StatusCode

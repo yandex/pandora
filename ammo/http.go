@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -21,11 +20,11 @@ type Http struct {
 	Tag     string
 }
 
-func (ha *Http) Request() (*http.Request, error) {
+func (h *Http) Request() (*http.Request, error) {
 	// FIXME: something wrong here with https
-	req, err := http.NewRequest(ha.Method, "https://"+ha.Host+ha.Uri, nil)
+	req, err := http.NewRequest(h.Method, "http://"+h.Host+h.Uri, nil)
 	if err == nil {
-		for k, v := range ha.Headers {
+		for k, v := range h.Headers {
 			req.Header.Set(k, v)
 		}
 	}
@@ -42,19 +41,24 @@ func HttpJSONDecode(jsonDoc []byte) (Ammo, error) {
 type HttpProvider struct {
 	*BaseProvider
 
-	sink      chan<- Ammo
-	ammoFile  io.ReadSeeker
-	ammoLimit int
-	passes    int
+	sink         chan<- Ammo
+	ammoFileName string
+	ammoLimit    int
+	passes       int
 }
 
 func (ap *HttpProvider) Start(ctx context.Context) error {
 	defer close(ap.sink)
+	ammoFile, err := os.Open(ap.ammoFileName)
+	if err != nil {
+		return fmt.Errorf("failed to open ammo source: %v", err)
+	}
+	defer ammoFile.Close()
 	ammoNumber := 0
 	passNum := 0
 	for {
 		passNum++
-		scanner := bufio.NewScanner(ap.ammoFile)
+		scanner := bufio.NewScanner(ammoFile)
 		scanner.Split(bufio.ScanLines)
 		for scanner.Scan() && (ap.ammoLimit == 0 || ammoNumber < ap.ammoLimit) {
 			data := scanner.Bytes()
@@ -68,7 +72,7 @@ func (ap *HttpProvider) Start(ctx context.Context) error {
 		if ap.passes != 0 && passNum >= ap.passes {
 			break
 		}
-		ap.ammoFile.Seek(0, 0)
+		ammoFile.Seek(0, 0)
 		if ap.passes == 0 {
 			log.Printf("Restarted ammo from the beginning. Infinite passes.\n")
 		} else {
@@ -80,18 +84,12 @@ func (ap *HttpProvider) Start(ctx context.Context) error {
 }
 
 func NewHttpProvider(c *config.AmmoProvider) (Provider, error) {
-	// When we should close a file?
-	// Also I'm not sure that we should open a file here but in Start method
-	file, err := os.Open(c.AmmoSource)
-	if err != nil {
-		return nil, err
-	}
 	ammoCh := make(chan Ammo)
 	ap := &HttpProvider{
-		ammoLimit: c.AmmoLimit,
-		passes:    c.Passes,
-		ammoFile:  file,
-		sink:      ammoCh,
+		ammoLimit:    c.AmmoLimit,
+		passes:       c.Passes,
+		ammoFileName: c.AmmoSource,
+		sink:         ammoCh,
 		BaseProvider: NewBaseProvider(
 			ammoCh,
 			HttpJSONDecode,
