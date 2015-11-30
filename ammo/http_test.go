@@ -1,8 +1,6 @@
 package ammo
 
 import (
-	"bytes"
-	"io/ioutil"
 	"testing"
 	"time"
 
@@ -36,20 +34,6 @@ func TestNewHttpProvider(t *testing.T) {
 	assert.NotNil(t, httpProvider.BaseProvider.source)
 	assert.NotNil(t, httpProvider.BaseProvider.decoder)
 
-	// compare data
-	actualData, err := ioutil.ReadAll(httpProvider.ammoFile)
-	require.NoError(t, err)
-
-	expectedData, err := ioutil.ReadFile(httpTestFilename)
-	require.NoError(t, err)
-
-	assert.Equal(t, expectedData, actualData)
-
-	// test wrong file
-
-	c.AmmoSource = "./testdata/badammo_name.jsonline"
-	_, err = NewHttpProvider(c)
-	assert.Error(t, err)
 }
 
 func TestHttpProvider(t *testing.T) {
@@ -57,14 +41,11 @@ func TestHttpProvider(t *testing.T) {
 	defer cancel()
 	providerCtx, _ := context.WithCancel(ctx)
 
-	data, err := ioutil.ReadFile(httpTestFilename)
-	require.NoError(t, err)
-
 	ammoCh := make(chan Ammo, 128)
 	provider := &HttpProvider{
-		passes:   2,
-		ammoFile: bytes.NewReader(data),
-		sink:     ammoCh,
+		passes:       2,
+		ammoFileName: httpTestFilename,
+		sink:         ammoCh,
 		BaseProvider: NewBaseProvider(
 			ammoCh,
 			HttpJSONDecode,
