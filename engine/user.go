@@ -104,9 +104,9 @@ func (up *UserPool) Start(ctx context.Context) error {
 		utils.PromiseCtx(userCtx, up.results.Start),
 		utils.PromiseCtx(ctx, up.startupLimiter.Start),
 	}
-	var sharedLimiter Limiter
+	var sharedLimiter limiter.Limiter
 
-	if up.sharedLimiter {
+	if up.sharedSchedule {
 		var err error
 		sharedLimiter, err = GetLimiter(up.userLimiterConfig)
 		if err != nil {
@@ -116,15 +116,16 @@ func (up *UserPool) Start(ctx context.Context) error {
 		// This may cause spike load in the beginning of a test if it takes time
 		// to initialize a user, because we don't wait for them to initialize in
 		// case of shared limiter and there might be some ticks accumulated
-		utilsPromises = append(utilsPromises, utils.PromiseCtx(userCtx, l.Start))
+		utilsPromises = append(utilsPromises, utils.PromiseCtx(userCtx, sharedLimiter.Start))
 	}
 
 	for range up.startupLimiter.Control() {
-		var l Limiter
-		if up.sharedLimiter {
+		var l limiter.Limiter
+		if up.sharedSchedule {
 			l = sharedLimiter
 		} else {
-			l, err := GetLimiter(up.userLimiterConfig)
+			var err error
+			l, err = GetLimiter(up.userLimiterConfig)
 			if err != nil {
 				return fmt.Errorf("could not make a user limiter from config due to %s", err)
 			}
@@ -134,13 +135,13 @@ func (up *UserPool) Start(ctx context.Context) error {
 			return fmt.Errorf("could not make a gun from config due to %s", err)
 		}
 		u := &User{
-			Name:       fmt.Sprintf("%s/%d", up.name, i),
+			Name:       up.name,
 			Ammunition: up.ammunition,
 			Results:    up.results,
 			Limiter:    l,
 			Gun:        g,
 		}
-		if !up.sharedLimiter {
+		if !up.sharedSchedule {
 			utilsPromises = append(utilsPromises, utils.PromiseCtx(userCtx, l.Start))
 		}
 		userPromises = append(userPromises, utils.PromiseCtx(ctx, u.Run))
