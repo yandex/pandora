@@ -63,6 +63,12 @@ func (hg *HttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 		ss.err = err
 		return err
 	}
+	req.URL.Host = hg.target
+	if hg.ssl {
+		req.URL.Scheme = "https"
+	} else {
+		req.URL.Scheme = "http"
+	}
 	res, err := hg.client.Do(req)
 	if err != nil {
 		log.Printf("Error performing a request: %s\n", err)
@@ -94,15 +100,14 @@ func (hg *HttpGun) Connect(results chan<- aggregate.Sample) {
 	config := tls.Config{
 		InsecureSkipVerify: true,
 	}
+	// TODO: do we want to give access to keep alive settings for guns in config?
 	dialer := &net.Dialer{
 		Timeout:   dialTimeout * time.Second,
 		KeepAlive: 120 * time.Second,
 	}
 	tr := &http.Transport{
-		TLSClientConfig: &config,
-		Dial: func(network, address string) (net.Conn, error) {
-			return dialer.Dial(network, hg.target)
-		},
+		TLSClientConfig:     &config,
+		Dial:                dialer.Dial,
 		TLSHandshakeTimeout: dialTimeout * time.Second,
 	}
 	hg.client = &http.Client{Transport: tr}
