@@ -95,6 +95,7 @@ func NewUserPoolFromConfig(cfg *config.UserPool) (up *UserPool, err error) {
 
 func (up *UserPool) Start(ctx context.Context) error {
 	// userCtx will be canceled when all users finished their execution
+
 	userCtx, resultCancel := context.WithCancel(ctx)
 
 	userPromises := utils.Promises{}
@@ -111,6 +112,11 @@ func (up *UserPool) Start(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not make a user limiter from config due to %s", err)
 		}
+		// Starting shared limiter.
+		// This may cause spike load in the beginning of a test if it takes time
+		// to initialize a user, because we don't wait for them to initialize in
+		// case of shared limiter and there might be some ticks accumulated
+		utilsPromises = append(utilsPromises, utils.PromiseCtx(userCtx, l.Start))
 	}
 
 	for range up.startupLimiter.Control() {
@@ -134,7 +140,9 @@ func (up *UserPool) Start(ctx context.Context) error {
 			Limiter:    l,
 			Gun:        g,
 		}
-		utilsPromises = append(utilsPromises, utils.PromiseCtx(userCtx, l.Start))
+		if !up.sharedLimiter {
+			utilsPromises = append(utilsPromises, utils.PromiseCtx(userCtx, l.Start))
+		}
 		userPromises = append(userPromises, utils.PromiseCtx(ctx, u.Run))
 	}
 	// FIXME: wrong logic here
