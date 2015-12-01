@@ -38,7 +38,9 @@ loop:
 				log.Println("Ammo ended")
 				break loop
 			}
-			_, more = <-control
+			if control != nil {
+				_, more = <-control
+			}
 			if more {
 				u.Gun.Shoot(ctx, j, sink)
 			} else {
