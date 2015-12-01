@@ -11,11 +11,20 @@ type unlimited struct {
 
 var _ Limiter = (*unlimited)(nil)
 
-func (pl *unlimited) Start(ctx context.Context) error {
+func (ul *unlimited) Start(ctx context.Context) error {
+	defer close(ul.control)
+loop:
+	for {
+		select {
+		case ul.control <- true:
+		case <-ctx.Done():
+			break loop
+
+		}
+	}
 	return nil
 }
 
 func NewUnlimitedFromConfig(c *config.Limiter) (l Limiter, err error) {
-	// just return nil to show that there are no limits
-	return &unlimited{limiter: limiter{}}, nil
+	return &unlimited{limiter: limiter{make(chan bool, 1)}}, nil
 }
