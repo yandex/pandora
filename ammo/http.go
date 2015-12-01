@@ -56,6 +56,7 @@ func (ap *HttpProvider) Start(ctx context.Context) error {
 	defer ammoFile.Close()
 	ammoNumber := 0
 	passNum := 0
+loop:
 	for {
 		passNum++
 		scanner := bufio.NewScanner(ammoFile)
@@ -66,7 +67,11 @@ func (ap *HttpProvider) Start(ctx context.Context) error {
 				return fmt.Errorf("failed to decode ammo: %v", err)
 			} else {
 				ammoNumber++
-				ap.sink <- a
+				select {
+				case ap.sink <- a:
+				case <-ctx.Done():
+					break loop
+				}
 			}
 		}
 		if ap.passes != 0 && passNum >= ap.passes {

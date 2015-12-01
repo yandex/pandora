@@ -52,13 +52,39 @@ type PhoutResultListener struct {
 	phout  *os.File
 }
 
-func (rl *PhoutResultListener) Start(context.Context) error {
-	for r := range rl.source {
-		pc, ok := r.(PhantomCompatible)
-		if ok {
-			rl.phout.WriteString(fmt.Sprintf("%s\n", pc.PhoutSample()))
-		} else {
-			return fmt.Errorf("Not phantom compatible sample")
+func (rl *PhoutResultListener) handle(r Sample) error {
+	pc, ok := r.(PhantomCompatible)
+	if ok {
+		_, err := rl.phout.WriteString(fmt.Sprintf("%s\n", pc.PhoutSample()))
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("Not phantom compatible sample")
+	}
+	return nil
+}
+
+func (rl *PhoutResultListener) Start(ctx context.Context) error {
+loop:
+	for {
+		select {
+		case r := <-rl.source:
+			if err := rl.handle(r); err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			// Context is done, but we should read all data from source
+			for {
+				select {
+				case r := <-rl.source:
+					if err := rl.handle(r); err != nil {
+						return err
+					}
+				default:
+					break loop
+				}
+			}
 		}
 	}
 	return nil

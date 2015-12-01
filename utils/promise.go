@@ -24,6 +24,7 @@ type PromiseFunc func() error
 
 // group asyncs and return grouped err after all async is finished
 func (promises Promises) All() chan error {
+	// TODO: wait in select for all promises at once. Because we can possible have a deadlock right now.
 	return Promise(func() error {
 		var result *MultiError
 		for _, a := range promises {

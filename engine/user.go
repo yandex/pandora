@@ -96,13 +96,13 @@ func NewUserPoolFromConfig(cfg *config.UserPool) (up *UserPool, err error) {
 func (up *UserPool) Start(ctx context.Context) error {
 	// userCtx will be canceled when all users finished their execution
 
-	userCtx, resultCancel := context.WithCancel(ctx)
+	utilCtx, utilCancel := context.WithCancel(ctx)
 
 	userPromises := utils.Promises{}
 	utilsPromises := utils.Promises{
-		utils.PromiseCtx(ctx, up.ammunition.Start),
-		utils.PromiseCtx(userCtx, up.results.Start),
-		utils.PromiseCtx(ctx, up.startupLimiter.Start),
+		utils.PromiseCtx(utilCtx, up.ammunition.Start),
+		utils.PromiseCtx(utilCtx, up.results.Start),
+		utils.PromiseCtx(utilCtx, up.startupLimiter.Start),
 	}
 	var sharedLimiter limiter.Limiter
 
@@ -116,7 +116,7 @@ func (up *UserPool) Start(ctx context.Context) error {
 		// This may cause spike load in the beginning of a test if it takes time
 		// to initialize a user, because we don't wait for them to initialize in
 		// case of shared limiter and there might be some ticks accumulated
-		utilsPromises = append(utilsPromises, utils.PromiseCtx(userCtx, sharedLimiter.Start))
+		utilsPromises = append(utilsPromises, utils.PromiseCtx(utilCtx, sharedLimiter.Start))
 	}
 
 	for range up.startupLimiter.Control() {
@@ -142,14 +142,15 @@ func (up *UserPool) Start(ctx context.Context) error {
 			Gun:        g,
 		}
 		if !up.sharedSchedule {
-			utilsPromises = append(utilsPromises, utils.PromiseCtx(userCtx, l.Start))
+			utilsPromises = append(utilsPromises, utils.PromiseCtx(utilCtx, l.Start))
 		}
 		userPromises = append(userPromises, utils.PromiseCtx(ctx, u.Run))
 	}
 	// FIXME: wrong logic here
 	log.Println("Started all users. Waiting for them")
 	err := <-userPromises.All()
-	resultCancel() // stop result listener when all users finished
+	log.Println("Stop utils")
+	utilCancel() // stop result listener when all users finished
 
 	err2 := <-utilsPromises.All()
 	if err2 != nil {
