@@ -22,14 +22,26 @@ type LoggingResultListener struct {
 	source <-chan Sample
 }
 
+func (rl *LoggingResultListener) handle(r Sample) {
+	log.Println(r)
+}
+
 func (rl *LoggingResultListener) Start(ctx context.Context) error {
 loop:
 	for {
 		select {
 		case r := <-rl.source:
-			log.Println(r)
+			rl.handle(r)
 		case <-ctx.Done():
-			break loop
+			// Context is done, but we should read all data from source
+			for {
+				select {
+				case r := <-rl.source:
+					rl.handle(r)
+				default:
+					break loop
+				}
+			}
 		}
 	}
 	return nil
