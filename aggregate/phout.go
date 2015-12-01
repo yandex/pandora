@@ -70,13 +70,17 @@ loop:
 	for {
 		select {
 		case r := <-rl.source:
-			rl.handle(r)
+			if err := rl.handle(r); err != nil {
+				return err
+			}
 		case <-ctx.Done():
 			// Context is done, but we should read all data from source
 			for {
 				select {
 				case r := <-rl.source:
-					rl.handle(r)
+					if err := rl.handle(r); err != nil {
+						return err
+					}
 				default:
 					break loop
 				}
