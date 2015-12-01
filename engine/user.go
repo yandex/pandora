@@ -151,9 +151,9 @@ func (up *UserPool) Start(ctx context.Context) error {
 	err := <-userPromises.All()
 	resultCancel() // stop result listener when all users finished
 
-	err2 := utilsPromises.All()
+	err2 := <-utilsPromises.All()
 	if err2 != nil {
-		fmt.Printf("%v", err2)
+		fmt.Printf("Error waiting utils promises: %s", err2.Error())
 	}
 	return err
 }
