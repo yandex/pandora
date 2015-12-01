@@ -32,6 +32,7 @@ func init() {
 	// inject limiters
 	extpoints.Limiters.Register(limiter.NewPeriodicFromConfig, "periodic")
 	extpoints.Limiters.Register(limiter.NewCompositeFromConfig, "composite")
+	extpoints.Limiters.Register(limiter.NewUnlimitedFromConfig, "unlimited")
 }
 
 func Run() {
