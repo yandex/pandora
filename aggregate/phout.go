@@ -1,8 +1,10 @@
 package aggregate
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/yandex/pandora/config"
 	"golang.org/x/net/context"
@@ -49,7 +51,7 @@ type PhoutResultListener struct {
 	resultListener
 
 	source <-chan Sample
-	phout  *os.File
+	phout  *bufio.Writer
 }
 
 func (rl *PhoutResultListener) handle(r Sample) error {
@@ -73,6 +75,8 @@ loop:
 			if err := rl.handle(r); err != nil {
 				return err
 			}
+		case <-time.After(1 * time.Second):
+			rl.phout.Flush()
 		case <-ctx.Done():
 			// Context is done, but we should read all data from source
 			for {
@@ -97,13 +101,14 @@ func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
 	} else {
 		phoutFile, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0666)
 	}
+	writer := bufio.NewWriter(phoutFile)
 	ch := make(chan Sample, 32)
 	return &PhoutResultListener{
 		source: ch,
 		resultListener: resultListener{
 			sink: ch,
 		},
-		phout: phoutFile,
+		phout: writer,
 	}, nil
 }
 
