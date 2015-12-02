@@ -15,9 +15,9 @@ func TestSizeLimiter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	master := &limiter{control: make(chan bool, 10)}
+	master := &limiter{control: make(chan struct{}, 10)}
 	for i := 0; i < 10; i++ {
-		master.control <- true
+		master.control <- struct{}{}
 	}
 
 	size := NewSize(5, master)
@@ -40,7 +40,7 @@ func TestEmptySizeLimiter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	master := &limiter{control: make(chan bool, 10)}
+	master := &limiter{control: make(chan struct{}, 10)}
 	close(master.control)
 
 	size := NewSize(5, master)
@@ -65,7 +65,7 @@ func TestContextCancelInSizeLimiter(t *testing.T) {
 	sizeCtx, sizeCancel := context.WithCancel(ctx)
 	sizeCancel()
 
-	master := &limiter{control: make(chan bool, 10)}
+	master := &limiter{control: make(chan struct{}, 10)}
 
 	size := NewSize(5, master)
 	promise := utils.PromiseCtx(sizeCtx, size.Start)
@@ -87,13 +87,13 @@ func TestContextCancelWhileControlSizeLimiter(t *testing.T) {
 	defer cancel()
 	sizeCtx, sizeCancel := context.WithCancel(ctx)
 
-	master := &limiter{control: make(chan bool)}
+	master := &limiter{control: make(chan struct{})}
 
 	size := NewSize(5, master)
 	promise := utils.PromiseCtx(sizeCtx, size.Start)
 
 	select {
-	case master.control <- true:
+	case master.control <- struct{}{}:
 		// we fed master and then cancel context
 		sizeCancel()
 	case <-ctx.Done():

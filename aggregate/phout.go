@@ -102,7 +102,7 @@ func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
 		phoutFile, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0666)
 	}
 	writer := bufio.NewWriter(phoutFile)
-	ch := make(chan Sample, 32)
+	ch := make(chan Sample, 65536)
 	return &PhoutResultListener{
 		source: ch,
 		resultListener: resultListener{

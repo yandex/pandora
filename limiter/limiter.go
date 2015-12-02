@@ -7,15 +7,15 @@ import (
 // Limiter interface describes limiter control structure
 type Limiter interface {
 	Start(context.Context) error
-	Control() <-chan bool
+	Control() <-chan struct{}
 }
 
 // limiter helps to build more complex limiters
 type limiter struct {
-	control chan bool
+	control chan struct{}
 }
 
-func (l *limiter) Control() <-chan bool {
+func (l *limiter) Control() <-chan struct{} {
 	return l.control
 }
 
