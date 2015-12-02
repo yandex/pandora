@@ -15,9 +15,9 @@ func TestBatchLimiter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 
-	master := &limiter{control: make(chan bool, 2)}
+	master := &limiter{control: make(chan struct{}, 2)}
 	for i := 0; i < 2; i++ {
-		master.control <- true
+		master.control <- struct{}{}
 	}
 	close(master.control)
 
@@ -43,7 +43,7 @@ func TestContextCancelInBatch(t *testing.T) {
 	limitCtx, limitCancel := context.WithCancel(ctx)
 	limitCancel()
 
-	master := &limiter{control: make(chan bool, 10)}
+	master := &limiter{control: make(chan struct{}, 10)}
 
 	batch := NewBatch(5, master)
 	promise := utils.PromiseCtx(limitCtx, batch.Start)
@@ -65,13 +65,13 @@ func TestContextCancelWhileControlBatchLimiter(t *testing.T) {
 	defer cancel()
 	limitCtx, limitCancel := context.WithCancel(ctx)
 
-	master := &limiter{control: make(chan bool)}
+	master := &limiter{control: make(chan struct{})}
 
 	batch := NewBatch(5, master)
 	promise := utils.PromiseCtx(limitCtx, batch.Start)
 
 	select {
-	case master.control <- true:
+	case master.control <- struct{}{}:
 		// we fed master and then cancel context
 		limitCancel()
 	case <-ctx.Done():

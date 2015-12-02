@@ -27,7 +27,7 @@ loop:
 			}
 			for i := 0; i < bl.batchSize; i++ {
 				select {
-				case bl.control <- true:
+				case bl.control <- struct{}{}:
 				case <-ctx.Done():
 					break loop
 				}
@@ -45,7 +45,7 @@ loop:
 // master shouldn't be started
 func NewBatch(batchSize int, master Limiter) (l Limiter) {
 	return &batch{
-		limiter:   limiter{make(chan bool)},
+		limiter:   limiter{make(chan struct{})},
 		master:    master,
 		batchSize: batchSize,
 	}

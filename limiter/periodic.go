@@ -22,7 +22,7 @@ func (pl *periodic) Start(ctx context.Context) error {
 	defer pl.ticker.Stop() // don't forget to stop ticker (goroutine leak possible)
 	// first tick just after the start
 	select {
-	case pl.control <- true:
+	case pl.control <- struct{}{}:
 	case <-ctx.Done():
 		return nil
 	}
@@ -31,7 +31,7 @@ loop:
 		select {
 		case <-pl.ticker.C:
 			select {
-			case pl.control <- true:
+			case pl.control <- struct{}{}:
 			case <-ctx.Done():
 				break loop
 
@@ -46,7 +46,7 @@ loop:
 func NewPeriodic(period time.Duration) (l Limiter) {
 	return &periodic{
 		// timer-based limiters should have big enough cache
-		limiter: limiter{make(chan bool, 65536)},
+		limiter: limiter{make(chan struct{}, 65536)},
 		ticker:  time.NewTicker(period),
 	}
 }

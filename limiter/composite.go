@@ -25,7 +25,7 @@ loop:
 					break loop
 				}
 				select {
-				case cl.control <- true:
+				case cl.control <- struct{}{}:
 				case <-ctx.Done():
 					break loop
 				}

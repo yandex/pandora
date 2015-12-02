@@ -16,7 +16,7 @@ func (ul *unlimited) Start(ctx context.Context) error {
 loop:
 	for {
 		select {
-		case ul.control <- true:
+		case ul.control <- struct{}{}:
 		case <-ctx.Done():
 			break loop
 
@@ -26,5 +26,5 @@ loop:
 }
 
 func NewUnlimitedFromConfig(c *config.Limiter) (l Limiter, err error) {
-	return &unlimited{limiter: limiter{make(chan bool, 1)}}, nil
+	return &unlimited{limiter: limiter{make(chan struct{}, 64)}}, nil
 }

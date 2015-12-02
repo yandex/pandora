@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime/pprof"
 	"time"
 
 	"golang.org/x/net/context"
@@ -43,6 +44,8 @@ func Run() {
 		flag.PrintDefaults()
 	}
 	example := flag.Bool("example", false, "print example config to STDOUT and exit")
+	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile := flag.String("memprofile", "", "write memory profile to this file")
 	flag.Parse()
 
 	if *example {
@@ -66,6 +69,24 @@ func Run() {
 		return
 	}
 
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+	if *memprofile != "" {
+		defer func() {
+			f, err := os.Create(*memprofile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			pprof.WriteHeapProfile(f)
+			f.Close()
+		}()
+	}
 	pandora := engine.New(cfg)
 
 	ctx, cancel := context.WithCancel(context.Background())

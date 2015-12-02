@@ -45,7 +45,7 @@ loop:
 // master shouldn't be started
 func NewSize(size int, master Limiter) (l Limiter) {
 	return &sizeLimiter{
-		limiter: limiter{make(chan bool)},
+		limiter: limiter{make(chan struct{})},
 		master:  master,
 		size:    size,
 	}
