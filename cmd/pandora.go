@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime/pprof"
 	"time"
 
 	"golang.org/x/net/context"
@@ -43,6 +44,7 @@ func Run() {
 		flag.PrintDefaults()
 	}
 	example := flag.Bool("example", false, "print example config to STDOUT and exit")
+	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	flag.Parse()
 
 	if *example {
@@ -64,6 +66,15 @@ func Run() {
 	if err != nil {
 		log.Printf("Could not unmarshal config from json: %s", err)
 		return
+	}
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
 	}
 
 	pandora := engine.New(cfg)
