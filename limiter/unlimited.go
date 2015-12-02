@@ -26,5 +26,5 @@ loop:
 }
 
 func NewUnlimitedFromConfig(c *config.Limiter) (l Limiter, err error) {
-	return &unlimited{limiter: limiter{make(chan bool, 1)}}, nil
+	return &unlimited{limiter: limiter{make(chan bool, 64)}}, nil
 }
