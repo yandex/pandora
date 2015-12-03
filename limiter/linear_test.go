@@ -14,17 +14,17 @@ import (
 func TestQuadraticRightRoot(t *testing.T) {
 	root, err := quadraticRightRoot(1, 1, -6)
 	require.NoError(t, err)
-	assert.Equal(t, 2, root)
+	assert.Equal(t, 2.0, root)
 }
 
 func TestLinearLimiter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 
-	limiterCtx, cancelLimiter := context.WithCancel(ctx)
+	//limiterCtx, _ := context.WithCancel(ctx)
 
 	limiter := NewLinear(5, 6, 1*time.Second)
-	promise := utils.PromiseCtx(limiterCtx, limiter.Start)
+	promise := utils.PromiseCtx(ctx, limiter.Start)
 
 	ch := make(chan int, 100)
 	go func() {
@@ -34,8 +34,6 @@ func TestLinearLimiter(t *testing.T) {
 		}
 		ch <- i
 	}()
-	time.Sleep(time.Second * 3)
-	cancelLimiter()
 	select {
 
 	case i := <-ch:

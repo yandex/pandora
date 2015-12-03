@@ -2,7 +2,6 @@ package limiter
 
 import (
 	"errors"
-	"log"
 	"math"
 	"time"
 
@@ -40,14 +39,10 @@ loop:
 		if err != nil {
 			return err
 		}
-		log.Printf("%f since start", time.Since(startTime).Seconds())
-		log.Printf("%f ts", ts)
 		waitPeriod := ts - time.Since(startTime).Seconds()
 		if waitPeriod > 0 {
-			log.Printf("Waiting for %s", (time.Duration(waitPeriod*1e9) * time.Nanosecond))
 			select {
 			case <-time.After(time.Duration(waitPeriod*1e9) * time.Nanosecond):
-				log.Printf("tick at %f since start", time.Since(startTime).Seconds())
 				select {
 				case l.control <- struct{}{}:
 				case <-ctx.Done():
