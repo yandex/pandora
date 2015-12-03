@@ -64,6 +64,14 @@ loop:
 			}
 		}
 	}
+	// now wait until the end of specified period
+	waitPeriod := l.period.Seconds() - time.Since(startTime).Seconds()
+	if waitPeriod > 0 {
+		select {
+		case <-time.After(time.Duration(waitPeriod*1e9) * time.Nanosecond):
+		case <-ctx.Done():
+		}
+	}
 	return nil
 }
 

@@ -19,7 +19,7 @@ func TestQuadraticRightRoot(t *testing.T) {
 }
 
 func TestLinearLimiter(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 
 	limiter := NewLinear(5, 6, 1)
