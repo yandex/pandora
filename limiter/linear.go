@@ -2,8 +2,11 @@ package limiter
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"time"
+
+	"github.com/yandex/pandora/config"
 
 	"golang.org/x/net/context"
 )
@@ -64,12 +67,48 @@ loop:
 	return nil
 }
 
-func NewLinear(startRps float64, endRps float64, period time.Duration) (l Limiter) {
+func NewLinear(startRps, endRps, period float64) (l Limiter) {
 	return &linear{
 		// timer-based limiters should have big enough cache
 		limiter:  limiter{make(chan struct{}, 65536)},
 		startRps: startRps,
 		endRps:   endRps,
-		period:   period,
+		period:   time.Duration(period*1e9) * time.Nanosecond,
 	}
+}
+
+// NewLinearFromConfig returns linear limiter
+func NewLinearFromConfig(c *config.Limiter) (l Limiter, err error) {
+	params := c.Parameters
+	if params == nil {
+		return nil, errors.New("Parameters not specified")
+	}
+	period, ok := params["Period"]
+	if !ok {
+		return nil, errors.New("Period not specified")
+	}
+	fPeriod, ok := period.(float64)
+	if !ok {
+		return nil, fmt.Errorf("Period is of the wrong type."+
+			" Expected 'float64' got '%T'", period)
+	}
+	startRps, ok := params["StartRps"]
+	if !ok {
+		return nil, fmt.Errorf("StartRps should be specified")
+	}
+	fStartRps, ok := startRps.(float64)
+	if !ok {
+		return nil, fmt.Errorf("StartRps is of the wrong type."+
+			" Expected 'float64' got '%T'", startRps)
+	}
+	endRps, ok := params["EndRps"]
+	if !ok {
+		return nil, fmt.Errorf("EndRps should be specified")
+	}
+	fEndRps, ok := endRps.(float64)
+	if !ok {
+		return nil, fmt.Errorf("EndRps is of the wrong type."+
+			" Expected 'float64' got '%T'", endRps)
+	}
+	return NewLinear(fStartRps, fEndRps, fPeriod), nil
 }
