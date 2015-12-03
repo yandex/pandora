@@ -46,23 +46,17 @@ loop:
 		if waitPeriod > 0 {
 			select {
 			case <-time.After(time.Duration(waitPeriod*1e9) * time.Nanosecond):
-				select {
-				case l.control <- struct{}{}:
-				case <-ctx.Done():
-					break loop
-
-				}
 			case <-ctx.Done():
 				break loop
-			}
-		} else {
-			select {
-			case l.control <- struct{}{}:
-			case <-ctx.Done():
-				break loop
-
 			}
 		}
+		select {
+		case l.control <- struct{}{}:
+		case <-ctx.Done():
+			break loop
+
+		}
+
 	}
 	// now wait until the end of specified period
 	waitPeriod := l.period.Seconds() - time.Since(startTime).Seconds()
