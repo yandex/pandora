@@ -1,6 +1,9 @@
 package limiter
 
 import (
+	"log"
+	"time"
+
 	"golang.org/x/net/context"
 )
 
@@ -30,7 +33,9 @@ loop:
 	for {
 		select {
 		case _, more := <-l.Control():
+			log.Printf("Tick: %s", time.Now().Format("2006-01-02T15:04:05.999999"))
 			if !more {
+				log.Printf("Exit drain at: %s", time.Now().Format("2006-01-02T15:04:05.999999"))
 				break loop
 			}
 			i++

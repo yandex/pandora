@@ -16,21 +16,22 @@ var _ Limiter = (*composite)(nil) // check interface
 
 func (cl *composite) Start(ctx context.Context) error {
 	defer close(cl.control)
-loop:
+outer_loop:
 	for _, l := range cl.steps {
+	inner_loop:
 		for {
 			select {
 			case _, more := <-l.Control():
 				if !more {
-					break loop
+					break inner_loop
 				}
 				select {
 				case cl.control <- struct{}{}:
 				case <-ctx.Done():
-					break loop
+					break outer_loop
 				}
 			case <-ctx.Done():
-				break loop
+				break outer_loop
 			}
 		}
 
