@@ -1,4 +1,6 @@
 # Pandora
+
+[![Join the chat at https://gitter.im/yandex/pandora](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/yandex/pandora?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 A load generator in Go language.
 
 ## Install
