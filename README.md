@@ -1,6 +1,8 @@
 # Pandora
 
 [![Join the chat at https://gitter.im/yandex/pandora](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/yandex/pandora?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/yandex/pandora.svg)](https://travis-ci.org/yandex/pandora)
+
 A load generator in Go language.
 
 ## Install
@@ -14,10 +16,6 @@ Run this binary with your .json config (see [examples](https://github.com/yandex
 ./pandora myconfig.json
 ```
 Or let [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/configuration.html#pandora) make it easy for you.
-
-## Get help
-Ask direvius@ in Yandex.Tank's chat room [![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/yandex/yandex-tank?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 
 
 ## Extension points
