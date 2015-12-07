@@ -44,6 +44,9 @@ tools:
 	go get golang.org/x/tools/cmd/goimports
 	go get github.com/golang/lint/golint
 	go get github.com/stretchr/testify
+	go get golang.org/x/tools/cmd/cover
+	go get github.com/modocache/gover
+	go get github.com/mattn/goveralls
 
 updep:
 	@echo "$(OK_COLOR)Update dependencies$(NO_COLOR)"
