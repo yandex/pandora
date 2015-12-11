@@ -23,10 +23,12 @@ Or let [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/configuration.h
 
 You can write plugins with the next [extension points](https://github.com/progrium/go-extpoints):
 
+```
 ammo.Provider
 aggregate.ResultListener
 limiter.Limiter
 gun.Gun
+```
 
 ## Build tags
 
