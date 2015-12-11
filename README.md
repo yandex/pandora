@@ -7,7 +7,7 @@
 A load generator in Go language.
 
 ## Install
-Compile a binary with go tool:
+Compile a binary with go tool (use go >= 1.5.2):
 ```
 go get github.com/yandex/pandora
 go build github.com/yandex/pandora
