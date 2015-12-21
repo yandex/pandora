@@ -1,8 +1,9 @@
+//go:generate ffjson $GOFILE
+
 package ammo
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// ffjson: noencoder
 type Http struct {
 	Host    string
 	Method  string
@@ -34,10 +36,11 @@ func (h *Http) Request() (*http.Request, error) {
 // HttpJSONDecode implements ammo.Decoder interface
 func HttpJSONDecode(jsonDoc []byte) (Ammo, error) {
 	a := &Http{}
-	err := json.Unmarshal(jsonDoc, a)
+	err := a.UnmarshalJSON(jsonDoc)
 	return a, err
 }
 
+// ffjson: skip
 type HttpProvider struct {
 	*BaseProvider
 
