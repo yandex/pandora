@@ -1,6 +1,7 @@
 package http
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log"
@@ -18,7 +19,7 @@ import (
 type FastHttpGun struct {
 	target string
 	ssl    bool
-	client *fasthttp.Client
+	client *fasthttp.HostClient
 }
 
 // Shoot to target, this method is not thread safe
@@ -53,6 +54,7 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 	} else {
 		uri = "http://" + ha.Host + ha.Uri
 	}
+	log.Printf(uri)
 	var res fasthttp.Response
 	switch ha.Method {
 	case "GET":
@@ -69,9 +71,7 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 	}
 
 	// TODO: make this an optional verbose answ_log output
-	//data := make([]byte, int(res.ContentLength))
-	// _, err = res.Body.(io.Reader).Read(data)
-	// fmt.Println(string(data))
+
 	ss.StatusCode = res.StatusCode()
 	return nil
 }
@@ -82,18 +82,14 @@ func (hg *FastHttpGun) Close() {
 
 func (hg *FastHttpGun) Connect(results chan<- aggregate.Sample) {
 	hg.Close()
-	// config := tls.Config{
-	// 	InsecureSkipVerify: true,
-	// }
-	// TODO: do we want to give access to keep alive settings for guns in config?
-	// dialer := &net.Dialer{
-	// 	Timeout:   dialTimeout * time.Second,
-	// 	KeepAlive: 120 * time.Second,
-	// }
-	// tr := &fasthttp.Transport{
-	// 	TLSClientConfig:     &config,
-	// 	Dial:                dialer.Dial,
-	// 	TLSHandshakeTimeout: dialTimeout * time.Second,
-	// }
-	hg.client = &fasthttp.Client{}
+	config := tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	hg.client = &fasthttp.HostClient{
+		Addr:      hg.target,
+		Name:      "Pandora/0.0.1",
+		IsTLS:     hg.ssl,
+		TLSConfig: &config,
+	}
 }
