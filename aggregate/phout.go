@@ -68,6 +68,11 @@ func (rl *PhoutResultListener) handle(r Sample) error {
 }
 
 func (rl *PhoutResultListener) Start(ctx context.Context) error {
+	go func() { // flush results file every second
+		for _ = range time.NewTicker(1 * time.Second).C {
+			rl.phout.Flush()
+		}
+	}()
 loop:
 	for {
 		select {
@@ -75,8 +80,6 @@ loop:
 			if err := rl.handle(r); err != nil {
 				return err
 			}
-		case <-time.After(1 * time.Second):
-			rl.phout.Flush()
 		case <-ctx.Done():
 			// Context is done, but we should read all data from source
 			for {
@@ -89,6 +92,7 @@ loop:
 					break loop
 				}
 			}
+			rl.phout.Flush()
 		}
 	}
 	return nil
@@ -101,7 +105,7 @@ func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
 	} else {
 		phoutFile, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0666)
 	}
-	writer := bufio.NewWriterSize(phoutFile, 1024*1024*4)
+	writer := bufio.NewWriterSize(phoutFile, 1024*512) // 512 KB
 	ch := make(chan Sample, 65536)
 	return &PhoutResultListener{
 		source: ch,
