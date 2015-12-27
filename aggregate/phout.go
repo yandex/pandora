@@ -92,9 +92,9 @@ loop:
 					break loop
 				}
 			}
-			rl.phout.Flush()
 		}
 	}
+	rl.phout.Flush()
 	return nil
 }
 
