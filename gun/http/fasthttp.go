@@ -12,6 +12,7 @@ import (
 	"github.com/valyala/fasthttp"
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
+	"github.com/yandex/pandora/utils"
 )
 
 // === Gun ===
@@ -29,13 +30,14 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 	if hg.client == nil {
 		hg.Connect(results)
 	}
+
 	start := time.Now()
 	ss := &HttpSample{ts: float64(start.UnixNano()) / 1e9, tag: "REQUEST"}
 	defer func() {
 		ss.rt = int(time.Since(start).Seconds() * 1e6)
 		results <- ss
 	}()
-	// now send the request to obtain a http response
+
 	ha, ok := a.(*ammo.Http)
 	if !ok {
 		errStr := fmt.Sprintf("Got '%T' instead of 'HttpAmmo'", a)
@@ -47,20 +49,18 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 		ss.tag += "|" + ha.Tag
 	}
 
-	var uri string
+	res := fasthttp.AcquireResponse()
+	defer func() { fasthttp.ReleaseResponse(res) }()
+	req := fasthttp.AcquireRequest()
+	defer func() { fasthttp.ReleaseRequest(req) }()
 
-	if hg.ssl {
-		uri = "https://" + ha.Host + ha.Uri
-	} else {
-		uri = "http://" + ha.Host + ha.Uri
-	}
-	log.Printf(uri)
-	var res fasthttp.Response
 	switch ha.Method {
 	case "GET":
-		var req fasthttp.Request
-		req.SetRequestURI(uri)
-		err := hg.client.Do(&req, &res)
+		req.SetRequestURI(ha.Uri)
+		for k, v := range ha.Headers {
+			req.Header.Set(k, v)
+		}
+		err := hg.client.Do(req, res)
 		if err != nil {
 			log.Printf("Error performing a request: %s\n", err)
 			ss.err = err
@@ -70,7 +70,7 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 		log.Printf("Method not implemented: %s\n", ha.Method)
 	}
 
-	// TODO: make this an optional verbose answ_log output
+	// TODO: optional verbose answ_log output
 
 	ss.StatusCode = res.StatusCode()
 	return nil
@@ -88,7 +88,7 @@ func (hg *FastHttpGun) Connect(results chan<- aggregate.Sample) {
 
 	hg.client = &fasthttp.HostClient{
 		Addr:      hg.target,
-		Name:      "Pandora/0.0.1",
+		Name:      "Pandora/" + utils.Version,
 		IsTLS:     hg.ssl,
 		TLSConfig: &config,
 	}

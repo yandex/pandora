@@ -16,8 +16,6 @@ import (
 
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
-	"github.com/yandex/pandora/config"
-	"github.com/yandex/pandora/gun"
 )
 
 // === Gun ===
@@ -134,69 +132,4 @@ func (hg *HttpGun) Connect(results chan<- aggregate.Sample) {
 	// 		ss.StatusCode = 200
 	// 	}
 	// 	results <- ss
-}
-
-type HttpSample struct {
-	ts         float64 // Unix Timestamp in seconds
-	rt         int     // response time in milliseconds
-	StatusCode int     // protocol status code
-	tag        string
-	err        error
-}
-
-func (ds *HttpSample) PhoutSample() *aggregate.PhoutSample {
-	var protoCode, netCode int
-	if ds.err != nil {
-		protoCode = 500
-		netCode = 999
-		log.Printf("Error code. %v\n", ds.err)
-	} else {
-		netCode = 0
-		protoCode = ds.StatusCode
-	}
-	return &aggregate.PhoutSample{
-		TS:            ds.ts,
-		Tag:           ds.tag,
-		RT:            ds.rt,
-		Connect:       0,
-		Send:          0,
-		Latency:       0,
-		Receive:       0,
-		IntervalEvent: 0,
-		Egress:        0,
-		Igress:        0,
-		NetCode:       netCode,
-		ProtoCode:     protoCode,
-	}
-}
-
-func (ds *HttpSample) String() string {
-	return fmt.Sprintf("rt: %d [%d] %s", ds.rt, ds.StatusCode, ds.tag)
-}
-
-func New(c *config.Gun) (gun.Gun, error) {
-	params := c.Parameters
-	if params == nil {
-		return nil, errors.New("Parameters not specified")
-	}
-	target, ok := params["Target"]
-	if !ok {
-		return nil, errors.New("Target not specified")
-	}
-	g := &HttpGun{}
-	switch t := target.(type) {
-	case string:
-		g.target = target.(string)
-	default:
-		return nil, fmt.Errorf("Target is of the wrong type."+
-			" Expected 'string' got '%T'", t)
-	}
-	if ssl, ok := params["SSL"]; ok {
-		if sslVal, casted := ssl.(bool); casted {
-			g.ssl = sslVal
-		} else {
-			return nil, fmt.Errorf("SSL should be boolean type.")
-		}
-	}
-	return g, nil
 }
