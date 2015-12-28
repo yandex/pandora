@@ -10,6 +10,7 @@ before_install:
   - go get github.com/stretchr/testify
   - go get github.com/SlyMarbo/spdy
   - go get github.com/davecgh/go-spew/spew
+  - go get github.com/pquerna/ffjson
 
 install: make tools
 

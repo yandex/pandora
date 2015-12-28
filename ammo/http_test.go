@@ -1,6 +1,9 @@
 package ammo
 
 import (
+	"bufio"
+	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -73,4 +76,24 @@ func TestHttpProvider(t *testing.T) {
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
 	}
+}
+
+var result Ammo
+
+func BenchmarkJsonDecoder(b *testing.B) {
+	f, err := os.Open(httpTestFilename)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer f.Close()
+	r := bufio.NewReader(f)
+	jsonDoc, isPrefix, err := r.ReadLine()
+	if err != nil || isPrefix {
+		b.Fatal(errors.New("Couldn't properly read ammo sample from data file"))
+	}
+	var a Ammo
+	for n := 0; n < b.N; n++ {
+		a, _ = HttpJSONDecode(jsonDoc)
+	}
+	result = a
 }
