@@ -33,10 +33,6 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 
 	start := time.Now()
 	ss := &HttpSample{ts: float64(start.UnixNano()) / 1e9, tag: "REQUEST"}
-	defer func() {
-		ss.rt = int(time.Since(start).Seconds() * 1e6)
-		results <- ss
-	}()
 
 	ha, ok := a.(*ammo.Http)
 	if !ok {
@@ -50,10 +46,7 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 	}
 
 	res := fasthttp.AcquireResponse()
-	defer func() { fasthttp.ReleaseResponse(res) }()
 	req := fasthttp.AcquireRequest()
-	defer func() { fasthttp.ReleaseRequest(req) }()
-
 	switch ha.Method {
 	case "GET":
 		req.SetRequestURI(ha.Uri)
@@ -61,9 +54,13 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 			req.Header.Set(k, v)
 		}
 		err := hg.client.Do(req, res)
+		fasthttp.ReleaseRequest(req)
 		if err != nil {
 			log.Printf("Error performing a request: %s\n", err)
+			fasthttp.ReleaseResponse(res)
 			ss.err = err
+			ss.rt = int(time.Since(start).Seconds() * 1e6)
+			results <- ss
 			return err
 		}
 	default:
@@ -73,6 +70,9 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 	// TODO: optional verbose answ_log output
 
 	ss.StatusCode = res.StatusCode()
+	ss.rt = int(time.Since(start).Seconds() * 1e6)
+	results <- ss
+	fasthttp.ReleaseResponse(res)
 	return nil
 }
 
