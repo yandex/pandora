@@ -46,9 +46,9 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 	}
 
 	res := fasthttp.AcquireResponse()
-	req := fasthttp.AcquireRequest()
 	switch ha.Method {
 	case "GET":
+		req := fasthttp.AcquireRequest()
 		req.SetRequestURI(ha.Uri)
 		for k, v := range ha.Headers {
 			req.Header.Set(k, v)
@@ -91,5 +91,6 @@ func (hg *FastHttpGun) Connect(results chan<- aggregate.Sample) {
 		Name:      "Pandora/" + utils.Version,
 		IsTLS:     hg.ssl,
 		TLSConfig: &config,
+		MaxConns:  100000,
 	}
 }
