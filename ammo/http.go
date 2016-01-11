@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/yandex/pandora/config"
 	"golang.org/x/net/context"
@@ -34,16 +35,30 @@ func (h *Http) Request() (*http.Request, error) {
 }
 
 // HttpJSONDecoder implements ammo.Decoder interface
-type HttpJSONDecoder struct{}
+type HttpJSONDecoder struct{
+	pool sync.Pool
+}
 
-func (*HttpJSONDecoder) Decode(jsonDoc []byte) (Ammo, error) {
-	a := &Http{}
+func (d *HttpJSONDecoder) Decode(jsonDoc []byte) (Ammo, error) {
+	a := d.pool.Get().(*Http)
 	err := a.UnmarshalJSON(jsonDoc)
 	return a, err
 }
 
+// be polite and return unused Ammo to the pool
+// be shure that you return Http because we don't make any checks here
+func (d *HttpJSONDecoder) Release(a Ammo) {
+	d.pool.Put(a)
+}
+
 func NewHttpJSONDecoder() Decoder {
-	return &HttpJSONDecoder{}
+	return &HttpJSONDecoder{
+		pool: sync.Pool{
+			New: func() (interface{}){
+				return &Http{}
+			},
+		},
+	}
 }
 
 // ffjson: skip

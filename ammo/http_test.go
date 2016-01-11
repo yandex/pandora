@@ -82,7 +82,7 @@ var result Ammo
 
 func BenchmarkJsonDecoder(b *testing.B) {
 	f, err := os.Open(httpTestFilename)
-	decoder := NewHttpJSONDecoder()
+	decoder := NewHttpJSONDecoder().(*HttpJSONDecoder)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -95,6 +95,6 @@ func BenchmarkJsonDecoder(b *testing.B) {
 	var a Ammo
 	for n := 0; n < b.N; n++ {
 		a, _ = decoder.Decode(jsonDoc)
+		decoder.Release(a)
 	}
-	result = a
 }
