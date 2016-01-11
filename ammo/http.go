@@ -35,7 +35,7 @@ func (h *Http) Request() (*http.Request, error) {
 }
 
 // HttpJSONDecoder implements ammo.Decoder interface
-type HttpJSONDecoder struct{
+type HttpJSONDecoder struct {
 	pool sync.Pool
 }
 
@@ -54,7 +54,7 @@ func (d *HttpJSONDecoder) Release(a Ammo) {
 func NewHttpJSONDecoder() Decoder {
 	return &HttpJSONDecoder{
 		pool: sync.Pool{
-			New: func() (interface{}){
+			New: func() interface{} {
 				return &Http{}
 			},
 		},
