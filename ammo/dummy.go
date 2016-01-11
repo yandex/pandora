@@ -13,11 +13,17 @@ type Log struct {
 	Message string
 }
 
-// LogJSONDecode implements ammo.Decoder interface
-func LogJSONDecode(jsonDoc []byte) (Ammo, error) {
+// LogJSONDecoder implements ammo.Decoder interface
+type LogJSONDecoder struct{}
+
+func (*LogJSONDecoder) Decode(jsonDoc []byte) (Ammo, error) {
 	a := &Log{}
 	err := json.Unmarshal(jsonDoc, a)
 	return a, err
+}
+
+func NewLogJSONDecoder() Decoder {
+	return &LogJSONDecoder{}
 }
 
 type LogProvider struct {
@@ -52,7 +58,7 @@ func NewLogAmmoProvider(c *config.AmmoProvider) (Provider, error) {
 		sink: ammoCh,
 		BaseProvider: NewBaseProvider(
 			ammoCh,
-			LogJSONDecode,
+			NewLogJSONDecoder(),
 		),
 	}
 	return ap, nil

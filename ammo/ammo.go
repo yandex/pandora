@@ -14,7 +14,9 @@ type BaseProvider struct {
 
 type Ammo interface{}
 
-type Decoder func([]byte) (Ammo, error)
+type Decoder interface {
+	Decode([]byte) (Ammo, error)
+}
 
 func NewBaseProvider(source <-chan Ammo, decoder Decoder) *BaseProvider {
 	return &BaseProvider{
@@ -28,7 +30,7 @@ func (ap *BaseProvider) Source() <-chan Ammo {
 }
 
 func (ap *BaseProvider) Decode(src []byte) (Ammo, error) {
-	return ap.decoder(src)
+	return ap.decoder.Decode(src)
 }
 
 // Drain reads all ammos from ammo.Provider. Useful for tests.

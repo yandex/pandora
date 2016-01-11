@@ -33,11 +33,17 @@ func (h *Http) Request() (*http.Request, error) {
 	return req, err
 }
 
-// HttpJSONDecode implements ammo.Decoder interface
-func HttpJSONDecode(jsonDoc []byte) (Ammo, error) {
+// HttpJSONDecoder implements ammo.Decoder interface
+type HttpJSONDecoder struct{}
+
+func (*HttpJSONDecoder) Decode(jsonDoc []byte) (Ammo, error) {
 	a := &Http{}
 	err := a.UnmarshalJSON(jsonDoc)
 	return a, err
+}
+
+func NewHttpJSONDecoder() Decoder {
+	return &HttpJSONDecoder{}
 }
 
 // ffjson: skip
@@ -100,7 +106,7 @@ func NewHttpProvider(c *config.AmmoProvider) (Provider, error) {
 		sink:         ammoCh,
 		BaseProvider: NewBaseProvider(
 			ammoCh,
-			HttpJSONDecode,
+			NewHttpJSONDecoder(),
 		),
 	}
 	return ap, nil
