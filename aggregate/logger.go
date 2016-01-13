@@ -1,7 +1,6 @@
 package aggregate
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/yandex/pandora/config"
@@ -12,16 +11,12 @@ import (
 type LoggingResultListener struct {
 	resultListener
 
-	source <-chan interface{}
+	source <-chan *Sample
 }
 
-func (rl *LoggingResultListener) handle(r interface{}) {
-	r, ok := r.(fmt.Stringer)
-	if !ok {
-		log.Println("Can't convert result to String")
-	} else {
-		log.Println(r)
-	}
+func (rl *LoggingResultListener) handle(s *Sample) {
+	log.Println(s)
+	ReleaseSample(s)
 }
 
 func (rl *LoggingResultListener) Start(ctx context.Context) error {
@@ -46,7 +41,7 @@ loop:
 }
 
 func NewLoggingResultListener(*config.ResultListener) (ResultListener, error) {
-	ch := make(chan interface{}, 32)
+	ch := make(chan *Sample, 32)
 	return &LoggingResultListener{
 		source: ch,
 		resultListener: resultListener{

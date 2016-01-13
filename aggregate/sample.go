@@ -29,8 +29,22 @@ type Sample struct {
 	Err           error
 }
 
-func AcquireSample() *Sample {
-	return samplePool.Get().(*Sample)
+func AcquireSample(ts float64, tag string) *Sample {
+	s := samplePool.Get().(*Sample)
+	s.TS = ts
+	s.Tag = tag
+	s.RT = 0
+	s.Connect = 0
+	s.Send = 0
+	s.Latency = 0
+	s.Receive = 0
+	s.IntervalEvent = 0
+	s.Egress = 0
+	s.Igress = 0
+	s.NetCode = 0
+	s.ProtoCode = 0
+	s.Err = nil
+	return s
 }
 
 func ReleaseSample(s *Sample) {

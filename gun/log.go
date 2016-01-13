@@ -14,7 +14,7 @@ import (
 
 type LogGun struct{}
 
-func (l *LogGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- interface{}) error {
+func (l *LogGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- *aggregate.Sample) error {
 	log.Println("Log message: ", a.(*ammo.Log).Message)
 	results <- &aggregate.Sample{}
 	return nil

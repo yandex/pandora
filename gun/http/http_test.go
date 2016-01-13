@@ -20,7 +20,7 @@ func TestHttpGunWithSsl(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	result := make(chan interface{})
+	result := make(chan *aggregate.Sample)
 	requests := make(chan *http.Request)
 
 	ts := httptest.NewTLSServer(
@@ -52,10 +52,8 @@ func TestHttpGunWithSsl(t *testing.T) {
 	})
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 1)
-	sample, casted := (results[0]).(*aggregate.Sample)
-	require.True(t, casted, "Should be *aggregate.Sample")
-	assert.Equal(t, "REQUEST", sample.Tag)
-	assert.Equal(t, 200, sample.ProtoCode)
+	assert.Equal(t, "REQUEST", results[0].Tag)
+	assert.Equal(t, 200, results[0].ProtoCode)
 
 	select {
 	case r := <-requests:
@@ -81,7 +79,7 @@ func TestHttpGunWithHttp(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	result := make(chan interface{})
+	result := make(chan *aggregate.Sample)
 	requests := make(chan *http.Request)
 
 	ts := httptest.NewServer(
@@ -113,10 +111,8 @@ func TestHttpGunWithHttp(t *testing.T) {
 	})
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 1)
-	sample, casted := (results[0]).(*aggregate.Sample)
-	require.True(t, casted, "Should be *aggregate.Sample")
-	assert.Equal(t, "REQUEST", sample.Tag)
-	assert.Equal(t, 200, sample.ProtoCode)
+	assert.Equal(t, "REQUEST", results[0].Tag)
+	assert.Equal(t, 200, results[0].ProtoCode)
 
 	select {
 	case r := <-requests:

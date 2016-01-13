@@ -25,7 +25,7 @@ type SpdyGun struct {
 	client     *spdy.Client
 }
 
-func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- interface{}) error {
+func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- *aggregate.Sample) error {
 	if sg.client == nil {
 		if err := sg.connect(results); err != nil {
 			return err
@@ -40,7 +40,7 @@ func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- interf
 		}()
 	}
 	start := time.Now()
-	ss := &aggregate.Sample{TS: float64(start.UnixNano()) / 1e9, Tag: "REQUEST"}
+	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "REQUEST")
 	defer func() {
 		ss.RT = int(time.Since(start).Seconds() * 1e6)
 		results <- ss
@@ -91,10 +91,10 @@ func (sg *SpdyGun) Close() {
 	}
 }
 
-func (sg *SpdyGun) connect(results chan<- interface{}) error {
+func (sg *SpdyGun) connect(results chan<- *aggregate.Sample) error {
 	// FIXME: rewrite connection logic, it isn't thread safe right now.
 	start := time.Now()
-	ss := &aggregate.Sample{TS: float64(start.UnixNano()) / 1e9, Tag: "CONNECT"}
+	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "CONNECT")
 	defer func() {
 		ss.RT = int(time.Since(start).Seconds() * 1e6)
 		results <- ss
@@ -125,7 +125,7 @@ func (sg *SpdyGun) connect(results chan<- interface{}) error {
 	return nil
 }
 
-func (sg *SpdyGun) Ping(results chan<- interface{}) {
+func (sg *SpdyGun) Ping(results chan<- *aggregate.Sample) {
 	if sg.client == nil {
 		return
 	}
@@ -138,7 +138,7 @@ func (sg *SpdyGun) Ping(results chan<- interface{}) {
 	if !pinged {
 		log.Printf("client: ping: timed out\n")
 	}
-	ss := &aggregate.Sample{TS: float64(pingStart.UnixNano()) / 1e9, Tag: "PING"}
+	ss := aggregate.AcquireSample(float64(pingStart.UnixNano())/1e9, "PING")
 	ss.RT = int(time.Since(pingStart).Seconds() * 1e6)
 
 	if err == nil && pinged {

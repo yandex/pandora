@@ -9,26 +9,20 @@ import (
 	"golang.org/x/net/context"
 )
 
-type PhoutSerializable interface {
-	AppendToPhout([]byte) []byte
-}
-
 type PhoutResultListener struct {
 	resultListener
 
-	source <-chan interface{}
+	source <-chan *Sample
 	phout  *bufio.Writer
 	buffer []byte
 }
 
-func (rl *PhoutResultListener) handle(s interface{}) error {
-	ps, ok := s.(PhoutSerializable)
-	if !ok {
-		panic("Result sample is not PhoutSerializable")
-	}
-	rl.buffer = ps.AppendToPhout(rl.buffer)
+func (rl *PhoutResultListener) handle(s *Sample) error {
+
+	rl.buffer = s.AppendToPhout(rl.buffer)
 	_, err := rl.phout.Write(rl.buffer)
 	rl.buffer = rl.buffer[:0]
+	ReleaseSample(s)
 	return err
 }
 
@@ -74,7 +68,7 @@ func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
 		phoutFile, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0666)
 	}
 	writer := bufio.NewWriterSize(phoutFile, 1024*512) // 512 KB
-	ch := make(chan interface{}, 65536)
+	ch := make(chan *Sample, 65536)
 	return &PhoutResultListener{
 		source: ch,
 		resultListener: resultListener{

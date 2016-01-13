@@ -4,19 +4,19 @@ import "golang.org/x/net/context"
 
 type ResultListener interface {
 	Start(context.Context) error
-	Sink() chan<- interface{}
+	Sink() chan<- *Sample
 }
 
 type resultListener struct {
-	sink chan<- interface{}
+	sink chan<- *Sample
 }
 
-func (rl *resultListener) Sink() chan<- interface{} {
+func (rl *resultListener) Sink() chan<- *Sample {
 	return rl.sink
 }
 
-func Drain(ctx context.Context, results <-chan interface{}) []interface{} {
-	samples := []interface{}{}
+func Drain(ctx context.Context, results <-chan *Sample) []*Sample {
+	samples := []*Sample{}
 loop:
 	for {
 		select {

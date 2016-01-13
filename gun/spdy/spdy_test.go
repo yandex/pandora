@@ -21,7 +21,7 @@ func TestSpdyGun(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	result := make(chan interface{})
+	result := make(chan *aggregate.Sample)
 
 	gun := &SpdyGun{
 		target:     "localhost:3000",
@@ -47,18 +47,14 @@ func TestSpdyGun(t *testing.T) {
 	{
 		// first result is connect
 
-		sample, casted := (results[0]).(*aggregate.Sample)
-		require.True(t, casted, "Should be *aggregate.Sample")
-		assert.Equal(t, "CONNECT", sample.Tag)
-		assert.Equal(t, 200, sample.ProtoCode)
+		assert.Equal(t, "CONNECT", results[0].Tag)
+		assert.Equal(t, 200, results[0].ProtoCode)
 	}
 	{
 		// second result is request
 
-		sample, casted := (results[1]).(*aggregate.Sample)
-		require.True(t, casted, "Should be *aggregate.Sample")
-		assert.Equal(t, "REQUEST", sample.Tag)
-		assert.Equal(t, 200, sample.ProtoCode)
+		assert.Equal(t, "REQUEST", results[1].Tag)
+		assert.Equal(t, 200, results[1].ProtoCode)
 	}
 
 	// TODO: test scenaries with errors
