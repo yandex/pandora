@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sync"
 
 	"github.com/yandex/pandora/config"
 	"golang.org/x/net/context"
@@ -24,7 +23,6 @@ type Http struct {
 }
 
 func (h *Http) Request() (*http.Request, error) {
-	// FIXME: something wrong here with https
 	req, err := http.NewRequest(h.Method, "http://"+h.Host+h.Uri, nil)
 	if err == nil {
 		for k, v := range h.Headers {
@@ -35,30 +33,11 @@ func (h *Http) Request() (*http.Request, error) {
 }
 
 // HttpJSONDecoder implements ammo.Decoder interface
-type HttpJSONDecoder struct {
-	pool sync.Pool
-}
+type HttpJSONDecoder struct{}
 
-func (d *HttpJSONDecoder) Decode(jsonDoc []byte) (Ammo, error) {
-	a := d.pool.Get().(*Http)
-	err := a.UnmarshalJSON(jsonDoc)
+func (d *HttpJSONDecoder) Decode(jsonDoc []byte, a Ammo) (Ammo, error) {
+	err := a.(*Http).UnmarshalJSON(jsonDoc)
 	return a, err
-}
-
-// be polite and return unused Ammo to the pool
-// be shure that you return Http because we don't make any checks here
-func (d *HttpJSONDecoder) Release(a Ammo) {
-	d.pool.Put(a)
-}
-
-func NewHttpJSONDecoder() Decoder {
-	return &HttpJSONDecoder{
-		pool: sync.Pool{
-			New: func() interface{} {
-				return &Http{}
-			},
-		},
-	}
 }
 
 // ffjson: skip
@@ -87,7 +66,7 @@ loop:
 		scanner.Split(bufio.ScanLines)
 		for scanner.Scan() && (ap.ammoLimit == 0 || ammoNumber < ap.ammoLimit) {
 			data := scanner.Bytes()
-			if a, err := ap.Decode(data); err != nil {
+			if a, err := ap.decode(data); err != nil {
 				return fmt.Errorf("failed to decode ammo: %v", err)
 			} else {
 				ammoNumber++
@@ -121,7 +100,8 @@ func NewHttpProvider(c *config.AmmoProvider) (Provider, error) {
 		sink:         ammoCh,
 		BaseProvider: NewBaseProvider(
 			ammoCh,
-			NewHttpJSONDecoder(),
+			&HttpJSONDecoder{},
+			func() interface{} { return &Http{} },
 		),
 	}
 	return ap, nil
