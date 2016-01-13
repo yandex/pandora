@@ -1,29 +1,27 @@
 package aggregate
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/yandex/pandora/config"
 	"golang.org/x/net/context"
 )
 
-type resultListener struct {
-	sink chan<- Sample
-}
-
-func (rl *resultListener) Sink() chan<- Sample {
-	return rl.sink
-}
-
 // Implements ResultListener interface
 type LoggingResultListener struct {
 	resultListener
 
-	source <-chan Sample
+	source <-chan interface{}
 }
 
-func (rl *LoggingResultListener) handle(r Sample) {
-	log.Println(r)
+func (rl *LoggingResultListener) handle(r interface{}) {
+	r, ok := r.(fmt.Stringer)
+	if !ok {
+		log.Println("Can't convert result to String")
+	} else {
+		log.Println(r)
+	}
 }
 
 func (rl *LoggingResultListener) Start(ctx context.Context) error {
@@ -48,7 +46,7 @@ loop:
 }
 
 func NewLoggingResultListener(*config.ResultListener) (ResultListener, error) {
-	ch := make(chan Sample, 32)
+	ch := make(chan interface{}, 32)
 	return &LoggingResultListener{
 		source: ch,
 		resultListener: resultListener{

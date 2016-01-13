@@ -25,7 +25,7 @@ type SpdyGun struct {
 	client     *spdy.Client
 }
 
-func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- aggregate.Sample) error {
+func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- interface{}) error {
 	if sg.client == nil {
 		if err := sg.connect(results); err != nil {
 			return err
@@ -40,33 +40,32 @@ func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- aggreg
 		}()
 	}
 	start := time.Now()
-	ss := &SpdySample{ts: float64(start.UnixNano()) / 1e9, tag: "REQUEST"}
+	ss := &aggregate.Sample{TS: float64(start.UnixNano()) / 1e9, Tag: "REQUEST"}
 	defer func() {
-		ss.rt = int(time.Since(start).Seconds() * 1e6)
+		ss.RT = int(time.Since(start).Seconds() * 1e6)
 		results <- ss
 	}()
 	// now send the request to obtain a http response
 	ha, ok := a.(*ammo.Http)
 	if !ok {
-		errStr := fmt.Sprintf("Got '%T' instead of 'HttpAmmo'", a)
-		log.Println(errStr)
-		ss.err = errors.New(errStr)
-		return ss.err
+		panic(fmt.Sprintf("Got '%T' instead of 'HttpAmmo'", a))
 	}
 	if ha.Tag != "" {
-		ss.tag += "|" + ha.Tag
+		ss.Tag += "|" + ha.Tag
 	}
 
 	req, err := http.NewRequest(ha.Method, "https://"+ha.Host+ha.Uri, nil)
 	if err != nil {
 		log.Printf("Error making HTTP request: %s\n", err)
-		ss.err = err
+		ss.Err = err
+		ss.NetCode = 999
 		return err
 	}
 	res, err := sg.client.Do(req)
 	if err != nil {
 		log.Printf("Error performing a request: %s\n", err)
-		ss.err = err
+		ss.Err = err
+		ss.NetCode = 999
 		return err
 	}
 
@@ -74,14 +73,15 @@ func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- aggreg
 	_, err = io.Copy(ioutil.Discard, res.Body)
 	if err != nil {
 		log.Printf("Error reading response body: %s\n", err)
-		ss.err = err
+		ss.Err = err
+		ss.NetCode = 999
 		return err
 	}
 	// TODO: make this an optional verbose answ_log output
 	//data := make([]byte, int(res.ContentLength))
 	// _, err = res.Body.(io.Reader).Read(data)
 	// fmt.Println(string(data))
-	ss.StatusCode = res.StatusCode
+	ss.ProtoCode = res.StatusCode
 	return err
 }
 
@@ -91,36 +91,41 @@ func (sg *SpdyGun) Close() {
 	}
 }
 
-func (sg *SpdyGun) connect(results chan<- aggregate.Sample) error {
+func (sg *SpdyGun) connect(results chan<- interface{}) error {
 	// FIXME: rewrite connection logic, it isn't thread safe right now.
-	connectStart := time.Now()
+	start := time.Now()
+	ss := &aggregate.Sample{TS: float64(start.UnixNano()) / 1e9, Tag: "CONNECT"}
+	defer func() {
+		ss.RT = int(time.Since(start).Seconds() * 1e6)
+		results <- ss
+	}()
 	config := tls.Config{
 		InsecureSkipVerify: true,
 		NextProtos:         []string{"spdy/3.1"},
 	}
 	conn, err := tls.Dial("tcp", sg.target, &config)
 	if err != nil {
-		return fmt.Errorf("client: dial: %s\n", err)
+		ss.Err = err
+		ss.NetCode = 999
+		return err
 	}
 	client, err := spdy.NewClientConn(conn)
 	if err != nil {
-		return fmt.Errorf("client: connect: %v\n", err)
+		ss.Err = err
+		ss.NetCode = 999
+		return err
+	} else {
+		ss.ProtoCode = 200
 	}
 	if sg.client != nil {
 		sg.Close()
 	}
 	sg.client = client
-	ss := &SpdySample{ts: float64(connectStart.UnixNano()) / 1e9, tag: "CONNECT"}
-	ss.rt = int(time.Since(connectStart).Seconds() * 1e6)
-	ss.err = err
-	if ss.err == nil {
-		ss.StatusCode = 200
-	}
-	results <- ss
+
 	return nil
 }
 
-func (sg *SpdyGun) Ping(results chan<- aggregate.Sample) {
+func (sg *SpdyGun) Ping(results chan<- interface{}) {
 	if sg.client == nil {
 		return
 	}
@@ -133,55 +138,19 @@ func (sg *SpdyGun) Ping(results chan<- aggregate.Sample) {
 	if !pinged {
 		log.Printf("client: ping: timed out\n")
 	}
-	ss := &SpdySample{ts: float64(pingStart.UnixNano()) / 1e9, tag: "PING"}
-	ss.rt = int(time.Since(pingStart).Seconds() * 1e6)
-	ss.err = err
-	if ss.err == nil && pinged {
-		ss.StatusCode = 200
+	ss := &aggregate.Sample{TS: float64(pingStart.UnixNano()) / 1e9, Tag: "PING"}
+	ss.RT = int(time.Since(pingStart).Seconds() * 1e6)
+
+	if err == nil && pinged {
+		ss.ProtoCode = 200
 	} else {
-		ss.StatusCode = 500
+		ss.Err = err
+		ss.ProtoCode = 500
 	}
 	results <- ss
 	if err != nil {
 		sg.connect(results)
 	}
-}
-
-type SpdySample struct {
-	ts         float64 // Unix Timestamp in seconds
-	rt         int     // response time in milliseconds
-	StatusCode int     // protocol status code
-	tag        string
-	err        error
-}
-
-func (ds *SpdySample) PhoutSample() *aggregate.PhoutSample {
-	var protoCode, netCode int
-	if ds.err != nil {
-		protoCode = 500
-		netCode = 999
-	} else {
-		netCode = 0
-		protoCode = ds.StatusCode
-	}
-	return &aggregate.PhoutSample{
-		TS:            ds.ts,
-		Tag:           ds.tag,
-		RT:            ds.rt,
-		Connect:       0,
-		Send:          0,
-		Latency:       0,
-		Receive:       0,
-		IntervalEvent: 0,
-		Egress:        0,
-		Igress:        0,
-		NetCode:       netCode,
-		ProtoCode:     protoCode,
-	}
-}
-
-func (ds *SpdySample) String() string {
-	return fmt.Sprintf("rt: %d [%d] %s", ds.rt, ds.StatusCode, ds.tag)
 }
 
 func New(c *config.Gun) (gun.Gun, error) {

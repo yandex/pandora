@@ -20,7 +20,7 @@ func TestHttpGunWithSsl(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	result := make(chan aggregate.Sample)
+	result := make(chan interface{})
 	requests := make(chan *http.Request)
 
 	ts := httptest.NewTLSServer(
@@ -52,11 +52,10 @@ func TestHttpGunWithSsl(t *testing.T) {
 	})
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 1)
-	rPhout, casted := (results[0]).(aggregate.PhantomCompatible)
-	require.True(t, casted, "Should be phantom compatible")
-	phoutSample := rPhout.PhoutSample()
-	assert.Equal(t, "REQUEST", phoutSample.Tag)
-	assert.Equal(t, 200, phoutSample.ProtoCode)
+	sample, casted := (results[0]).(*aggregate.Sample)
+	require.True(t, casted, "Should be *aggregate.Sample")
+	assert.Equal(t, "REQUEST", sample.Tag)
+	assert.Equal(t, 200, sample.ProtoCode)
 
 	select {
 	case r := <-requests:
@@ -82,7 +81,7 @@ func TestHttpGunWithHttp(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	result := make(chan aggregate.Sample)
+	result := make(chan interface{})
 	requests := make(chan *http.Request)
 
 	ts := httptest.NewServer(
@@ -114,11 +113,10 @@ func TestHttpGunWithHttp(t *testing.T) {
 	})
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 1)
-	rPhout, casted := (results[0]).(aggregate.PhantomCompatible)
-	require.True(t, casted, "Should be phantom compatible")
-	phoutSample := rPhout.PhoutSample()
-	assert.Equal(t, "REQUEST", phoutSample.Tag)
-	assert.Equal(t, 200, phoutSample.ProtoCode)
+	sample, casted := (results[0]).(*aggregate.Sample)
+	require.True(t, casted, "Should be *aggregate.Sample")
+	assert.Equal(t, "REQUEST", sample.Tag)
+	assert.Equal(t, 200, sample.ProtoCode)
 
 	select {
 	case r := <-requests:

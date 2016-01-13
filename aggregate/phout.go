@@ -2,106 +2,34 @@ package aggregate
 
 import (
 	"bufio"
-	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/yandex/pandora/config"
 	"golang.org/x/net/context"
 )
 
-const (
-	phoutDelimiter = '\t'
-	phoutLineEnd   = '\n'
-)
-
-type PhoutSample struct {
-	TS            float64
-	Tag           string
-	RT            int
-	Connect       int
-	Send          int
-	Latency       int
-	Receive       int
-	IntervalEvent int
-	Egress        int
-	Igress        int
-	NetCode       int
-	ProtoCode     int
-}
-
-func (ps *PhoutSample) String() string {
-	return fmt.Sprintf(
-		"%.3f\t%s\t%d\t"+
-			"%d\t%d\t"+
-			"%d\t%d\t"+
-			"%d\t"+
-			"%d\t%d\t"+
-			"%d\t%d",
-		ps.TS, ps.Tag, ps.RT,
-		ps.Connect, ps.Send,
-		ps.Latency, ps.Receive,
-		ps.IntervalEvent,
-		ps.Egress, ps.Igress,
-		ps.NetCode, ps.ProtoCode,
-	)
-}
-
-func (ps *PhoutSample) AppendTo(dst []byte) []byte {
-	dst = strconv.AppendFloat(dst, ps.TS, 'f', 3, 64)
-	dst = append(dst, phoutDelimiter)
-	dst = append(dst, ps.Tag...)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.RT), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Connect), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Send), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Latency), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Receive), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.IntervalEvent), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Egress), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Igress), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.NetCode), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.ProtoCode), 10)
-	dst = append(dst, phoutLineEnd)
-	return dst
-}
-
-type PhantomCompatible interface {
-	Sample
-	PhoutSample() *PhoutSample
+type PhoutSerializable interface {
+	AppendToPhout([]byte) []byte
 }
 
 type PhoutResultListener struct {
 	resultListener
 
-	source <-chan Sample
+	source <-chan interface{}
 	phout  *bufio.Writer
 	buffer []byte
 }
 
-func (rl *PhoutResultListener) handle(r Sample) error {
-	pc, ok := r.(PhantomCompatible)
-	if ok {
-		rl.buffer = pc.PhoutSample().AppendTo(rl.buffer)
-		_, err := rl.phout.Write(rl.buffer)
-		rl.buffer = rl.buffer[:0]
-		if err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("Not phantom compatible sample")
+func (rl *PhoutResultListener) handle(s interface{}) error {
+	ps, ok := s.(PhoutSerializable)
+	if !ok {
+		panic("Result sample is not PhoutSerializable")
 	}
-	return nil
+	rl.buffer = ps.AppendToPhout(rl.buffer)
+	_, err := rl.phout.Write(rl.buffer)
+	rl.buffer = rl.buffer[:0]
+	return err
 }
 
 func (rl *PhoutResultListener) Start(ctx context.Context) error {
@@ -146,7 +74,7 @@ func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
 		phoutFile, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0666)
 	}
 	writer := bufio.NewWriterSize(phoutFile, 1024*512) // 512 KB
-	ch := make(chan Sample, 65536)
+	ch := make(chan interface{}, 65536)
 	return &PhoutResultListener{
 		source: ch,
 		resultListener: resultListener{

@@ -2,17 +2,21 @@ package aggregate
 
 import "golang.org/x/net/context"
 
-type Sample interface {
-	String() string
-}
-
 type ResultListener interface {
 	Start(context.Context) error
-	Sink() chan<- Sample
+	Sink() chan<- interface{}
 }
 
-func Drain(ctx context.Context, results <-chan Sample) []Sample {
-	samples := []Sample{}
+type resultListener struct {
+	sink chan<- interface{}
+}
+
+func (rl *resultListener) Sink() chan<- interface{} {
+	return rl.sink
+}
+
+func Drain(ctx context.Context, results <-chan interface{}) []interface{} {
+	samples := []interface{}{}
 loop:
 	for {
 		select {

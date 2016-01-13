@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/SlyMarbo/spdy" // we specially use spdy server from another library
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/aggregate"
@@ -22,7 +21,7 @@ func TestSpdyGun(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	result := make(chan aggregate.Sample)
+	result := make(chan interface{})
 
 	gun := &SpdyGun{
 		target:     "localhost:3000",
@@ -47,20 +46,19 @@ func TestSpdyGun(t *testing.T) {
 	require.Len(t, results, 2)
 	{
 		// first result is connect
-		rPhout, casted := (results[0]).(aggregate.PhantomCompatible)
-		require.True(t, casted, "Should be phantom compatible")
-		phoutSample := rPhout.PhoutSample()
-		assert.Equal(t, "CONNECT", phoutSample.Tag)
-		assert.Equal(t, 200, phoutSample.ProtoCode)
+
+		sample, casted := (results[0]).(*aggregate.Sample)
+		require.True(t, casted, "Should be *aggregate.Sample")
+		assert.Equal(t, "CONNECT", sample.Tag)
+		assert.Equal(t, 200, sample.ProtoCode)
 	}
 	{
 		// second result is request
-		rPhout, casted := (results[1]).(aggregate.PhantomCompatible)
-		require.True(t, casted, "Should be phantom compatible")
-		phoutSample := rPhout.PhoutSample()
-		spew.Dump(phoutSample)
-		assert.Equal(t, "REQUEST", phoutSample.Tag)
-		assert.Equal(t, 200, phoutSample.ProtoCode)
+
+		sample, casted := (results[1]).(*aggregate.Sample)
+		require.True(t, casted, "Should be *aggregate.Sample")
+		assert.Equal(t, "REQUEST", sample.Tag)
+		assert.Equal(t, 200, sample.ProtoCode)
 	}
 
 	// TODO: test scenaries with errors
