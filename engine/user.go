@@ -33,14 +33,15 @@ func (u *User) Run(ctx context.Context) error {
 loop:
 	for {
 		select {
-		case j, more := <-source:
+		case ammo, more := <-source:
 			if !more {
 				log.Println("Ammo ended")
 				break loop
 			}
 			_, more = <-control
 			if more {
-				u.Gun.Shoot(ctx, j, sink)
+				u.Gun.Shoot(ctx, ammo, sink)
+				u.Ammunition.Release(ammo)
 			} else {
 				log.Println("Limiter ended.")
 				break loop
