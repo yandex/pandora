@@ -4,10 +4,16 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/yandex/pandora/config"
 	"golang.org/x/net/context"
+)
+
+const (
+	phoutDelimiter = '\t'
+	phoutLineEnd   = '\n'
 )
 
 type PhoutSample struct {
@@ -42,6 +48,34 @@ func (ps *PhoutSample) String() string {
 	)
 }
 
+func (ps *PhoutSample) AppendTo(dst []byte) []byte {
+	dst = strconv.AppendFloat(dst, ps.TS, 'f', 3, 64)
+	dst = append(dst, phoutDelimiter)
+	dst = append(dst, ps.Tag...)
+	dst = append(dst, phoutDelimiter)
+	dst = strconv.AppendInt(dst, int64(ps.RT), 10)
+	dst = append(dst, phoutDelimiter)
+	dst = strconv.AppendInt(dst, int64(ps.Connect), 10)
+	dst = append(dst, phoutDelimiter)
+	dst = strconv.AppendInt(dst, int64(ps.Send), 10)
+	dst = append(dst, phoutDelimiter)
+	dst = strconv.AppendInt(dst, int64(ps.Latency), 10)
+	dst = append(dst, phoutDelimiter)
+	dst = strconv.AppendInt(dst, int64(ps.Receive), 10)
+	dst = append(dst, phoutDelimiter)
+	dst = strconv.AppendInt(dst, int64(ps.IntervalEvent), 10)
+	dst = append(dst, phoutDelimiter)
+	dst = strconv.AppendInt(dst, int64(ps.Egress), 10)
+	dst = append(dst, phoutDelimiter)
+	dst = strconv.AppendInt(dst, int64(ps.Igress), 10)
+	dst = append(dst, phoutDelimiter)
+	dst = strconv.AppendInt(dst, int64(ps.NetCode), 10)
+	dst = append(dst, phoutDelimiter)
+	dst = strconv.AppendInt(dst, int64(ps.ProtoCode), 10)
+	dst = append(dst, phoutLineEnd)
+	return dst
+}
+
 type PhantomCompatible interface {
 	Sample
 	PhoutSample() *PhoutSample
@@ -52,12 +86,15 @@ type PhoutResultListener struct {
 
 	source <-chan Sample
 	phout  *bufio.Writer
+	buffer []byte
 }
 
 func (rl *PhoutResultListener) handle(r Sample) error {
 	pc, ok := r.(PhantomCompatible)
 	if ok {
-		_, err := rl.phout.WriteString(fmt.Sprintf("%s\n", pc.PhoutSample()))
+		rl.buffer = pc.PhoutSample().AppendTo(rl.buffer)
+		_, err := rl.phout.Write(rl.buffer)
+		rl.buffer = rl.buffer[:0]
 		if err != nil {
 			return err
 		}
@@ -115,7 +152,8 @@ func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
 		resultListener: resultListener{
 			sink: ch,
 		},
-		phout: writer,
+		phout:  writer,
+		buffer: make([]byte, 0, 1024),
 	}, nil
 }
 
