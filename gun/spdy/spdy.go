@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/amahi/spdy"
@@ -55,7 +56,8 @@ func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- aggreg
 	if ha.Tag != "" {
 		ss.tag += "|" + ha.Tag
 	}
-	req, err := ha.Request()
+
+	req, err := http.NewRequest(ha.Method, "https://"+ha.Host+ha.Uri, nil)
 	if err != nil {
 		log.Printf("Error making HTTP request: %s\n", err)
 		ss.err = err

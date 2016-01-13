@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/yandex/pandora/config"
@@ -20,16 +19,6 @@ type Http struct {
 	Uri     string
 	Headers map[string]string
 	Tag     string
-}
-
-func (h *Http) Request() (*http.Request, error) {
-	req, err := http.NewRequest(h.Method, "http://"+h.Host+h.Uri, nil)
-	if err == nil {
-		for k, v := range h.Headers {
-			req.Header.Set(k, v)
-		}
-	}
-	return req, err
 }
 
 // HttpJSONDecoder implements ammo.Decoder interface

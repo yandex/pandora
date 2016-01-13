@@ -57,18 +57,22 @@ func (hg *HttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 	if ha.Tag != "" {
 		ss.tag += "|" + ha.Tag
 	}
-	req, err := ha.Request()
+	var uri string
+	if hg.ssl {
+		uri = "https://" + ha.Host + ha.Uri
+	} else {
+		uri = "http://" + ha.Host + ha.Uri
+	}
+	req, err := http.NewRequest(ha.Method, uri, nil)
 	if err != nil {
 		log.Printf("Error making HTTP request: %s\n", err)
 		ss.err = err
 		return err
 	}
-	req.URL.Host = hg.target
-	if hg.ssl {
-		req.URL.Scheme = "https"
-	} else {
-		req.URL.Scheme = "http"
+	for k, v := range ha.Headers {
+		req.Header.Set(k, v)
 	}
+	req.URL.Host = hg.target
 	res, err := hg.client.Do(req)
 	if err != nil {
 		log.Printf("Error performing a request: %s\n", err)
