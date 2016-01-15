@@ -33,8 +33,9 @@ func TestHttpGunWithSsl(t *testing.T) {
 	defer ts.Close()
 
 	gun := &HttpGun{
-		target: ts.Listener.Addr().String(),
-		ssl:    true,
+		target:  ts.Listener.Addr().String(),
+		ssl:     true,
+		results: result,
 	}
 	promise := utils.Promise(func() error {
 		defer close(result)
@@ -48,7 +49,7 @@ func TestHttpGunWithSsl(t *testing.T) {
 				"Host":            "example.org",
 				"User-Agent":      "Pandora/0.0.1",
 			},
-		}, result)
+		})
 	})
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 1)
@@ -92,8 +93,9 @@ func TestHttpGunWithHttp(t *testing.T) {
 	defer ts.Close()
 
 	gun := &HttpGun{
-		target: ts.Listener.Addr().String(),
-		ssl:    false,
+		target:  ts.Listener.Addr().String(),
+		ssl:     false,
+		results: result,
 	}
 	promise := utils.Promise(func() error {
 		defer close(result)
@@ -107,7 +109,7 @@ func TestHttpGunWithHttp(t *testing.T) {
 				"Host":            "example.org",
 				"User-Agent":      "Pandora/0.0.1",
 			},
-		}, result)
+		})
 	})
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 1)

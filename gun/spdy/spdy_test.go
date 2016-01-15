@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
+	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/utils"
 	"golang.org/x/net/context"
 )
@@ -24,8 +25,8 @@ func TestSpdyGun(t *testing.T) {
 	result := make(chan *aggregate.Sample)
 
 	gun := &SpdyGun{
-		target:     "localhost:3000",
-		pingPeriod: time.Second * 5,
+		target:  "localhost:3000",
+		results: result,
 	}
 	promise := utils.Promise(func() error {
 		defer gun.Close()
@@ -40,7 +41,7 @@ func TestSpdyGun(t *testing.T) {
 				"Host":            "example.org",
 				"User-Agent":      "Pandora/0.0.1",
 			},
-		}, result)
+		})
 	})
 
 	results := aggregate.Drain(ctx, result)
@@ -76,16 +77,16 @@ func TestSpdyConnectPing(t *testing.T) {
 	result := make(chan *aggregate.Sample)
 
 	gun := &SpdyGun{
-		target:     "localhost:3000",
-		pingPeriod: time.Second * 5,
+		target:  "localhost:3000",
+		results: result,
 	}
 	promise := utils.Promise(func() error {
 		defer gun.Close()
 		defer close(result)
-		if err := gun.Connect(result); err != nil {
+		if err := gun.Connect(); err != nil {
 			return err
 		}
-		gun.Ping(result)
+		gun.Ping()
 		return nil
 	})
 
@@ -110,6 +111,30 @@ func TestSpdyConnectPing(t *testing.T) {
 		t.Fatal(ctx.Err())
 	}
 
+}
+
+func TestNewSpdyGun(t *testing.T) {
+	spdyConfig := &config.Gun{
+		GunType: "spdy",
+		Parameters: map[string]interface{}{
+			"Target":     "localhost:3000",
+			"PingPeriod": 5.0,
+		},
+	}
+	g, err := New(spdyConfig)
+	assert.NoError(t, err)
+	_, ok := g.(*SpdyGun)
+	assert.Equal(t, true, ok)
+
+	failSpdyConfig := &config.Gun{
+		GunType: "spdy",
+		Parameters: map[string]interface{}{
+			"Target":     "localhost:3000",
+			"PingPeriod": "not-a-number",
+		},
+	}
+	_, err = New(failSpdyConfig)
+	assert.Error(t, err)
 }
 
 func runSpdyTestServer() {

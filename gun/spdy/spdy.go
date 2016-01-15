@@ -20,14 +20,19 @@ import (
 )
 
 type SpdyGun struct {
-	pingPeriod time.Duration
-	target     string
-	client     *spdy.Client
+	target  string
+	client  *spdy.Client
+	results chan<- *aggregate.Sample
+	closed  bool
 }
 
-func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- *aggregate.Sample) error {
+func (sg *SpdyGun) BindResultsTo(results chan<- *aggregate.Sample) {
+	sg.results = results
+}
+
+func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo) error {
 	if sg.client == nil {
-		if err := sg.Connect(results); err != nil {
+		if err := sg.Connect(); err != nil {
 			return err
 		}
 	}
@@ -36,7 +41,7 @@ func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- *aggre
 	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "REQUEST")
 	defer func() {
 		ss.RT = int(time.Since(start).Seconds() * 1e6)
-		results <- ss
+		sg.results <- ss
 	}()
 	// now send the request to obtain a http response
 	ha, ok := a.(*ammo.Http)
@@ -79,18 +84,19 @@ func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- *aggre
 }
 
 func (sg *SpdyGun) Close() {
+	sg.closed = true
 	if sg.client != nil {
 		sg.client.Close()
 	}
 }
 
-func (sg *SpdyGun) Connect(results chan<- *aggregate.Sample) error {
+func (sg *SpdyGun) Connect() error {
 	// FIXME: rewrite connection logic, it isn't thread safe right now.
 	start := time.Now()
 	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "CONNECT")
 	defer func() {
 		ss.RT = int(time.Since(start).Seconds() * 1e6)
-		results <- ss
+		sg.results <- ss
 	}()
 	config := tls.Config{
 		InsecureSkipVerify: true,
@@ -118,7 +124,7 @@ func (sg *SpdyGun) Connect(results chan<- *aggregate.Sample) error {
 	return nil
 }
 
-func (sg *SpdyGun) Ping(results chan<- *aggregate.Sample) {
+func (sg *SpdyGun) Ping() {
 	if sg.client == nil {
 		return
 	}
@@ -140,9 +146,22 @@ func (sg *SpdyGun) Ping(results chan<- *aggregate.Sample) {
 		ss.Err = err
 		ss.ProtoCode = 500
 	}
-	results <- ss
+	sg.results <- ss
 	if err != nil {
-		sg.Connect(results)
+		sg.Connect()
+	}
+}
+
+func (sg *SpdyGun) startAutoPing(pingPeriod time.Duration) {
+	if pingPeriod > 0 {
+		go func() {
+			for range time.NewTicker(pingPeriod).C {
+				if sg.closed {
+					return
+				}
+				sg.Ping()
+			}
+		}()
 	}
 }
 
@@ -171,23 +190,12 @@ func New(c *config.Gun) (gun.Gun, error) {
 	switch t := target.(type) {
 	case string:
 		g = &SpdyGun{
-			pingPeriod: pingPeriod,
-			target:     target.(string),
+			target: target.(string),
 		}
 	default:
 		return nil, fmt.Errorf("Target is of the wrong type."+
 			" Expected 'string' got '%T'", t)
 	}
-	// TODO: implement this logic somewhere
-	// if pingPeriod > 0 {
-	// 	go func() {
-	// 		for range time.NewTicker(pingPeriod).C {
-	// 			if g.closed {
-	// 				return
-	// 			}
-	// 			g.Ping(results)
-	// 		}
-	// 	}()
-	// }
+	g.(*SpdyGun).startAutoPing(pingPeriod)
 	return g, nil
 }

@@ -28,23 +28,27 @@ const (
 )
 
 type HttpGun struct {
-	target string
-	ssl    bool
-	client *http.Client
+	target  string
+	ssl     bool
+	client  *http.Client
+	results chan<- *aggregate.Sample
+}
+
+func (hg *HttpGun) BindResultsTo(results chan<- *aggregate.Sample) {
+	hg.results = results
 }
 
 // Shoot to target, this method is not thread safe
-func (hg *HttpGun) Shoot(ctx context.Context, a ammo.Ammo,
-	results chan<- *aggregate.Sample) error {
+func (hg *HttpGun) Shoot(ctx context.Context, a ammo.Ammo) error {
 
 	if hg.client == nil {
-		hg.Connect(results)
+		hg.Connect()
 	}
 	start := time.Now()
 	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "REQUEST")
 	defer func() {
 		ss.RT = int(time.Since(start).Seconds() * 1e6)
-		results <- ss
+		hg.results <- ss
 	}()
 	// now send the request to obtain a http response
 	ha, ok := a.(*ammo.Http)
@@ -99,7 +103,7 @@ func (hg *HttpGun) Close() {
 	hg.client = nil
 }
 
-func (hg *HttpGun) Connect(results chan<- *aggregate.Sample) {
+func (hg *HttpGun) Connect() {
 	hg.Close()
 	config := tls.Config{
 		InsecureSkipVerify: true,
