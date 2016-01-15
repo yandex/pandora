@@ -28,6 +28,7 @@ func TestSpdyGun(t *testing.T) {
 		pingPeriod: time.Second * 5,
 	}
 	promise := utils.Promise(func() error {
+		defer gun.Close()
 		defer close(result)
 		return gun.Shoot(ctx, &ammo.Http{
 			Host:   "example.org",
@@ -58,8 +59,50 @@ func TestSpdyGun(t *testing.T) {
 	}
 
 	// TODO: test scenaries with errors
-	// TODO: test ping logic
 
+	select {
+	case err := <-promise:
+		require.NoError(t, err)
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+
+}
+
+func TestSpdyConnectPing(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	result := make(chan *aggregate.Sample)
+
+	gun := &SpdyGun{
+		target:     "localhost:3000",
+		pingPeriod: time.Second * 5,
+	}
+	promise := utils.Promise(func() error {
+		defer gun.Close()
+		defer close(result)
+		if err := gun.Connect(result); err != nil {
+			return err
+		}
+		gun.Ping(result)
+		return nil
+	})
+
+	results := aggregate.Drain(ctx, result)
+	require.Len(t, results, 2)
+	{
+		// first result is connect
+
+		assert.Equal(t, "CONNECT", results[0].Tag)
+		assert.Equal(t, 200, results[0].ProtoCode)
+	}
+	{
+		// second result is PING
+
+		assert.Equal(t, "PING", results[1].Tag)
+		assert.Equal(t, 200, results[1].ProtoCode)
+	}
 	select {
 	case err := <-promise:
 		require.NoError(t, err)

@@ -27,18 +27,11 @@ type SpdyGun struct {
 
 func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- *aggregate.Sample) error {
 	if sg.client == nil {
-		if err := sg.connect(results); err != nil {
+		if err := sg.Connect(results); err != nil {
 			return err
 		}
 	}
-	if sg.pingPeriod > 0 {
-		pingTimer := time.NewTicker(sg.pingPeriod)
-		go func() {
-			for range pingTimer.C {
-				sg.Ping(results)
-			}
-		}()
-	}
+
 	start := time.Now()
 	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "REQUEST")
 	defer func() {
@@ -91,7 +84,7 @@ func (sg *SpdyGun) Close() {
 	}
 }
 
-func (sg *SpdyGun) connect(results chan<- *aggregate.Sample) error {
+func (sg *SpdyGun) Connect(results chan<- *aggregate.Sample) error {
 	// FIXME: rewrite connection logic, it isn't thread safe right now.
 	start := time.Now()
 	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "CONNECT")
@@ -149,7 +142,7 @@ func (sg *SpdyGun) Ping(results chan<- *aggregate.Sample) {
 	}
 	results <- ss
 	if err != nil {
-		sg.connect(results)
+		sg.Connect(results)
 	}
 }
 
@@ -185,5 +178,16 @@ func New(c *config.Gun) (gun.Gun, error) {
 		return nil, fmt.Errorf("Target is of the wrong type."+
 			" Expected 'string' got '%T'", t)
 	}
+	// TODO: implement this logic somewhere
+	// if pingPeriod > 0 {
+	// 	go func() {
+	// 		for range time.NewTicker(pingPeriod).C {
+	// 			if g.closed {
+	// 				return
+	// 			}
+	// 			g.Ping(results)
+	// 		}
+	// 	}()
+	// }
 	return g, nil
 }
