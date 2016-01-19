@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/yandex/pandora/config"
@@ -22,21 +21,11 @@ type Http struct {
 	Tag     string
 }
 
-func (h *Http) Request() (*http.Request, error) {
-	// FIXME: something wrong here with https
-	req, err := http.NewRequest(h.Method, "http://"+h.Host+h.Uri, nil)
-	if err == nil {
-		for k, v := range h.Headers {
-			req.Header.Set(k, v)
-		}
-	}
-	return req, err
-}
+// HttpJSONDecoder implements ammo.Decoder interface
+type HttpJSONDecoder struct{}
 
-// HttpJSONDecode implements ammo.Decoder interface
-func HttpJSONDecode(jsonDoc []byte) (Ammo, error) {
-	a := &Http{}
-	err := a.UnmarshalJSON(jsonDoc)
+func (d *HttpJSONDecoder) Decode(jsonDoc []byte, a Ammo) (Ammo, error) {
+	err := a.(*Http).UnmarshalJSON(jsonDoc)
 	return a, err
 }
 
@@ -66,7 +55,7 @@ loop:
 		scanner.Split(bufio.ScanLines)
 		for scanner.Scan() && (ap.ammoLimit == 0 || ammoNumber < ap.ammoLimit) {
 			data := scanner.Bytes()
-			if a, err := ap.Decode(data); err != nil {
+			if a, err := ap.decode(data); err != nil {
 				return fmt.Errorf("failed to decode ammo: %v", err)
 			} else {
 				ammoNumber++
@@ -100,7 +89,8 @@ func NewHttpProvider(c *config.AmmoProvider) (Provider, error) {
 		sink:         ammoCh,
 		BaseProvider: NewBaseProvider(
 			ammoCh,
-			HttpJSONDecode,
+			&HttpJSONDecoder{},
+			func() interface{} { return &Http{} },
 		),
 	}
 	return ap, nil

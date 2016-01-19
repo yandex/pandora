@@ -18,31 +18,32 @@ import (
 // === Gun ===
 
 type FastHttpGun struct {
-	target string
-	ssl    bool
-	client *fasthttp.HostClient
+	target  string
+	ssl     bool
+	results chan<- *aggregate.Sample
+	client  *fasthttp.HostClient
 }
 
 // Shoot to target, this method is not thread safe
-func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
-	results chan<- aggregate.Sample) error {
+func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo) error {
 
 	if hg.client == nil {
-		hg.Connect(results)
+		hg.Connect()
 	}
 
 	start := time.Now()
-	ss := &HttpSample{ts: float64(start.UnixNano()) / 1e9, tag: "REQUEST"}
+	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "REQUEST")
 
 	ha, ok := a.(*ammo.Http)
 	if !ok {
 		errStr := fmt.Sprintf("Got '%T' instead of 'HttpAmmo'", a)
 		log.Println(errStr)
-		ss.err = errors.New(errStr)
-		return ss.err
+		err := errors.New(errStr)
+		ss.Err = err
+		return err
 	}
 	if ha.Tag != "" {
-		ss.tag += "|" + ha.Tag
+		ss.Tag += "|" + ha.Tag
 	}
 
 	res := fasthttp.AcquireResponse()
@@ -58,9 +59,9 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 		if err != nil {
 			log.Printf("Error performing a request: %s\n", err)
 			fasthttp.ReleaseResponse(res)
-			ss.err = err
-			ss.rt = int(time.Since(start).Seconds() * 1e6)
-			results <- ss
+			ss.Err = err
+			ss.RT = int(time.Since(start).Seconds() * 1e6)
+			hg.results <- ss
 			return err
 		}
 	default:
@@ -69,18 +70,22 @@ func (hg *FastHttpGun) Shoot(ctx context.Context, a ammo.Ammo,
 
 	// TODO: optional verbose answ_log output
 
-	ss.StatusCode = res.StatusCode()
-	ss.rt = int(time.Since(start).Seconds() * 1e6)
-	results <- ss
+	ss.ProtoCode = res.StatusCode()
+	ss.RT = int(time.Since(start).Seconds() * 1e6)
+	hg.results <- ss
 	fasthttp.ReleaseResponse(res)
 	return nil
+}
+
+func (hg *FastHttpGun) BindResultsTo(results chan<- *aggregate.Sample) {
+	hg.results = results
 }
 
 func (hg *FastHttpGun) Close() {
 	hg.client = nil
 }
 
-func (hg *FastHttpGun) Connect(results chan<- aggregate.Sample) {
+func (hg *FastHttpGun) Connect() {
 	hg.Close()
 	config := tls.Config{
 		InsecureSkipVerify: true,

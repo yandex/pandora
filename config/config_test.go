@@ -33,7 +33,8 @@ func TestGlobalConfig(t *testing.T) {
 	gc := &Gun{
 		GunType: "spdy",
 		Parameters: map[string]interface{}{
-			"Target": "localhost:3000",
+			"Target":     "localhost:3000",
+			"PingPeriod": "5",
 		},
 	}
 	globalConfig := &Global{

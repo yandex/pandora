@@ -20,7 +20,7 @@ func TestFastHttpGunWithSsl(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	result := make(chan aggregate.Sample)
+	result := make(chan *aggregate.Sample)
 	requests := make(chan *http.Request)
 
 	ts := httptest.NewTLSServer(
@@ -33,8 +33,9 @@ func TestFastHttpGunWithSsl(t *testing.T) {
 	defer ts.Close()
 
 	gun := &FastHttpGun{
-		target: ts.Listener.Addr().String(),
-		ssl:    true,
+		target:  ts.Listener.Addr().String(),
+		ssl:     true,
+		results: result,
 	}
 	promise := utils.Promise(func() error {
 		defer close(result)
@@ -48,15 +49,12 @@ func TestFastHttpGunWithSsl(t *testing.T) {
 				"Host":            "example.org",
 				"User-Agent":      "Pandora/0.0.1",
 			},
-		}, result)
+		})
 	})
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 1)
-	rPhout, casted := (results[0]).(aggregate.PhantomCompatible)
-	require.True(t, casted, "Should be phantom compatible")
-	phoutSample := rPhout.PhoutSample()
-	assert.Equal(t, "REQUEST", phoutSample.Tag)
-	assert.Equal(t, 200, phoutSample.ProtoCode)
+	assert.Equal(t, "REQUEST", results[0].Tag)
+	assert.Equal(t, 200, results[0].ProtoCode)
 
 	select {
 	case r := <-requests:
@@ -82,7 +80,7 @@ func TestFastHttpGunWithHttp(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	result := make(chan aggregate.Sample)
+	result := make(chan *aggregate.Sample)
 	requests := make(chan *http.Request)
 
 	ts := httptest.NewServer(
@@ -95,8 +93,9 @@ func TestFastHttpGunWithHttp(t *testing.T) {
 	defer ts.Close()
 
 	gun := &FastHttpGun{
-		target: ts.Listener.Addr().String(),
-		ssl:    false,
+		target:  ts.Listener.Addr().String(),
+		ssl:     false,
+		results: result,
 	}
 	promise := utils.Promise(func() error {
 		defer close(result)
@@ -110,15 +109,12 @@ func TestFastHttpGunWithHttp(t *testing.T) {
 				"Host":            "example.org",
 				"User-Agent":      "Pandora/0.0.1",
 			},
-		}, result)
+		})
 	})
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 1)
-	rPhout, casted := (results[0]).(aggregate.PhantomCompatible)
-	require.True(t, casted, "Should be phantom compatible")
-	phoutSample := rPhout.PhoutSample()
-	assert.Equal(t, "REQUEST", phoutSample.Tag)
-	assert.Equal(t, 200, phoutSample.ProtoCode)
+	assert.Equal(t, "REQUEST", results[0].Tag)
+	assert.Equal(t, 200, results[0].ProtoCode)
 
 	select {
 	case r := <-requests:

@@ -2,7 +2,6 @@ package aggregate
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"time"
 
@@ -10,61 +9,21 @@ import (
 	"golang.org/x/net/context"
 )
 
-type PhoutSample struct {
-	TS            float64
-	Tag           string
-	RT            int
-	Connect       int
-	Send          int
-	Latency       int
-	Receive       int
-	IntervalEvent int
-	Egress        int
-	Igress        int
-	NetCode       int
-	ProtoCode     int
-}
-
-func (ps *PhoutSample) String() string {
-	return fmt.Sprintf(
-		"%.3f\t%s\t%d\t"+
-			"%d\t%d\t"+
-			"%d\t%d\t"+
-			"%d\t"+
-			"%d\t%d\t"+
-			"%d\t%d",
-		ps.TS, ps.Tag, ps.RT,
-		ps.Connect, ps.Send,
-		ps.Latency, ps.Receive,
-		ps.IntervalEvent,
-		ps.Egress, ps.Igress,
-		ps.NetCode, ps.ProtoCode,
-	)
-}
-
-type PhantomCompatible interface {
-	Sample
-	PhoutSample() *PhoutSample
-}
-
 type PhoutResultListener struct {
 	resultListener
 
-	source <-chan Sample
+	source <-chan *Sample
 	phout  *bufio.Writer
+	buffer []byte
 }
 
-func (rl *PhoutResultListener) handle(r Sample) error {
-	pc, ok := r.(PhantomCompatible)
-	if ok {
-		_, err := rl.phout.WriteString(fmt.Sprintf("%s\n", pc.PhoutSample()))
-		if err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("Not phantom compatible sample")
-	}
-	return nil
+func (rl *PhoutResultListener) handle(s *Sample) error {
+
+	rl.buffer = s.AppendToPhout(rl.buffer)
+	_, err := rl.phout.Write(rl.buffer)
+	rl.buffer = rl.buffer[:0]
+	ReleaseSample(s)
+	return err
 }
 
 func (rl *PhoutResultListener) Start(ctx context.Context) error {
@@ -109,13 +68,14 @@ func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
 		phoutFile, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0666)
 	}
 	writer := bufio.NewWriterSize(phoutFile, 1024*512) // 512 KB
-	ch := make(chan Sample, 65536)
+	ch := make(chan *Sample, 65536)
 	return &PhoutResultListener{
 		source: ch,
 		resultListener: resultListener{
 			sink: ch,
 		},
-		phout: writer,
+		phout:  writer,
+		buffer: make([]byte, 0, 1024),
 	}, nil
 }
 

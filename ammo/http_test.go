@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -51,7 +52,8 @@ func TestHttpProvider(t *testing.T) {
 		sink:         ammoCh,
 		BaseProvider: NewBaseProvider(
 			ammoCh,
-			HttpJSONDecode,
+			&HttpJSONDecoder{},
+			func() interface{} { return &Http{} },
 		),
 	}
 	promise := utils.PromiseCtx(providerCtx, provider.Start)
@@ -82,6 +84,7 @@ var result Ammo
 
 func BenchmarkJsonDecoder(b *testing.B) {
 	f, err := os.Open(httpTestFilename)
+	decoder := &HttpJSONDecoder{}
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -93,7 +96,31 @@ func BenchmarkJsonDecoder(b *testing.B) {
 	}
 	var a Ammo
 	for n := 0; n < b.N; n++ {
-		a, _ = HttpJSONDecode(jsonDoc)
+		a, _ = decoder.Decode(jsonDoc, &Http{})
 	}
-	result = a
+	_ = a
+}
+
+func BenchmarkJsonDecoderWithPool(b *testing.B) {
+	f, err := os.Open(httpTestFilename)
+	decoder := &HttpJSONDecoder{}
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer f.Close()
+	r := bufio.NewReader(f)
+	jsonDoc, isPrefix, err := r.ReadLine()
+	if err != nil || isPrefix {
+		b.Fatal(errors.New("Couldn't properly read ammo sample from data file"))
+	}
+	var a Ammo
+	pool := sync.Pool{
+		New: func() interface{} { return &Http{} },
+	}
+	for n := 0; n < b.N; n++ {
+		h := pool.Get().(*Http)
+		a, _ = decoder.Decode(jsonDoc, h)
+		pool.Put(h)
+	}
+	_ = a
 }

@@ -1,8 +1,8 @@
 package gun
 
 import (
-	"fmt"
 	"log"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -11,24 +11,18 @@ import (
 	"github.com/yandex/pandora/config"
 )
 
-type LogGun struct{}
+type LogGun struct {
+	results chan<- *aggregate.Sample
+}
 
-func (l *LogGun) Shoot(ctx context.Context, a ammo.Ammo, results chan<- aggregate.Sample) error {
+func (l *LogGun) BindResultsTo(results chan<- *aggregate.Sample) {
+	l.results = results
+}
+
+func (l *LogGun) Shoot(ctx context.Context, a ammo.Ammo) error {
 	log.Println("Log message: ", a.(*ammo.Log).Message)
-	results <- &DummySample{0}
+	l.results <- aggregate.AcquireSample(float64(time.Now().UnixNano())/1e9, "REQUEST")
 	return nil
-}
-
-type DummySample struct {
-	value int
-}
-
-func (ds *DummySample) PhoutSample() *aggregate.PhoutSample {
-	return &aggregate.PhoutSample{}
-}
-
-func (ds *DummySample) String() string {
-	return fmt.Sprintf("My value is %d", ds.value)
 }
 
 func NewLogGunFromConfig(c *config.Gun) (g Gun, err error) {

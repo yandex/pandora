@@ -7,5 +7,6 @@ import (
 )
 
 type Gun interface {
-	Shoot(context.Context, ammo.Ammo, chan<- aggregate.Sample) error
+	Shoot(context.Context, ammo.Ammo) error
+	BindResultsTo(chan<- *aggregate.Sample)
 }
