@@ -58,7 +58,7 @@ func init() {
 			activeUsers := evUsersStarted.Get() - evUsersFinished.Get()
 			activeRequests := requestsNew - responsesNew
 			log.Printf(
-				"[ENGINE] resp/s: %d req/s: %d users: %d (%d active)\n",
+				"[ENGINE] %d resp/s; %d req/s; %d users; %d active\n",
 				rps, reqps, activeUsers, activeRequests)
 
 			requests = requestsNew
