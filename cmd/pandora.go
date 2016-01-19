@@ -9,8 +9,6 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
 	"github.com/yandex/pandora/config"
@@ -18,6 +16,7 @@ import (
 	"github.com/yandex/pandora/extpoints"
 	"github.com/yandex/pandora/limiter"
 	"github.com/yandex/pandora/utils"
+	"golang.org/x/net/context"
 )
 
 func init() {
@@ -38,7 +37,7 @@ func init() {
 }
 
 func Run() {
-	fmt.Printf("Pandora v%s\n", Version)
+	fmt.Printf("Pandora v%s\n", utils.Version)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of Pandora: pandora [<config_filename>]\n"+
 			"<config_filename> is './load.json' by default\n")

@@ -6,7 +6,7 @@ go:
 before_install:
   - go get github.com/amahi/spdy
   - go get golang.org/x/net/context
-  - go get github.com/amahi/spdy
+  - go get github.com/valyala/fasthttp
   - go get github.com/stretchr/testify
   - go get github.com/SlyMarbo/spdy
   - go get github.com/davecgh/go-spew/spew
