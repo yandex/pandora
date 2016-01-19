@@ -24,8 +24,10 @@ type User struct {
 
 func (u *User) Run(ctx context.Context) error {
 	log.Printf("Starting user: %s\n", u.Name)
+	evUsersStarted.Add(1)
 	defer func() {
 		log.Printf("Exit user: %s\n", u.Name)
+		evUsersFinished.Add(1)
 	}()
 	control := u.Limiter.Control()
 	source := u.Ammunition.Source()
@@ -40,7 +42,9 @@ loop:
 			}
 			_, more = <-control
 			if more {
+				evRequests.Add(1)
 				u.Gun.Shoot(ctx, ammo)
+				evResponses.Add(1)
 				u.Ammunition.Release(ammo)
 			} else {
 				log.Println("Limiter ended.")
