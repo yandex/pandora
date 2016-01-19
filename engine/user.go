@@ -29,18 +29,19 @@ func (u *User) Run(ctx context.Context) error {
 	}()
 	control := u.Limiter.Control()
 	source := u.Ammunition.Source()
-	sink := u.Results.Sink()
+	u.Gun.BindResultsTo(u.Results.Sink())
 loop:
 	for {
 		select {
-		case j, more := <-source:
+		case ammo, more := <-source:
 			if !more {
 				log.Println("Ammo ended")
 				break loop
 			}
 			_, more = <-control
 			if more {
-				u.Gun.Shoot(ctx, j, sink)
+				u.Gun.Shoot(ctx, ammo)
+				u.Ammunition.Release(ammo)
 			} else {
 				log.Println("Limiter ended.")
 				break loop

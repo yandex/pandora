@@ -7,23 +7,16 @@ import (
 	"golang.org/x/net/context"
 )
 
-type resultListener struct {
-	sink chan<- Sample
-}
-
-func (rl *resultListener) Sink() chan<- Sample {
-	return rl.sink
-}
-
 // Implements ResultListener interface
 type LoggingResultListener struct {
 	resultListener
 
-	source <-chan Sample
+	source <-chan *Sample
 }
 
-func (rl *LoggingResultListener) handle(r Sample) {
-	log.Println(r)
+func (rl *LoggingResultListener) handle(s *Sample) {
+	log.Println(s)
+	ReleaseSample(s)
 }
 
 func (rl *LoggingResultListener) Start(ctx context.Context) error {
@@ -48,7 +41,7 @@ loop:
 }
 
 func NewLoggingResultListener(*config.ResultListener) (ResultListener, error) {
-	ch := make(chan Sample, 32)
+	ch := make(chan *Sample, 32)
 	return &LoggingResultListener{
 		source: ch,
 		resultListener: resultListener{

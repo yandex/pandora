@@ -13,11 +13,16 @@ type Log struct {
 	Message string
 }
 
-// LogJSONDecode implements ammo.Decoder interface
-func LogJSONDecode(jsonDoc []byte) (Ammo, error) {
-	a := &Log{}
+// LogJSONDecoder implements ammo.Decoder interface
+type LogJSONDecoder struct{}
+
+func (*LogJSONDecoder) Decode(jsonDoc []byte, a Ammo) (Ammo, error) {
 	err := json.Unmarshal(jsonDoc, a)
 	return a, err
+}
+
+func NewLogJSONDecoder() Decoder {
+	return &LogJSONDecoder{}
 }
 
 type LogProvider struct {
@@ -31,7 +36,7 @@ func (ap *LogProvider) Start(ctx context.Context) error {
 	defer close(ap.sink)
 loop:
 	for i := 0; i < ap.size; i++ {
-		if a, err := ap.Decode([]byte(fmt.Sprintf(`{"message": "Job #%d"}`, i))); err == nil {
+		if a, err := ap.decode([]byte(fmt.Sprintf(`{"message": "Job #%d"}`, i))); err == nil {
 			select {
 			case ap.sink <- a:
 			case <-ctx.Done():
@@ -52,7 +57,8 @@ func NewLogAmmoProvider(c *config.AmmoProvider) (Provider, error) {
 		sink: ammoCh,
 		BaseProvider: NewBaseProvider(
 			ammoCh,
-			LogJSONDecode,
+			NewLogJSONDecoder(),
+			func() interface{} { return &Log{} },
 		),
 	}
 	return ap, nil

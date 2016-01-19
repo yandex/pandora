@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/SlyMarbo/spdy" // we specially use spdy server from another library
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
+	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/utils"
 	"golang.org/x/net/context"
 )
@@ -22,13 +22,14 @@ func TestSpdyGun(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	result := make(chan aggregate.Sample)
+	result := make(chan *aggregate.Sample)
 
 	gun := &SpdyGun{
-		target:     "localhost:3000",
-		pingPeriod: time.Second * 5,
+		target:  "localhost:3000",
+		results: result,
 	}
 	promise := utils.Promise(func() error {
+		defer gun.Close()
 		defer close(result)
 		return gun.Shoot(ctx, &ammo.Http{
 			Host:   "example.org",
@@ -40,31 +41,25 @@ func TestSpdyGun(t *testing.T) {
 				"Host":            "example.org",
 				"User-Agent":      "Pandora/0.0.1",
 			},
-		}, result)
+		})
 	})
 
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 2)
 	{
 		// first result is connect
-		rPhout, casted := (results[0]).(aggregate.PhantomCompatible)
-		require.True(t, casted, "Should be phantom compatible")
-		phoutSample := rPhout.PhoutSample()
-		assert.Equal(t, "CONNECT", phoutSample.Tag)
-		assert.Equal(t, 200, phoutSample.ProtoCode)
+
+		assert.Equal(t, "CONNECT", results[0].Tag)
+		assert.Equal(t, 200, results[0].ProtoCode)
 	}
 	{
 		// second result is request
-		rPhout, casted := (results[1]).(aggregate.PhantomCompatible)
-		require.True(t, casted, "Should be phantom compatible")
-		phoutSample := rPhout.PhoutSample()
-		spew.Dump(phoutSample)
-		assert.Equal(t, "REQUEST", phoutSample.Tag)
-		assert.Equal(t, 200, phoutSample.ProtoCode)
+
+		assert.Equal(t, "REQUEST", results[1].Tag)
+		assert.Equal(t, 200, results[1].ProtoCode)
 	}
 
 	// TODO: test scenaries with errors
-	// TODO: test ping logic
 
 	select {
 	case err := <-promise:
@@ -73,6 +68,73 @@ func TestSpdyGun(t *testing.T) {
 		t.Fatal(ctx.Err())
 	}
 
+}
+
+func TestSpdyConnectPing(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	result := make(chan *aggregate.Sample)
+
+	gun := &SpdyGun{
+		target:  "localhost:3000",
+		results: result,
+	}
+	promise := utils.Promise(func() error {
+		defer gun.Close()
+		defer close(result)
+		if err := gun.Connect(); err != nil {
+			return err
+		}
+		gun.Ping()
+		return nil
+	})
+
+	results := aggregate.Drain(ctx, result)
+	require.Len(t, results, 2)
+	{
+		// first result is connect
+
+		assert.Equal(t, "CONNECT", results[0].Tag)
+		assert.Equal(t, 200, results[0].ProtoCode)
+	}
+	{
+		// second result is PING
+
+		assert.Equal(t, "PING", results[1].Tag)
+		assert.Equal(t, 200, results[1].ProtoCode)
+	}
+	select {
+	case err := <-promise:
+		require.NoError(t, err)
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+
+}
+
+func TestNewSpdyGun(t *testing.T) {
+	spdyConfig := &config.Gun{
+		GunType: "spdy",
+		Parameters: map[string]interface{}{
+			"Target":     "localhost:3000",
+			"PingPeriod": 5.0,
+		},
+	}
+	g, err := New(spdyConfig)
+	assert.NoError(t, err)
+	_, ok := g.(*SpdyGun)
+	assert.Equal(t, true, ok)
+
+	failSpdyConfig := &config.Gun{
+		GunType: "spdy",
+		Parameters: map[string]interface{}{
+			"Target":     "localhost:3000",
+			"PingPeriod": "not-a-number",
+		},
+	}
+	_, err = New(failSpdyConfig)
+	assert.Error(t, err)
 }
 
 func runSpdyTestServer() {
