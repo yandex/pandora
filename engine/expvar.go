@@ -2,6 +2,7 @@ package engine
 
 import (
 	"expvar"
+	"log"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -52,12 +53,21 @@ func init() {
 		for _ = range time.NewTicker(1 * time.Second).C {
 			requestsNew = evRequests.Get()
 			responsesNew = evResponses.Get()
-			evActiveUsers.Set(evUsersStarted.Get() - evUsersFinished.Get())
-			evActiveRequests.Set(requestsNew - responsesNew)
-			evReqPS.Set(requestsNew - requests)
-			evResPS.Set(responsesNew - responses)
+			rps := responsesNew - responses
+			reqps := requestsNew - requests
+			activeUsers := evUsersStarted.Get() - evUsersFinished.Get()
+			activeRequests := requestsNew - responsesNew
+			log.Printf(
+				"[ENGINE] resp/s: %d req/s: %d users: %d (%d active)\n",
+				rps, reqps, activeUsers, activeRequests)
+
 			requests = requestsNew
 			responses = responsesNew
+
+			evActiveUsers.Set(activeUsers)
+			evActiveRequests.Set(activeRequests)
+			evReqPS.Set(reqps)
+			evResPS.Set(rps)
 		}
 	}()
 }
