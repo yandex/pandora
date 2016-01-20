@@ -5,7 +5,7 @@
 	],
 	"Arch": "amd64",
 	"Os": "linux darwin windows",
-	"PackageVersion": "0.1.1",
+	"PackageVersion": "0.1.2",
 	"TaskSettings": {
 		"publish-github": {
 			"owner": "yandex",
