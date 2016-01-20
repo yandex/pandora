@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"runtime/pprof"
 	"time"
@@ -47,11 +48,16 @@ func Run() {
 	example := flag.Bool("example", false, "print example config to STDOUT and exit")
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile := flag.String("memprofile", "", "write memory profile to this file")
+	expvarHttp := flag.Bool("expvar", false, "start HTTP server with monitoring variables")
 	flag.Parse()
 
 	if *example {
 		fmt.Printf(exampleConfig)
 		return
+	}
+
+	if *expvarHttp {
+		go http.ListenAndServe(":1234", nil)
 	}
 
 	configFileName := "./load.json"

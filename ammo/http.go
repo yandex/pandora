@@ -71,9 +71,11 @@ loop:
 		}
 		ammoFile.Seek(0, 0)
 		if ap.passes == 0 {
-			log.Printf("Restarted ammo from the beginning. Infinite passes.\n")
+			evPassesLeft.Set(-1)
+			//log.Printf("Restarted ammo from the beginning. Infinite passes.\n")
 		} else {
-			log.Printf("Restarted ammo from the beginning. Passes left: %d\n", ap.passes-passNum)
+			evPassesLeft.Set(int64(ap.passes - passNum))
+			//log.Printf("Restarted ammo from the beginning. Passes left: %d\n", ap.passes-passNum)
 		}
 	}
 	log.Println("Ran out of ammo")
