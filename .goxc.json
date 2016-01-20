@@ -1,0 +1,16 @@
+{
+	"Tasks": [
+		"default",
+		"publish-github"
+	],
+	"Arch": "amd64",
+	"Os": "linux darwin windows",
+	"PackageVersion": "0.1.1",
+	"TaskSettings": {
+		"publish-github": {
+			"owner": "yandex",
+			"repository": "pandora"
+		}
+	},
+	"ConfigVersion": "0.9"
+}
