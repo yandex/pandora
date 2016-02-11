@@ -26,3 +26,5 @@ _testmain.go
 .pc
 *.coverprofile
 .goxc.local.json
+.idea/
+pandora.iml
