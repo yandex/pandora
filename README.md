@@ -12,6 +12,9 @@ Compile a binary with go tool (use go >= 1.5.2):
 go get github.com/yandex/pandora
 go build github.com/yandex/pandora
 ```
+
+There are also [binary releases](https://github.com/yandex/pandora/releases) available.
+
 Run this binary with your .json config (see [examples](https://github.com/yandex/pandora/tree/master/example/config)):
 ```
 ./pandora myconfig.json
