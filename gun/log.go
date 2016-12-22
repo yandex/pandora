@@ -1,10 +1,8 @@
 package gun
 
 import (
+	"context"
 	"log"
-	"time"
-
-	"golang.org/x/net/context"
 
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
@@ -21,7 +19,7 @@ func (l *LogGun) BindResultsTo(results chan<- *aggregate.Sample) {
 
 func (l *LogGun) Shoot(ctx context.Context, a ammo.Ammo) error {
 	log.Println("Log message: ", a.(*ammo.Log).Message)
-	l.results <- aggregate.AcquireSample(float64(time.Now().UnixNano())/1e9, "REQUEST")
+	l.results <- aggregate.AcquireSample("REQUEST")
 	return nil
 }
 

@@ -1,9 +1,8 @@
 package engine
 
 import (
+	"context"
 	"log"
-
-	"golang.org/x/net/context"
 
 	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/utils"
@@ -14,9 +13,7 @@ type Engine struct {
 }
 
 func New(cfg config.Global) *Engine {
-	return &Engine{
-		cfg: cfg,
-	}
+	return &Engine{cfg}
 }
 
 func (e *Engine) Serve(ctx context.Context) error {

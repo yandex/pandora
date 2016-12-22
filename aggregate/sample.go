@@ -1,97 +1,120 @@
 package aggregate
 
 import (
-	"fmt"
+	"net"
+	"os"
 	"strconv"
 	"sync"
+	"syscall"
+	"time"
 )
 
 const (
-	phoutDelimiter = '\t'
-	phoutNewLine   = '\n'
+	keyRTTMicro = iota
+	keyConnectMicro
+	keySendMicro
+	keyLatencyMicro
+	keyReceiveMicro
+	keyIntervalEventMicro // TODO: understand WTF is that mean and set it right.
+	keyRequestBytes
+	keyResponseBytes
+	keyErrno
+	keyProtoCode
+	fieldsNum
 )
+
+func AcquireSample(tag string) *Sample {
+	s := samplePool.Get().(*Sample)
+	*s = Sample{
+		timeStamp: time.Now(),
+		tags:      tag,
+	}
+	return s
+}
+
+func ReleaseSample(s *Sample) { samplePool.Put(s) }
 
 var samplePool = &sync.Pool{New: func() interface{} { return &Sample{} }}
 
 type Sample struct {
-	TS            float64
-	Tag           string
-	RT            int
-	Connect       int
-	Send          int
-	Latency       int
-	Receive       int
-	IntervalEvent int
-	Egress        int
-	Igress        int
-	NetCode       int
-	ProtoCode     int
-	Err           error
+	timeStamp time.Time
+	tags      string
+	fields    [fieldsNum]int
+	err       error
 }
 
-func AcquireSample(ts float64, tag string) *Sample {
-	s := samplePool.Get().(*Sample)
-	s.TS = ts
-	s.Tag = tag
-	s.RT = 0
-	s.Connect = 0
-	s.Send = 0
-	s.Latency = 0
-	s.Receive = 0
-	s.IntervalEvent = 0
-	s.Egress = 0
-	s.Igress = 0
-	s.NetCode = 0
-	s.ProtoCode = 0
-	s.Err = nil
-	return s
+func (s *Sample) Tags() string      { return s.tags }
+func (s *Sample) AddTag(tag string) { s.tags += "|" + tag }
+
+func (s *Sample) ProtoCode() int { return s.get(keyProtoCode) }
+func (s *Sample) SetProtoCode(code int) {
+	s.set(keyProtoCode, code)
+	s.setRTT()
 }
 
-func ReleaseSample(s *Sample) {
-	samplePool.Put(s)
+func (s *Sample) Err() error { return s.err }
+func (s *Sample) SetErr(err error) {
+	s.err = err
+	s.set(keyErrno, getErrno(err))
+	s.setRTT()
 }
 
-func (ps *Sample) String() string {
-	return fmt.Sprintf(
-		"%.3f\t%s\t%d\t"+
-			"%d\t%d\t"+
-			"%d\t%d\t"+
-			"%d\t"+
-			"%d\t%d\t"+
-			"%d\t%d",
-		ps.TS, ps.Tag, ps.RT,
-		ps.Connect, ps.Send,
-		ps.Latency, ps.Receive,
-		ps.IntervalEvent,
-		ps.Egress, ps.Igress,
-		ps.NetCode, ps.ProtoCode,
-	)
+func (s *Sample) get(k int) int                      { return s.fields[k] }
+func (s *Sample) set(k, v int)                       { s.fields[k] = v }
+func (s *Sample) setDuration(k int, d time.Duration) { s.set(k, int(d.Nanoseconds()/1000)) }
+func (s *Sample) setRTT() {
+	if s.get(keyRTTMicro) == 0 {
+		s.setDuration(keyRTTMicro, time.Since(s.timeStamp))
+	}
 }
 
-func (ps *Sample) AppendToPhout(dst []byte) []byte {
-	dst = strconv.AppendFloat(dst, ps.TS, 'f', 3, 64)
+func (s *Sample) String() string {
+	return string(appendPhout(s, nil))
+}
+
+func getErrno(err error) int {
+	// stackerr.Error and etc.
+	type hasUnderlying interface {
+		Underlying() error
+	}
+	for {
+		typed, ok := err.(hasUnderlying)
+		if !ok {
+			break
+		}
+		err = typed.Underlying()
+	}
+	for {
+		switch typed := err.(type) {
+		case *net.OpError:
+			err = typed.Err
+		case *os.SyscallError:
+			err = typed.Err
+		case syscall.Errno:
+			return int(typed)
+		default:
+			// Legacy default.
+			return 999
+		}
+	}
+}
+
+func appendPhout(s *Sample, dst []byte) []byte {
+	const phoutDelimiter = '\t'
+	// Append time stamp in phout format. Example: 1335524833.562
+	dst = strconv.AppendInt(dst, s.timeStamp.UnixNano()/1e6, 10)
+	dotIndex := len(dst) - 3
+	dst = append(dst, 0)
+	for i := len(dst) - 1; i > dotIndex; i-- {
+		dst[i] = dst[i-1]
+	}
+	dst[dotIndex] = '.'
 	dst = append(dst, phoutDelimiter)
-	dst = append(dst, ps.Tag...)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.RT), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Connect), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Send), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Latency), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Receive), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.IntervalEvent), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Egress), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.Igress), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.NetCode), 10)
-	dst = append(dst, phoutDelimiter)
-	dst = strconv.AppendInt(dst, int64(ps.ProtoCode), 10)
-	dst = append(dst, phoutNewLine)
+
+	dst = append(dst, s.tags...)
+	for _, v := range s.fields {
+		dst = append(dst, phoutDelimiter)
+		dst = strconv.AppendInt(dst, int64(v), 10)
+	}
 	return dst
 }

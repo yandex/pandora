@@ -6,10 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+	"context"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
@@ -53,8 +53,8 @@ func TestHttpGunWithSsl(t *testing.T) {
 	})
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 1)
-	assert.Equal(t, "REQUEST", results[0].Tag)
-	assert.Equal(t, 200, results[0].ProtoCode)
+	assert.Equal(t, "REQUEST", results[0].Tags())
+	assert.Equal(t, 200, results[0].ProtoCode())
 
 	select {
 	case r := <-requests:
@@ -113,8 +113,8 @@ func TestHttpGunWithHttp(t *testing.T) {
 	})
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 1)
-	assert.Equal(t, "REQUEST", results[0].Tag)
-	assert.Equal(t, 200, results[0].ProtoCode)
+	assert.Equal(t, "REQUEST", results[0].Tags())
+	assert.Equal(t, 200, results[0].ProtoCode())
 
 	select {
 	case r := <-requests:

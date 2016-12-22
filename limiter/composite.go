@@ -1,10 +1,10 @@
 package limiter
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/yandex/pandora/config"
-	"golang.org/x/net/context"
 )
 
 type composite struct {

@@ -1,8 +1,9 @@
 package limiter
 
 import (
+	"context"
+
 	"github.com/yandex/pandora/utils"
-	"golang.org/x/net/context"
 )
 
 // batch implements Limiter interface

@@ -1,10 +1,10 @@
 package aggregate
 
 import (
+	"context"
 	"log"
 
 	"github.com/yandex/pandora/config"
-	"golang.org/x/net/context"
 )
 
 // Implements ResultListener interface

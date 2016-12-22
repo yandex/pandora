@@ -2,26 +2,25 @@ package aggregate
 
 import (
 	"bufio"
+	"context"
 	"os"
 	"time"
 
 	"github.com/yandex/pandora/config"
-	"golang.org/x/net/context"
 )
 
 type PhoutResultListener struct {
 	resultListener
-
 	source <-chan *Sample
 	phout  *bufio.Writer
-	buffer []byte
+	buf    []byte
 }
 
 func (rl *PhoutResultListener) handle(s *Sample) error {
-
-	rl.buffer = s.AppendToPhout(rl.buffer)
-	_, err := rl.phout.Write(rl.buffer)
-	rl.buffer = rl.buffer[:0]
+	rl.buf = appendPhout(s, rl.buf)
+	rl.buf = append(rl.buf, '\n')
+	_, err := rl.phout.Write(rl.buf)
+	rl.buf = rl.buf[:0]
 	ReleaseSample(s)
 	return err
 }
@@ -74,8 +73,8 @@ func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
 		resultListener: resultListener{
 			sink: ch,
 		},
-		phout:  writer,
-		buffer: make([]byte, 0, 1024),
+		phout: writer,
+		buf:   make([]byte, 0, 1024),
 	}, nil
 }
 

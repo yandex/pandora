@@ -2,8 +2,8 @@ package ammo
 
 import (
 	"sync"
+	"context"
 
-	"golang.org/x/net/context"
 )
 
 type Provider interface {

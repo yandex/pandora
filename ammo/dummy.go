@@ -1,12 +1,12 @@
 package ammo
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/yandex/pandora/config"
-	"golang.org/x/net/context"
 )
 
 type Log struct {

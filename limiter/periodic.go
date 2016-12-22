@@ -1,12 +1,12 @@
 package limiter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/yandex/pandora/config"
-	"golang.org/x/net/context"
 )
 
 // periodic implements Limiter interface

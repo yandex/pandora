@@ -1,14 +1,13 @@
 package limiter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
 	"time"
 
 	"github.com/yandex/pandora/config"
-
-	"golang.org/x/net/context"
 )
 
 // linear implements Limiter interface

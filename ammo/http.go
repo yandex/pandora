@@ -4,12 +4,12 @@ package ammo
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/yandex/pandora/config"
-	"golang.org/x/net/context"
 )
 
 // ffjson: noencoder

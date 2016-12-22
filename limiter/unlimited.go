@@ -1,8 +1,9 @@
 package limiter
 
 import (
+	"context"
+
 	"github.com/yandex/pandora/config"
-	"golang.org/x/net/context"
 )
 
 type unlimited struct {

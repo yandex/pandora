@@ -3,10 +3,10 @@ package limiter
 import (
 	"testing"
 	"time"
+	"context"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 
 	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/utils"

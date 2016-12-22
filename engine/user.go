@@ -1,10 +1,9 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"log"
-
-	"golang.org/x/net/context"
 
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"

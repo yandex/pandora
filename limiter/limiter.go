@@ -1,10 +1,9 @@
 package limiter
 
 import (
+	"context"
 	"log"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 // Limiter interface describes limiter control structure

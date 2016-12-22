@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -9,8 +10,6 @@ import (
 	"os"
 	"runtime/pprof"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
@@ -41,7 +40,7 @@ func init() {
 func Run() {
 	fmt.Printf("Pandora v%s\n", Version)
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of Pandora: pandora [<config_filename>]\n"+
+		fmt.Fprint(os.Stderr, "Usage of Pandora: pandora [<config_filename>]\n"+
 			"<config_filename> is './load.json' by default\n")
 		flag.PrintDefaults()
 	}
@@ -52,7 +51,7 @@ func Run() {
 	flag.Parse()
 
 	if *example {
-		fmt.Printf(exampleConfig)
+		fmt.Println(exampleConfig)
 		return
 	}
 
@@ -82,7 +81,10 @@ func Run() {
 			log.Fatal(err)
 		}
 		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
+		defer func() {
+			pprof.StopCPUProfile()
+			f.Close()
+		}()
 	}
 	if *memprofile != "" {
 		defer func() {
