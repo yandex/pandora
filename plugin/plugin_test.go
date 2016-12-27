@@ -1,4 +1,6 @@
 // Copyright (c) 2016 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MLP 2.0
+// license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
 package plugin
@@ -20,23 +22,22 @@ func TestRegisterValid(t *testing.T) {
 		newPluginImpl            interface{}
 		newDefaultConfigOptional []interface{}
 	}{
-		{"Return Impl", func() *testPluginImpl { return nil }, nil},
-		{"Return Interface", func() TestPlugin { return nil }, nil},
-		{"Super interface", func() interface {
+		{"return impl", func() *testPluginImpl { return nil }, nil},
+		{"return interface", func() TestPlugin { return nil }, nil},
+		{"super interface", func() interface {
 			io.Writer
 			TestPlugin
 		} {
 			return nil
 		}, nil},
-		{"Struct config", func(pluginImplConfig) TestPlugin { return nil }, nil},
-		{"Struct ptr config", func(*pluginImplConfig) TestPlugin { return nil }, nil},
-		//{"String map config", func(map[string]interface{}) TestPlugin { return nil }, nil},
-		{"Default config", func(*pluginImplConfig) TestPlugin { return nil }, []interface{}{func() *pluginImplConfig { return nil }}},
+		{"struct config", func(pluginImplConfig) TestPlugin { return nil }, nil},
+		{"struct ptr config", func(*pluginImplConfig) TestPlugin { return nil }, nil},
+		{"default config", func(*pluginImplConfig) TestPlugin { return nil }, []interface{}{func() *pluginImplConfig { return nil }}},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				newRegistry().testRegister(tc.newPluginImpl, tc.newDefaultConfigOptional...)
+				newTypeRegistry().testRegister(tc.newPluginImpl, tc.newDefaultConfigOptional...)
 			})
 		})
 	}
@@ -48,31 +49,47 @@ func TestRegisterInvalid(t *testing.T) {
 		newPluginImpl            interface{}
 		newDefaultConfigOptional []interface{}
 	}{
-		{"Return not impl", func() testPluginImpl { panic("") }, nil},
-		{"Invalid config", func(int) TestPlugin { return nil }, nil},
-		{"To many args", func(_, _ pluginImplConfig) TestPlugin { return nil }, nil},
-		{"Default without config", func() TestPlugin { return nil }, []interface{}{func() *pluginImplConfig { return nil }}},
-		{"Extra deafult config", func(*pluginImplConfig) TestPlugin { return nil }, []interface{}{func() *pluginImplConfig { return nil }, 0}},
-		{"Invalid default config", func(pluginImplConfig) TestPlugin { return nil }, []interface{}{func() *pluginImplConfig { return nil }}},
-		{"Default config accepts args", func(*pluginImplConfig) TestPlugin { return nil }, []interface{}{func(int) *pluginImplConfig { return nil }}},
+		{"return not impl", func() testPluginImpl { panic("") }, nil},
+		{"invalid config type", func(int) TestPlugin { return nil }, nil},
+		{"invalid config ptr type", func(*int) TestPlugin { return nil }, nil},
+		{"to many args", func(_, _ pluginImplConfig) TestPlugin { return nil }, nil},
+		{"default without config", func() TestPlugin { return nil }, []interface{}{func() *pluginImplConfig { return nil }}},
+		{"extra deafult config", func(*pluginImplConfig) TestPlugin { return nil }, []interface{}{func() *pluginImplConfig { return nil }, 0}},
+		{"invalid default config", func(pluginImplConfig) TestPlugin { return nil }, []interface{}{func() *pluginImplConfig { return nil }}},
+		{"default config accepts args", func(*pluginImplConfig) TestPlugin { return nil }, []interface{}{func(int) *pluginImplConfig { return nil }}},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			defer func() {
-				r := recover()
-				require.NotNil(t, r)
-				assert.Contains(t, r, "expectation failed")
-			}()
-			newRegistry().testRegister(tc.newPluginImpl, tc.newDefaultConfigOptional...)
+			defer assertExpectationFailed(t)
+			newTypeRegistry().testRegister(tc.newPluginImpl, tc.newDefaultConfigOptional...)
 		})
 	}
 }
 
+func TestRegisterNameCollisionPanics(t *testing.T) {
+	r := newTypeRegistry()
+	r.testRegister(newPlugin)
+	defer assertExpectationFailed(t)
+	r.testRegister(newPlugin)
+}
+
+func TestLookup(t *testing.T) {
+	r := newTypeRegistry()
+	r.testRegister(newPlugin)
+	assert.True(t, r.Lookup(pluginType()))
+	assert.False(t, r.Lookup(reflect.TypeOf(0)))
+	assert.False(t, r.Lookup(reflect.TypeOf(&testPluginImpl{})))
+	assert.False(t, r.Lookup(reflect.TypeOf((*io.Writer)(nil)).Elem()))
+}
+
 func TestNew(t *testing.T) {
-	var r registry
+	var r typeRegistry
 
 	fillConf := func(conf interface{}) error {
 		return mapstructure.Decode(map[string]interface{}{"Value": "conf"}, conf)
+	}
+	newFromPtrConfig := func(c *pluginImplConfig) *testPluginImpl {
+		return &testPluginImpl{c.Value}
 	}
 	tests := []struct {
 		desc string
@@ -80,7 +97,7 @@ func TestNew(t *testing.T) {
 	}{
 		{"no conf", func(t *testing.T) {
 			r.testRegister(newPlugin)
-			assert.Equal(t, r.testNewOk(t), "init")
+			assert.Equal(t, r.testNewOk(t), testInitValue)
 		}},
 		{"no conf, fill conf error", func(t *testing.T) {
 			r.testRegister(newPlugin)
@@ -94,7 +111,7 @@ func TestNew(t *testing.T) {
 		}},
 		{"default", func(t *testing.T) {
 			r.testRegister(newPluginFromConf, newPluginDefaultConf)
-			assert.Equal(t, r.testNewOk(t), "default")
+			assert.Equal(t, r.testNewOk(t), testDefaultValue)
 		}},
 		{"fill conf default", func(t *testing.T) {
 			r.testRegister(newPluginFromConf, newPluginDefaultConf)
@@ -105,50 +122,36 @@ func TestNew(t *testing.T) {
 			assert.Equal(t, "conf", r.testNewOk(t, fillConf))
 		}},
 		{"fill ptr conf no default", func(t *testing.T) {
-			r.testRegister(func(c *pluginImplConfig) *testPluginImpl { return &testPluginImpl{c.Value} })
+			r.testRegister(newFromPtrConfig)
 			assert.Equal(t, "conf", r.testNewOk(t, fillConf))
+		}},
+		{"no default ptr conf not nil", func(t *testing.T) {
+			r.testRegister(newFromPtrConfig)
+			assert.Equal(t, "", r.testNewOk(t))
+		}},
+		{"nil default, conf not nil", func(t *testing.T) {
+			r.testRegister(newFromPtrConfig, func() *pluginImplConfig { return nil })
+			assert.Equal(t, "", r.testNewOk(t))
+		}},
+		{"fill nil default", func(t *testing.T) {
+			r.testRegister(newFromPtrConfig, func() *pluginImplConfig { return nil })
+			assert.Equal(t, "conf", r.testNewOk(t, fillConf))
+		}},
+		{"more than one fill conf panics", func(t *testing.T) {
+			r.testRegister(newFromPtrConfig)
+			defer assertExpectationFailed(t)
+			r.testNew(fillConf, fillConf)
 		}},
 	}
 	for _, test := range tests {
-		r = newRegistry()
+		r = newTypeRegistry()
 		t.Run(test.desc, test.fn)
 	}
 }
 
-func (r registry) testRegister(newPluginImpl interface{}, newDefaultConfigOptional ...interface{}) {
-	r.Register(pluginType(), "test_name", newPluginImpl, newDefaultConfigOptional...)
-}
-
-func (r registry) testNew(fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
-	return r.New(pluginType(), "test_name", fillConfOptional...)
-}
-
-func (r registry) testNewOk(t *testing.T, fillConfOptional ...func(conf interface{}) error) (pluginVal string) {
-	plugin, err := r.New(pluginType(), "test_name", fillConfOptional...)
-	require.NoError(t, err)
-	return plugin.(*testPluginImpl).Value
-}
-
-type TestPlugin interface {
-	DoSomething()
-}
-
-func pluginType() reflect.Type   { return reflect.TypeOf((*TestPlugin)(nil)).Elem() }
-func newPlugin() *testPluginImpl { return &testPluginImpl{Value: "init"} }
-
-type testPluginImpl struct{ Value string }
-
-func (p *testPluginImpl) DoSomething() {}
-
-var _ TestPlugin = (*testPluginImpl)(nil)
-
-type pluginImplConfig struct{ Value string }
-
-func newPluginFromConf(c pluginImplConfig) *testPluginImpl { return &testPluginImpl{c.Value} }
-func newPluginDefaultConf() pluginImplConfig               { return pluginImplConfig{"default"} }
-
+// Test typical usage.
 func TestMapstructureDecode(t *testing.T) {
-	r := newRegistry()
+	r := newTypeRegistry()
 	const nameKey = "type"
 
 	var hook mapstructure.DecodeHookFunc
@@ -168,13 +171,13 @@ func TestMapstructureDecode(t *testing.T) {
 			if !r.Lookup(to) {
 				return data, nil
 			}
-			// NOTE: could be map[interface{}]interface{} here
+			// NOTE: could be map[interface{}]interface{} here.
 			input := data.(map[string]interface{})
-			// NOTE: should be case insensitive
+			// NOTE: should be case insensitive behaviour.
 			pluginName := input[nameKey].(string)
 			delete(input, nameKey)
 			return r.New(to, pluginName, func(conf interface{}) error {
-				// NOTE: error, if conf has "type" field
+				// NOTE: should error, if conf has "type" field.
 				return decode(input, conf)
 			})
 		})
@@ -183,7 +186,7 @@ func TestMapstructureDecode(t *testing.T) {
 	input := map[string]interface{}{
 		"plugin": map[string]interface{}{
 			nameKey: "my-plugin",
-			"value": "conf",
+			"value": testConfValue,
 		},
 	}
 	type Config struct {
@@ -192,5 +195,50 @@ func TestMapstructureDecode(t *testing.T) {
 	var conf Config
 	err := decode(input, &conf)
 	require.NoError(t, err)
-	assert.Equal(t, "conf", conf.Plugin.(*testPluginImpl).Value)
+	assert.Equal(t, testConfValue, conf.Plugin.(*testPluginImpl).Value)
+}
+
+const (
+	testPluginName   = "test_name"
+	testConfValue    = "conf"
+	testDefaultValue = "default"
+	testInitValue    = "init"
+)
+
+func (r typeRegistry) testRegister(newPluginImpl interface{}, newDefaultConfigOptional ...interface{}) {
+	r.Register(pluginType(), testPluginName, newPluginImpl, newDefaultConfigOptional...)
+}
+
+func (r typeRegistry) testNew(fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
+	return r.New(pluginType(), testPluginName, fillConfOptional...)
+}
+
+func (r typeRegistry) testNewOk(t *testing.T, fillConfOptional ...func(conf interface{}) error) (pluginVal string) {
+	plugin, err := r.New(pluginType(), testPluginName, fillConfOptional...)
+	require.NoError(t, err)
+	return plugin.(*testPluginImpl).Value
+}
+
+type TestPlugin interface {
+	DoSomething()
+}
+
+func pluginType() reflect.Type   { return reflect.TypeOf((*TestPlugin)(nil)).Elem() }
+func newPlugin() *testPluginImpl { return &testPluginImpl{Value: testInitValue} }
+
+type testPluginImpl struct{ Value string }
+
+func (p *testPluginImpl) DoSomething() {}
+
+var _ TestPlugin = (*testPluginImpl)(nil)
+
+type pluginImplConfig struct{ Value string }
+
+func newPluginFromConf(c pluginImplConfig) *testPluginImpl { return &testPluginImpl{c.Value} }
+func newPluginDefaultConf() pluginImplConfig               { return pluginImplConfig{testDefaultValue} }
+
+func assertExpectationFailed(t *testing.T) {
+	r := recover()
+	require.NotNil(t, r)
+	assert.Contains(t, r, "expectation failed")
 }
