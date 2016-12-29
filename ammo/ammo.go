@@ -1,15 +1,21 @@
 package ammo
 
 import (
-	"sync"
 	"context"
+	"reflect"
+	"sync"
 
+	"github.com/yandex/pandora/plugin"
 )
 
 type Provider interface {
 	Start(context.Context) error
 	Source() <-chan Ammo
 	Release(Ammo) // return unused Ammo object to memory pool
+}
+
+func RegisterProvider(name string, newAmmoProvider interface{}, newDefaultConfigOptional ...interface{}) {
+	plugin.Register(reflect.TypeOf((*Provider)(nil)).Elem(), name, newAmmoProvider, newDefaultConfigOptional...)
 }
 
 type BaseProvider struct {

@@ -7,7 +7,7 @@ package limiter
 //		name:       "Example user",
 //		ammunition: ap,
 //		results:    rl,
-//		limiter:    NewBatch(10, NewPeriodic(time.Second)),
+//		limiter:    NewBatch(10, newPeriodic(time.Second)),
 //		done:       make(chan bool),
 //		gun:        &LogGun{},
 //	}
@@ -26,7 +26,7 @@ package limiter
 //		LimiterType: "periodic",
 //		Parameters:  nil,
 //	}
-//	l, err := NewPeriodicFromConfig(lc)
+//	l, err := NewPeriodic(lc)
 //
 //	if err == nil {
 //		t.Errorf("Should return error if empty config")
@@ -52,7 +52,7 @@ package limiter
 //			"MaxCount":  5.0,
 //		},
 //	}
-//	l, err := NewPeriodicFromConfig(lc)
+//	l, err := NewPeriodic(lc)
 //	if err != nil {
 //		log.Panic(err)
 //	}

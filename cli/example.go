@@ -1,5 +1,7 @@
-package cmd
+package cli
 
+// TODO: print example from ../example/
+// TODO: update example to YAML
 const exampleConfig string = `
 {
   "Pools": [

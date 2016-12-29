@@ -12,7 +12,7 @@ import (
 
 // linear implements Limiter interface
 type linear struct {
-	limiter
+	base
 	startRps float64
 	endRps   float64
 	period   time.Duration
@@ -71,7 +71,7 @@ loop:
 func NewLinear(startRps, endRps, period float64) (l Limiter) {
 	return &linear{
 		// timer-based limiters should have big enough cache
-		limiter:  limiter{make(chan struct{}, 65536)},
+		base:     base{make(chan struct{}, 65536)},
 		startRps: startRps,
 		endRps:   endRps,
 		period:   time.Duration(period*1e9) * time.Nanosecond,

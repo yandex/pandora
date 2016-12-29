@@ -1,20 +1,19 @@
 package spdy
 
 import (
+	"context"
 	"flag"
 	"log"
 	"net/http"
 	"os"
 	"testing"
 	"time"
-	"context"
 
 	"github.com/SlyMarbo/spdy" // we specially use SPDY server from another library
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
-	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/utils"
 )
 
@@ -25,7 +24,9 @@ func TestSPDYGun(t *testing.T) {
 	result := make(chan *aggregate.Sample)
 
 	gun := &SPDYGun{
-		target:  "localhost:3000",
+		config: Config{
+			Target: "localhost:3000",
+		},
 		results: result,
 	}
 	promise := utils.Promise(func() error {
@@ -71,7 +72,9 @@ func TestSPDYConnectPing(t *testing.T) {
 	result := make(chan *aggregate.Sample)
 
 	gun := &SPDYGun{
-		target:  "localhost:3000",
+		config: Config{
+			Target: "localhost:3000",
+		},
 		results: result,
 	}
 	promise := utils.Promise(func() error {
@@ -100,31 +103,6 @@ func TestSPDYConnectPing(t *testing.T) {
 	}
 
 }
-
-func TestNewSPDYGun(t *testing.T) {
-	SPDYConfig := &config.Gun{
-		GunType: "SPDY",
-		Parameters: map[string]interface{}{
-			"Target":     "localhost:3000",
-			"PingPeriod": 5.0,
-		},
-	}
-	g, err := New(SPDYConfig)
-	assert.NoError(t, err)
-	_, ok := g.(*SPDYGun)
-	assert.Equal(t, true, ok)
-
-	failSPDYConfig := &config.Gun{
-		GunType: "SPDY",
-		Parameters: map[string]interface{}{
-			"Target":     "localhost:3000",
-			"PingPeriod": "not-a-number",
-		},
-	}
-	_, err = New(failSPDYConfig)
-	assert.Error(t, err)
-}
-
 func runSPDYTestServer() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")

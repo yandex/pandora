@@ -8,7 +8,7 @@ import (
 
 // batch implements Limiter interface
 type batch struct {
-	limiter
+	base
 	master    Limiter
 	batchSize int
 }
@@ -46,7 +46,7 @@ loop:
 // master shouldn't be started
 func NewBatch(batchSize int, master Limiter) (l Limiter) {
 	return &batch{
-		limiter:   limiter{make(chan struct{})},
+		base:      base{make(chan struct{})},
 		master:    master,
 		batchSize: batchSize,
 	}

@@ -2,7 +2,14 @@ package aggregate
 
 import (
 	"context"
+	"reflect"
+
+	"github.com/yandex/pandora/plugin"
 )
+
+func RegisterResultListener(name string, newResultListener interface{}, newDefaultConfigOptional ...interface{}) {
+	plugin.Register(reflect.TypeOf((*ResultListener)(nil)).Elem(), name, newResultListener, newDefaultConfigOptional...)
+}
 
 type ResultListener interface {
 	Start(context.Context) error

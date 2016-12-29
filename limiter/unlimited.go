@@ -1,13 +1,9 @@
 package limiter
 
-import (
-	"context"
-
-	"github.com/yandex/pandora/config"
-)
+import "context"
 
 type unlimited struct {
-	limiter
+	base
 }
 
 var _ Limiter = (*unlimited)(nil)
@@ -26,6 +22,6 @@ loop:
 	return nil
 }
 
-func NewUnlimitedFromConfig(c *config.Limiter) (l Limiter, err error) {
-	return &unlimited{limiter: limiter{make(chan struct{}, 64)}}, nil
+func NewUnlimited() *unlimited {
+	return &unlimited{base: base{make(chan struct{}, 64)}}
 }

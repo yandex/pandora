@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/utils"
 )
 
@@ -18,7 +17,7 @@ func TestPeriodicLimiter(t *testing.T) {
 
 	limiterCtx, cancelLimiter := context.WithCancel(ctx)
 
-	limiter := NewPeriodic(time.Millisecond * 2)
+	limiter := newPeriodic(time.Millisecond * 2)
 	promise := utils.PromiseCtx(limiterCtx, limiter.Start)
 
 	ch := make(chan int)
@@ -48,36 +47,8 @@ func TestPeriodicLimiter(t *testing.T) {
 	}
 }
 
-func TestEmptyPeriodicLimiterConfig(t *testing.T) {
-	lc := &config.Limiter{
-		LimiterType: "periodic",
-		Parameters:  nil,
-	}
-	l, err := NewPeriodicFromConfig(lc)
-
-	if err == nil {
-		t.Errorf("Should return error if empty config")
-	}
-	if l != nil {
-		t.Errorf("Should return 'nil' if empty config")
-	}
-}
-
 func TestPeriodicLimiterNoBatch(t *testing.T) {
-	lc := &config.Limiter{
-		LimiterType: "periodic",
-		Parameters: map[string]interface{}{
-			"Period": 0.46,
-		},
-	}
-	l, err := NewPeriodicFromConfig(lc)
-
-	if err != nil {
-		t.Errorf("Got an error while creating periodic limiter: %s", err)
-	}
-	if l == nil {
-		t.Errorf("Returned 'nil' with valid config")
-	}
+	l := NewPeriodic(PeriodicConfig{Period: time.Second})
 	switch tt := l.(type) {
 	case *periodic:
 	default:
@@ -86,21 +57,10 @@ func TestPeriodicLimiterNoBatch(t *testing.T) {
 }
 
 func TestPeriodicLimiterBatch(t *testing.T) {
-	lc := &config.Limiter{
-		LimiterType: "periodic",
-		Parameters: map[string]interface{}{
-			"Period":    0.46,
-			"BatchSize": 3.0,
-		},
-	}
-	l, err := NewPeriodicFromConfig(lc)
-
-	if err != nil {
-		t.Errorf("Got an error while creating periodic limiter: %s", err)
-	}
-	if l == nil {
-		t.Errorf("Returned 'nil' with valid config")
-	}
+	l := NewPeriodic(PeriodicConfig{
+		Period:    time.Second,
+		BatchSize: 10,
+	})
 	switch tt := l.(type) {
 	case *batch:
 	default:
@@ -109,22 +69,13 @@ func TestPeriodicLimiterBatch(t *testing.T) {
 }
 
 func TestPeriodicLimiterBatchMaxCount(t *testing.T) {
-	lc := &config.Limiter{
-		LimiterType: "periodic",
-		Parameters: map[string]interface{}{
-			"Period":    0.46,
-			"BatchSize": 3.0,
-			"MaxCount":  5.0,
-		},
+	config := PeriodicConfig{
+		Period:    time.Millisecond,
+		BatchSize: 3,
+		MaxCount:  5,
 	}
-	l, err := NewPeriodicFromConfig(lc)
+	l := NewPeriodic(config)
 
-	if err != nil {
-		t.Errorf("Got an error while creating periodic limiter: %s", err)
-	}
-	if l == nil {
-		t.Errorf("Returned 'nil' with valid config")
-	}
 	switch tt := l.(type) {
 	case *batch:
 	default:
@@ -138,7 +89,7 @@ func TestPeriodicLimiterBatchMaxCount(t *testing.T) {
 	i, err := Drain(ctx, l)
 	assert.NoError(t, err)
 	// we should take only 0 tick from master
-	assert.Equal(t, i, 15)
+	assert.Equal(t, i, config.MaxCount*config.BatchSize)
 
 	select {
 	case err := <-promise:

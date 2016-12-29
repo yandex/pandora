@@ -1,29 +1,40 @@
 package spdy
 
 import (
+	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
-	"context"
 
 	"github.com/amahi/spdy"
 
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
-	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/gun"
 )
 
+func New(conf Config) *SPDYGun {
+	g := &SPDYGun{config: conf}
+	g.startAutoPing()
+	return g
+}
+
+type Config struct {
+	PingPeriod time.Duration
+	Target     string
+}
+
 type SPDYGun struct {
-	target  string
+	config  Config
 	client  *spdy.Client
 	results chan<- *aggregate.Sample
 }
+
+var _ gun.Gun = (*SPDYGun)(nil)
 
 func (g *SPDYGun) BindResultsTo(results chan<- *aggregate.Sample) {
 	g.results = results
@@ -95,11 +106,11 @@ func (g *SPDYGun) Connect() (err error) {
 		}
 		g.results <- ss
 	}()
-	config := tls.Config{
+	tlsConfig := tls.Config{
 		InsecureSkipVerify: true,
 		NextProtos:         []string{"spdy/3.1"},
 	}
-	conn, err := tls.Dial("tcp", g.target, &config)
+	conn, err := tls.Dial("tcp", g.config.Target, &tlsConfig)
 	if err != nil {
 		return
 	}
@@ -140,10 +151,10 @@ func (sg *SPDYGun) Ping() {
 	}
 }
 
-func (sg *SPDYGun) startAutoPing(pingPeriod time.Duration) {
-	if pingPeriod > 0 {
+func (sg *SPDYGun) startAutoPing() {
+	if sg.config.PingPeriod > 0 {
 		go func() {
-			for range time.NewTicker(pingPeriod).C {
+			for range time.NewTicker(sg.config.PingPeriod).C {
 				if sg.client == nil {
 					return
 				}
@@ -151,40 +162,4 @@ func (sg *SPDYGun) startAutoPing(pingPeriod time.Duration) {
 			}
 		}()
 	}
-}
-
-func New(c *config.Gun) (gun.Gun, error) {
-	// TODO: use mapstrucuture to do such things
-	params := c.Parameters
-	if params == nil {
-		return nil, errors.New("Parameters not specified")
-	}
-	target, ok := params["Target"]
-	if !ok {
-		return nil, errors.New("Target not specified")
-	}
-	var pingPeriod time.Duration
-	paramPingPeriod, ok := params["PingPeriod"]
-	if !ok {
-		paramPingPeriod = 120.0 // TODO: move this default elsewhere
-	}
-	switch t := paramPingPeriod.(type) {
-	case float64:
-		pingPeriod = time.Duration(paramPingPeriod.(float64)*1e3) * time.Millisecond
-	default:
-		return nil, fmt.Errorf("Period is of the wrong type."+
-			" Expected 'float64' got '%T'", t)
-	}
-	var g gun.Gun
-	switch t := target.(type) {
-	case string:
-		g = &SPDYGun{
-			target: target.(string),
-		}
-	default:
-		return nil, fmt.Errorf("Target is of the wrong type."+
-			" Expected 'string' got '%T'", t)
-	}
-	g.(*SPDYGun).startAutoPing(pingPeriod)
-	return g, nil
 }

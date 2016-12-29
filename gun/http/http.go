@@ -3,7 +3,6 @@ package http
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,23 +13,30 @@ import (
 
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
-	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/gun"
 )
-
-// === Gun ===
 
 const (
 	// TODO: extract to config?
 	dialTimeout = 3 // in sec
 )
 
+func New(conf Config) *HttpGun {
+	return &HttpGun{config: conf}
+}
+
+type Config struct {
+	Target string
+	SSL    bool
+}
+
 type HttpGun struct {
-	target  string
-	ssl     bool
+	config  Config
 	client  *http.Client
 	results chan<- *aggregate.Sample
 }
+
+var _ gun.Gun = (*HttpGun)(nil)
 
 func (hg *HttpGun) BindResultsTo(results chan<- *aggregate.Sample) {
 	hg.results = results
@@ -57,8 +63,9 @@ func (g *HttpGun) Shoot(ctx context.Context, a ammo.Ammo) (err error) {
 		ss.AddTag(ha.Tag)
 	}
 	var uri string
+
 	// TODO: get rid of ha.Host that is overwrite by gh target
-	if g.ssl {
+	if g.config.SSL {
 		uri = "https://" + ha.Host + ha.Uri
 	} else {
 		uri = "http://" + ha.Host + ha.Uri
@@ -72,7 +79,7 @@ func (g *HttpGun) Shoot(ctx context.Context, a ammo.Ammo) (err error) {
 	for k, v := range ha.Headers {
 		req.Header.Set(k, v)
 	}
-	req.URL.Host = g.target
+	req.URL.Host = g.config.Target
 	var res *http.Response
 	res, err = g.client.Do(req)
 	if err != nil {
@@ -114,32 +121,4 @@ func (hg *HttpGun) Connect() {
 		TLSHandshakeTimeout: dialTimeout * time.Second,
 	}
 	hg.client = &http.Client{Transport: tr}
-}
-
-func New(c *config.Gun) (gun.Gun, error) {
-	// TODO: use mapstrucuture to do such things
-	params := c.Parameters
-	if params == nil {
-		return nil, errors.New("Parameters not specified")
-	}
-	target, ok := params["Target"]
-	if !ok {
-		return nil, errors.New("Target not specified")
-	}
-	g := &HttpGun{}
-	switch t := target.(type) {
-	case string:
-		g.target = target.(string)
-	default:
-		return nil, fmt.Errorf("Target is of the wrong type."+
-			" Expected 'string' got '%T'", t)
-	}
-	if ssl, ok := params["SSL"]; ok {
-		if sslVal, casted := ssl.(bool); casted {
-			g.ssl = sslVal
-		} else {
-			return nil, fmt.Errorf("SSL should be boolean type.")
-		}
-	}
-	return g, nil
 }

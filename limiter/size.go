@@ -6,14 +6,23 @@ import (
 	"github.com/yandex/pandora/utils"
 )
 
-// size implements Limiter interface
+// NewSize returns size limiter that cuts master limiter by size
+// master shouldn't be started.
+func NewSize(size int, master Limiter) Limiter {
+	return &sizeLimiter{
+		base{make(chan struct{})},
+		master,
+		size,
+	}
+}
+
 type sizeLimiter struct {
-	limiter
+	base
 	master Limiter
 	size   int
 }
 
-var _ Limiter = (*sizeLimiter)(nil) // check interface
+var _ Limiter = (*sizeLimiter)(nil)
 
 func (sl *sizeLimiter) Start(ctx context.Context) error {
 	defer close(sl.control)
@@ -40,14 +49,4 @@ loop:
 	}
 	cancelMaster()
 	return <-masterPromise
-}
-
-// NewSize returns size limiter that cuts master limiter by size
-// master shouldn't be started
-func NewSize(size int, master Limiter) (l Limiter) {
-	return &sizeLimiter{
-		limiter: limiter{make(chan struct{})},
-		master:  master,
-		size:    size,
-	}
 }

@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"context"
@@ -11,31 +11,12 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/yandex/pandora/aggregate"
-	"github.com/yandex/pandora/ammo"
 	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/engine"
-	"github.com/yandex/pandora/extpoints"
-	"github.com/yandex/pandora/limiter"
 	"github.com/yandex/pandora/utils"
 )
 
-func init() {
-	// inject ammo providers
-	extpoints.AmmoProviders.Register(ammo.NewHttpProvider, "jsonline/http")
-	extpoints.AmmoProviders.Register(ammo.NewHttpProvider, "jsonline/spdy")
-	extpoints.AmmoProviders.Register(ammo.NewLogAmmoProvider, "dummy/log")
-
-	// inject result listeners
-	extpoints.ResultListeners.Register(aggregate.NewLoggingResultListener, "log/simple")
-	extpoints.ResultListeners.Register(aggregate.GetPhoutResultListener, "log/phout")
-
-	// inject limiters
-	extpoints.Limiters.Register(limiter.NewPeriodicFromConfig, "periodic")
-	extpoints.Limiters.Register(limiter.NewCompositeFromConfig, "composite")
-	extpoints.Limiters.Register(limiter.NewUnlimitedFromConfig, "unlimited")
-	extpoints.Limiters.Register(limiter.NewLinearFromConfig, "linear")
-}
+const Version = "0.1.2"
 
 func Run() {
 	fmt.Printf("Pandora v%s\n", Version)

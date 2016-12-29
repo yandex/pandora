@@ -3,12 +3,10 @@ package limiter
 import (
 	"context"
 	"fmt"
-
-	"github.com/yandex/pandora/config"
 )
 
 type composite struct {
-	limiter
+	base
 	steps []Limiter
 }
 
@@ -36,10 +34,9 @@ outer_loop:
 		}
 
 	}
-
 	return nil
 }
 
-func NewCompositeFromConfig(c *config.Limiter) (l Limiter, err error) {
+func NewComposite() (l Limiter, err error) {
 	return nil, fmt.Errorf("Not implemented")
 }
