@@ -3,15 +3,22 @@ package aggregate
 import (
 	"context"
 	"log"
-
-	"github.com/yandex/pandora/config"
 )
 
 // Implements ResultListener interface
 type LoggingResultListener struct {
 	resultListener
-
 	source <-chan *Sample
+}
+
+func NewLoggingResultListener() ResultListener {
+	ch := make(chan *Sample, 32)
+	return &LoggingResultListener{
+		source: ch,
+		resultListener: resultListener{
+			sink: ch,
+		},
+	}
 }
 
 func (rl *LoggingResultListener) handle(s *Sample) {
@@ -38,14 +45,4 @@ loop:
 		}
 	}
 	return nil
-}
-
-func NewLoggingResultListener(*config.ResultListener) (ResultListener, error) {
-	ch := make(chan *Sample, 32)
-	return &LoggingResultListener{
-		source: ch,
-		resultListener: resultListener{
-			sink: ch,
-		},
-	}, nil
 }

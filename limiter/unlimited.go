@@ -23,5 +23,5 @@ loop:
 }
 
 func NewUnlimited() *unlimited {
-	return &unlimited{base: base{make(chan struct{}, 64)}}
+	return &unlimited{base: *newBase(64)}
 }

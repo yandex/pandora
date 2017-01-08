@@ -1,0 +1,79 @@
+// Copyright (c) 2016 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MLP 2.0
+// license that can be found in the LICENSE file.
+// Author: Vladimir Skipor <skipor@yandex-team.ru>
+
+package config
+
+import (
+	"errors"
+	"net"
+	"net/url"
+	"reflect"
+
+	"github.com/asaskevich/govalidator"
+	"github.com/c2h5oh/datasize"
+	"github.com/facebookgo/stackerr"
+)
+
+var InvalidURLError = errors.New("string is not valid URL")
+
+var (
+	urlPtrType = reflect.TypeOf(&url.URL{})
+	urlType    = reflect.TypeOf(url.URL{})
+)
+
+// StringToURLHook converts string to url.URL or *url.URL
+func StringToURLHook(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	if f.Kind() != reflect.String {
+		return data, nil
+	}
+	if t != urlPtrType && t != urlType {
+		return data, nil
+	}
+	str := data.(string)
+
+	if !govalidator.IsURL(str) { // checks more than url.Parse
+		return nil, stackerr.Wrap(InvalidURLError)
+	}
+	urlPtr, err := url.Parse(str)
+	if err != nil {
+		return nil, stackerr.Wrap(err)
+	}
+
+	if t == urlType {
+		return *urlPtr, nil
+	}
+	return urlPtr, nil
+}
+
+var InvalidIPError = errors.New("string is not valid IP")
+
+// StringToIPHook converts string to net.IP
+func StringToIPHook(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	if f.Kind() != reflect.String {
+		return data, nil
+	}
+	if t != reflect.TypeOf(net.IP{}) {
+		return data, nil
+	}
+	str := data.(string)
+	ip := net.ParseIP(str)
+	if ip == nil {
+		return nil, stackerr.Wrap(InvalidIPError)
+	}
+	return ip, nil
+}
+
+// StringToDataSizeHook converts string to datasize.Single
+func StringToDataSizeHook(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	if f.Kind() != reflect.String {
+		return data, nil
+	}
+	if t != reflect.TypeOf(datasize.B) {
+		return data, nil
+	}
+	var size datasize.ByteSize
+	err := size.UnmarshalText([]byte(data.(string)))
+	return size, err
+}

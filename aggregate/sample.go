@@ -3,15 +3,14 @@ package aggregate
 import (
 	"net"
 	"os"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
 )
 
 const (
-	keyRTTMicro = iota
-	keyConnectMicro
+	keyRTTMicro     = iota
+	keyConnectMicro // TODO: all for HTTP using httptrace and helper structs
 	keySendMicro
 	keyLatencyMicro
 	keyReceiveMicro
@@ -97,24 +96,4 @@ func getErrno(err error) int {
 			return 999
 		}
 	}
-}
-
-func appendPhout(s *Sample, dst []byte) []byte {
-	const phoutDelimiter = '\t'
-	// Append time stamp in phout format. Example: 1335524833.562
-	dst = strconv.AppendInt(dst, s.timeStamp.UnixNano()/1e6, 10)
-	dotIndex := len(dst) - 3
-	dst = append(dst, 0)
-	for i := len(dst) - 1; i > dotIndex; i-- {
-		dst[i] = dst[i-1]
-	}
-	dst[dotIndex] = '.'
-	dst = append(dst, phoutDelimiter)
-
-	dst = append(dst, s.tags...)
-	for _, v := range s.fields {
-		dst = append(dst, phoutDelimiter)
-		dst = strconv.AppendInt(dst, int64(v), 10)
-	}
-	return dst
 }

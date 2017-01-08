@@ -24,7 +24,7 @@ func init() {
 	limiter.Register("periodic", limiter.NewPeriodic)
 	limiter.Register("composite", limiter.NewComposite)
 	limiter.Register("unlimited", limiter.NewUnlimited)
-	limiter.Register("linear", limiter.NewLinearFromConfig)
+	limiter.Register("linear", limiter.NewLinear)
 }
 
 func main() {

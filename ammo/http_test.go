@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/utils"
 )
 
@@ -21,19 +20,18 @@ const (
 )
 
 func TestNewHttpProvider(t *testing.T) {
-	c := &config.AmmoProvider{
-		AmmoSource: httpTestFilename,
-		AmmoLimit:  10,
+	c := HttpProviderConfig{
+		AmmoFileName: httpTestFilename,
+		AmmoLimit:    10,
 	}
-	provider, err := NewHttpProvider(c)
-	require.NoError(t, err)
+	provider := NewHttpProvider(c)
 
-	httpProvider, casted := provider.(*HttpProvider)
-	require.True(t, casted, "NewHttpProvider should return *HttpProvider type")
+	httpProvider, casted := provider.(*httpProvider)
+	require.True(t, casted, "NewHttpProvider should return *httpProvider type")
 
 	// look at defaults
-	assert.Equal(t, 10, httpProvider.ammoLimit)
-	assert.Equal(t, 0, httpProvider.passes)
+	assert.Equal(t, 10, httpProvider.AmmoLimit)
+	assert.Equal(t, 0, httpProvider.Passes)
 	assert.NotNil(t, httpProvider.sink)
 	assert.NotNil(t, httpProvider.BaseProvider.source)
 	assert.NotNil(t, httpProvider.BaseProvider.decoder)
@@ -46,13 +44,15 @@ func TestHttpProvider(t *testing.T) {
 	providerCtx, _ := context.WithCancel(ctx)
 
 	ammoCh := make(chan Ammo, 128)
-	provider := &HttpProvider{
-		passes:       2,
-		ammoFileName: httpTestFilename,
-		sink:         ammoCh,
+	provider := &httpProvider{
+		HttpProviderConfig: HttpProviderConfig{
+			Passes:       2,
+			AmmoFileName: httpTestFilename,
+		},
+		sink: ammoCh,
 		BaseProvider: NewBaseProvider(
 			ammoCh,
-			&HttpJSONDecoder{},
+			&httpJSONDecoder{},
 			func() interface{} { return &Http{} },
 		),
 	}
@@ -84,7 +84,7 @@ var result Ammo
 
 func BenchmarkJsonDecoder(b *testing.B) {
 	f, err := os.Open(httpTestFilename)
-	decoder := &HttpJSONDecoder{}
+	decoder := &httpJSONDecoder{}
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func BenchmarkJsonDecoder(b *testing.B) {
 
 func BenchmarkJsonDecoderWithPool(b *testing.B) {
 	f, err := os.Open(httpTestFilename)
-	decoder := &HttpJSONDecoder{}
+	decoder := &httpJSONDecoder{}
 	if err != nil {
 		b.Fatal(err)
 	}

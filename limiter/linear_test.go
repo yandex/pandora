@@ -1,14 +1,13 @@
 package limiter
 
 import (
+	"context"
 	"testing"
 	"time"
-	"context"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/utils"
 )
 
@@ -22,7 +21,11 @@ func TestLinearLimiter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 
-	limiter := NewLinear(5, 6, 1)
+	limiter := NewLinear(LinearConfig{
+		StartRps: 5,
+		EndRps:   6,
+		Period:   time.Second,
+	})
 	promise := utils.PromiseCtx(ctx, limiter.Start)
 
 	ch := make(chan int, 100)
@@ -49,46 +52,16 @@ func TestLinearLimiter(t *testing.T) {
 	}
 }
 
-func TestEmptyLinearLimiterConfig(t *testing.T) {
-	lc := &config.Limiter{
-		LimiterType: "linear",
-		Parameters:  nil,
-	}
-	l, err := NewLinearFromConfig(lc)
-
-	if err == nil {
-		t.Errorf("Should return error if empty config")
-	}
-	if l != nil {
-		t.Errorf("Should return 'nil' if empty config")
-	}
-}
-
 func TestLinearLimiterFromConfig(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	lc := &config.Limiter{
-		LimiterType: "linear",
-		Parameters: map[string]interface{}{
-			"Period":   0.46,
-			"StartRps": 10.0,
-			"EndRps":   10.1,
-		},
-	}
-	limiter, err := NewLinearFromConfig(lc)
+	limiter := NewLinear(LinearConfig{
+		Period:   46 * time.Second / 100,
+		StartRps: 10.0,
+		EndRps:   10.1,
+	})
 
-	if err != nil {
-		t.Errorf("Got an error while creating linear limiter: %s", err)
-	}
-	if limiter == nil {
-		t.Errorf("Returned 'nil' with valid config")
-	}
-	switch tt := limiter.(type) {
-	case *linear:
-	default:
-		t.Errorf("Wrong limiter type returned (expected linear): %T", tt)
-	}
 	promise := utils.PromiseCtx(ctx, limiter.Start)
 
 	ch := make(chan int, 100)
@@ -100,7 +73,6 @@ func TestLinearLimiterFromConfig(t *testing.T) {
 		ch <- i
 	}()
 	select {
-
 	case i := <-ch:
 		assert.Equal(t, 5, i)
 	case <-ctx.Done():

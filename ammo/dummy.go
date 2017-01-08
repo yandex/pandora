@@ -5,34 +5,50 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-
-	"github.com/yandex/pandora/config"
 )
 
 type Log struct {
 	Message string
 }
 
-// LogJSONDecoder implements ammo.Decoder interface
-type LogJSONDecoder struct{}
+type LogAmmoProviderConfig struct {
+	AmmoLimit int
+}
 
-func (*LogJSONDecoder) Decode(jsonDoc []byte, a Ammo) (Ammo, error) {
+func NewLogAmmoProvider(conf LogAmmoProviderConfig) Provider {
+	ammoCh := make(chan Ammo, 128)
+	ap := &logProvider{
+		size: conf.AmmoLimit,
+		sink: ammoCh,
+		BaseProvider: NewBaseProvider(
+			ammoCh,
+			newLogJSONDecoder(),
+			func() interface{} { return &Log{} },
+		),
+	}
+	return ap
+}
+
+// logJSONDecoder implements ammo.Decoder interface
+type logJSONDecoder struct{}
+
+func (*logJSONDecoder) Decode(jsonDoc []byte, a Ammo) (Ammo, error) {
 	err := json.Unmarshal(jsonDoc, a)
 	return a, err
 }
 
-func NewLogJSONDecoder() Decoder {
-	return &LogJSONDecoder{}
+func newLogJSONDecoder() Decoder {
+	return &logJSONDecoder{}
 }
 
-type LogProvider struct {
+type logProvider struct {
 	*BaseProvider
 
 	sink chan<- Ammo
 	size int
 }
 
-func (ap *LogProvider) Start(ctx context.Context) error {
+func (ap *logProvider) Start(ctx context.Context) error {
 	defer close(ap.sink)
 loop:
 	for i := 0; i < ap.size; i++ {
@@ -48,18 +64,4 @@ loop:
 	}
 	log.Println("Ran out of ammo")
 	return nil
-}
-
-func NewLogAmmoProvider(c *config.AmmoProvider) (Provider, error) {
-	ammoCh := make(chan Ammo, 128)
-	ap := &LogProvider{
-		size: c.AmmoLimit,
-		sink: ammoCh,
-		BaseProvider: NewBaseProvider(
-			ammoCh,
-			NewLogJSONDecoder(),
-			func() interface{} { return &Log{} },
-		),
-	}
-	return ap, nil
 }

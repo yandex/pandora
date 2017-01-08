@@ -42,7 +42,7 @@ loop:
 func newPeriodic(period time.Duration) Limiter {
 	return &periodic{
 		// timer-based limiters should have big enough cache
-		base:   base{make(chan struct{}, 65536)},
+		base:   *newBase(65536),
 		ticker: time.NewTicker(period),
 	}
 }

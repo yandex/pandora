@@ -24,6 +24,10 @@ type base struct {
 	control chan struct{}
 }
 
+func newBase(buf int) *base {
+	return &base{make(chan struct{}, buf)}
+}
+
 func (l *base) Control() <-chan struct{} {
 	return l.control
 }

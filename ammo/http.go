@@ -8,9 +8,34 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	"github.com/yandex/pandora/config"
 )
+
+func NewHttpProvider(conf HttpProviderConfig) Provider {
+	ammoCh := make(chan Ammo)
+	return &httpProvider{
+		HttpProviderConfig: conf,
+		sink:               ammoCh,
+		BaseProvider: NewBaseProvider(
+			ammoCh,
+			&httpJSONDecoder{},
+			func() interface{} { return &Http{} },
+		),
+	}
+}
+
+// ffjson: skip
+type httpProvider struct {
+	*BaseProvider
+	sink chan<- Ammo
+	HttpProviderConfig
+}
+
+// ffjson: skip
+type HttpProviderConfig struct {
+	AmmoFileName string
+	AmmoLimit    int
+	Passes       int
+}
 
 // ffjson: noencoder
 type Http struct {
@@ -21,27 +46,17 @@ type Http struct {
 	Tag     string
 }
 
-// HttpJSONDecoder implements ammo.Decoder interface
-type HttpJSONDecoder struct{}
+// httpJSONDecoder implements ammo.Decoder interface
+type httpJSONDecoder struct{}
 
-func (d *HttpJSONDecoder) Decode(jsonDoc []byte, a Ammo) (Ammo, error) {
+func (d *httpJSONDecoder) Decode(jsonDoc []byte, a Ammo) (Ammo, error) {
 	err := a.(*Http).UnmarshalJSON(jsonDoc)
 	return a, err
 }
 
-// ffjson: skip
-type HttpProvider struct {
-	*BaseProvider
-
-	sink         chan<- Ammo
-	ammoFileName string
-	ammoLimit    int
-	passes       int
-}
-
-func (ap *HttpProvider) Start(ctx context.Context) error {
+func (ap *httpProvider) Start(ctx context.Context) error {
 	defer close(ap.sink)
-	ammoFile, err := os.Open(ap.ammoFileName)
+	ammoFile, err := os.Open(ap.AmmoFileName)
 	if err != nil {
 		return fmt.Errorf("failed to open ammo source: %v", err)
 	}
@@ -53,7 +68,7 @@ loop:
 		passNum++
 		scanner := bufio.NewScanner(ammoFile)
 		scanner.Split(bufio.ScanLines)
-		for scanner.Scan() && (ap.ammoLimit == 0 || ammoNumber < ap.ammoLimit) {
+		for scanner.Scan() && (ap.AmmoLimit == 0 || ammoNumber < ap.AmmoLimit) {
 			data := scanner.Bytes()
 			if a, err := ap.decode(data); err != nil {
 				return fmt.Errorf("failed to decode ammo: %v", err)
@@ -66,34 +81,18 @@ loop:
 				}
 			}
 		}
-		if ap.passes != 0 && passNum >= ap.passes {
+		if ap.Passes != 0 && passNum >= ap.Passes {
 			break
 		}
 		ammoFile.Seek(0, 0)
-		if ap.passes == 0 {
+		if ap.Passes == 0 {
 			evPassesLeft.Set(-1)
 			//log.Printf("Restarted ammo from the beginning. Infinite passes.\n")
 		} else {
-			evPassesLeft.Set(int64(ap.passes - passNum))
+			evPassesLeft.Set(int64(ap.Passes - passNum))
 			//log.Printf("Restarted ammo from the beginning. Passes left: %d\n", ap.passes-passNum)
 		}
 	}
 	log.Println("Ran out of ammo")
 	return nil
-}
-
-func NewHttpProvider(c *config.AmmoProvider) (Provider, error) {
-	ammoCh := make(chan Ammo)
-	ap := &HttpProvider{
-		ammoLimit:    c.AmmoLimit,
-		passes:       c.Passes,
-		ammoFileName: c.AmmoSource,
-		sink:         ammoCh,
-		BaseProvider: NewBaseProvider(
-			ammoCh,
-			&HttpJSONDecoder{},
-			func() interface{} { return &Http{} },
-		),
-	}
-	return ap, nil
 }
