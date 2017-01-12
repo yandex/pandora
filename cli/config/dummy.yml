@@ -1,0 +1,19 @@
+pools:
+  - name: dummy pool
+    gun:
+      type: log
+    ammo:
+      type: dummy/log
+    result:
+      type: log/simple
+    shared-limits: false
+    user-limiter:
+      type: periodic
+      batch: 2
+      max: 3
+      period: 1s
+    startup-limiter:
+      type: periodic
+      batch: 1
+      max: 5
+      period: 0.5s

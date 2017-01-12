@@ -4,80 +4,67 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"runtime/pprof"
 	"time"
 
+	"github.com/facebookgo/stackerr"
+	"github.com/spf13/viper"
+
 	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/engine"
 	"github.com/yandex/pandora/utils"
 )
 
-const Version = "0.1.2"
+const Version = "0.2.0"
+const defaultConfigFile = "load"
+
+var configSearchDirs = []string{"./", "./config", "/etc/pandora"}
+
+// TODO: make nice spf13/cobra CLI and integrate it with viper
 
 func Run() {
-	fmt.Printf("Pandora v%s\n", Version)
+	log.Printf("Pandora v%s\n", Version)
 	flag.Usage = func() {
-		fmt.Fprint(os.Stderr, "Usage of Pandora: pandora [<config_filename>]\n"+
-			"<config_filename> is './load.json' by default\n")
+		fmt.Fprintf(os.Stderr, "Usage of Pandora: pandora [<config_filename>]\n"+"<config_filename> is './%s.(yaml|json|...)' by default\n", defaultConfigFile)
 		flag.PrintDefaults()
 	}
-	example := flag.Bool("example", false, "print example config to STDOUT and exit")
-	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile := flag.String("memprofile", "", "write memory profile to this file")
-	expvarHttp := flag.Bool("expvar", false, "start HTTP server with monitoring variables")
+	var (
+		example    bool
+		monitoring monitoringConfig
+	)
+	flag.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
+	flag.StringVar(&monitoring.CPUProfile, "cpuprofile", "", "write cpu profile to file")
+	flag.StringVar(&monitoring.MemProfile, "memprofile", "", "write memory profile to this file")
+	flag.BoolVar(&monitoring.Expvar, "expvar", false, "start HTTP server with monitoring variables")
 	flag.Parse()
 
-	if *example {
-		fmt.Println(exampleConfig)
+	if example {
+		panic("Not implemented yet")
+		// TODO: print example config file content
 		return
 	}
 
-	if *expvarHttp {
-		go http.ListenAndServe(":1234", nil)
-	}
-
-	configFileName := "./load.json"
+	v := newViper()
 	if len(flag.Args()) > 0 {
-		configFileName = flag.Args()[0]
+		v.SetConfigFile(flag.Args()[0])
 	}
-	log.Printf("Reading config from '%s'...\n", configFileName)
-	jsonDoc, err := ioutil.ReadFile(configFileName)
+	err := v.ReadInConfig()
+	log.Printf("Reading config from %q", v.ConfigFileUsed())
 	if err != nil {
-		log.Printf("Could not read config from file: %s", err)
-		return
+		err = stackerr.Wrap(err)
+		log.Fatalf("Config read error: %v", err)
 	}
-	cfg, err := config.NewGlobalFromJSON(jsonDoc)
+	var conf cliConfig
+	err = config.DecodeAndValidate(v.AllSettings(), &conf)
 	if err != nil {
-		log.Printf("Could not unmarshal config from json: %s", err)
-		return
+		log.Fatal("Config decode error: ", err)
 	}
 
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer func() {
-			pprof.StopCPUProfile()
-			f.Close()
-		}()
-	}
-	if *memprofile != "" {
-		defer func() {
-			f, err := os.Create(*memprofile)
-			if err != nil {
-				log.Fatal(err)
-			}
-			pprof.WriteHeapProfile(f)
-			f.Close()
-		}()
-	}
-	pandora := engine.New(cfg)
+	pandora := engine.New(conf.Engine)
+	startMonitoring(monitoring)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -91,11 +78,65 @@ func Run() {
 		select {
 		case err = <-promise:
 		case <-time.After(time.Second * 5):
-			err = fmt.Errorf("timeout exceeded")
+			log.Fatal("Interrupt timeout exeeded")
 		}
 	case err = <-promise:
 	}
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+type monitoringConfig struct {
+	Expvar     bool   // TODO: struct { Enabled bool; Port string }
+	CPUProfile string // TODO: struct { Enabled bool; File string }
+	MemProfile string // TODO: struct { Enabled bool; File string }
+}
+
+func startMonitoring(conf monitoringConfig) (stop func()) {
+	if conf.Expvar {
+		go http.ListenAndServe(":1234", nil)
+	}
+	var stops []func()
+	if conf.CPUProfile != "" {
+		f, err := os.Create(conf.MemProfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		stops = append(stops, func() {
+			pprof.StopCPUProfile()
+			f.Close()
+		})
+	}
+	if conf.MemProfile != "" {
+		f, err := os.Create(conf.MemProfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		stops = append(stops, func() {
+			pprof.WriteHeapProfile(f)
+			f.Close()
+		})
+	}
+	stop = func() {
+		for _, s := range stops {
+			s()
+		}
+	}
+	return
+}
+
+func newViper() *viper.Viper {
+	v := viper.New()
+	v.SetConfigName(defaultConfigFile)
+	for _, dir := range configSearchDirs {
+		v.AddConfigPath(dir)
+	}
+	return v
+}
+
+type cliConfig struct {
+	Engine engine.Config `config:",squash"`
+	// TODO monitoring config should be there
 }

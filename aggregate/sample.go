@@ -1,3 +1,8 @@
+// Copyright (c) 2016 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MLP 2.0
+// license that can be found in the LICENSE file.
+// Author: Vladimir Skipor <skipor@yandex-team.ru>
+
 package aggregate
 
 import (
@@ -10,7 +15,7 @@ import (
 
 const (
 	keyRTTMicro     = iota
-	keyConnectMicro // TODO: all for HTTP using httptrace and helper structs
+	keyConnectMicro // TODO (skipor): set all for HTTP using httptrace and helper structs
 	keySendMicro
 	keyLatencyMicro
 	keyReceiveMicro

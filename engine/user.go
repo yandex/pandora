@@ -12,18 +12,46 @@ import (
 	"github.com/yandex/pandora/utils"
 )
 
+type Engine struct {
+	config Config
+}
+
+func New(conf Config) *Engine {
+	return &Engine{conf}
+}
+
+func (e *Engine) Serve(ctx context.Context) error {
+	promises := utils.Promises{}
+	for _, up := range e.config.Pools {
+		promises = append(promises, utils.PromiseCtx(ctx, up.Start))
+	}
+	select {
+	case err := <-promises.All():
+		if err != nil {
+			return err
+		}
+	case <-ctx.Done():
+	}
+	log.Println("Done")
+	return nil
+}
+
 type Config struct {
 	Pools []UserPool
 }
 
+// TODO (skipor): test that mapstructure hooks are correctly called on array
+// elements. If it is true make config.SetDefault(default interface{})
+// where default is struct or struct factory, and use it to set default
+// unique Name and SharedLimits = true.
 type UserPool struct {
 	Name           string
-	AmmoProvider   ammo.Provider
-	ResultListener aggregate.ResultListener
-	StartupLimiter limiter.Limiter
-	SharedLimits   bool
-	LimiterConfig  interface{}
-	GunConfig      interface{}
+	AmmoProvider   ammo.Provider            `config:"ammo"`
+	ResultListener aggregate.ResultListener `config:"result"`
+	SharedLimits   bool                     `config:"shared-limits"`
+	StartupLimiter limiter.Limiter          `config:"startup-limiter"`
+	LimiterConfig  interface{}              `config:"user-limiter"`
+	GunConfig      interface{}              `config:"gun"`
 }
 
 type User struct {
@@ -34,7 +62,7 @@ type User struct {
 	Gun        gun.Gun
 }
 
-func (u *User) Run(ctx context.Context) error {
+func (u *User) Start(ctx context.Context) error {
 	//log.Printf("Starting user: %s\n", u.Name)
 	evUsersStarted.Add(1)
 	defer func() {
@@ -70,6 +98,7 @@ loop:
 }
 
 func (p *UserPool) Start(ctx context.Context) error {
+	//TODO
 	// userCtx will be canceled when all users finished their execution
 
 	utilCtx, utilCancel := context.WithCancel(ctx)
@@ -84,7 +113,7 @@ func (p *UserPool) Start(ctx context.Context) error {
 
 	if p.SharedLimits {
 		var err error
-		sharedLimiter, err = p.GetLimiter()
+		sharedLimiter, err = p.NewLimiter()
 		if err != nil {
 			return fmt.Errorf("could not make a user limiter from config due to %s", err)
 		}
@@ -101,15 +130,16 @@ func (p *UserPool) Start(ctx context.Context) error {
 			l = sharedLimiter
 		} else {
 			var err error
-			l, err = p.GetLimiter()
+			l, err = p.NewLimiter()
 			if err != nil {
 				return fmt.Errorf("could not make a user limiter from config due to %s", err)
 			}
 		}
-		g, err := p.GetGun()
+		g, err := p.NewGun()
 		if err != nil {
 			return fmt.Errorf("could not make a gun from config due to %s", err)
 		}
+		// TODO: set unique user name
 		u := &User{
 			Name:       p.Name,
 			Ammunition: p.AmmoProvider,
@@ -120,9 +150,9 @@ func (p *UserPool) Start(ctx context.Context) error {
 		if !p.SharedLimits {
 			utilsPromises = append(utilsPromises, utils.PromiseCtx(utilCtx, l.Start))
 		}
-		userPromises = append(userPromises, utils.PromiseCtx(ctx, u.Run))
+		userPromises = append(userPromises, utils.PromiseCtx(ctx, u.Start))
 	}
-	// FIXME: don't use promises, send all errors into only chan
+	// TODO: don't use promises, send all errors into only chan
 	log.Println("Started all users. Waiting for them")
 	err := <-userPromises.All()
 	log.Println("Stop utils")
@@ -135,10 +165,10 @@ func (p *UserPool) Start(ctx context.Context) error {
 	return err
 }
 
-func (p *UserPool) GetLimiter() (limiter.Limiter, error) {
+func (p *UserPool) NewLimiter() (limiter.Limiter, error) {
 	panic("NIY") // TODO
 }
 
-func (p *UserPool) GetGun() (gun.Gun, error) {
+func (p *UserPool) NewGun() (gun.Gun, error) {
 	panic("NIY") // TODO
 }

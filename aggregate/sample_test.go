@@ -1,4 +1,6 @@
 // Copyright (c) 2016 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MLP 2.0
+// license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
 package aggregate
@@ -47,3 +49,5 @@ func TestGetErrno(t *testing.T) {
 	assert.NotZero(t, getErrno(err))
 	assert.Equal(t, int(syscall.EINVAL), getErrno(err))
 }
+
+// TODO: test getErrno on some real net error from stdlib.

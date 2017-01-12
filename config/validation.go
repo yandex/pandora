@@ -60,15 +60,6 @@ func EndpointStringValidation(value string) bool {
 		govalidator.IsPort(port)
 }
 
-// "ip" "ipv4:port", "[ip]:port"
-func DNSEndpointStringValidation(value string) bool {
-	if govalidator.IsIP(value) {
-		return true
-	}
-	host, port, err := net.SplitHostPort(value)
-	return err == nil && govalidator.IsIP(host) && govalidator.IsPort(port)
-}
-
 // pathRegexp is regexp for at least one path component.
 // Valid characters are taken from RFC 3986.
 var pathRegexp = regexp.MustCompile(`^(/[a-zA-Z0-9._~!$&'()*+,;=:@%-]+)+$`)

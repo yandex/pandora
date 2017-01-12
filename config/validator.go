@@ -27,7 +27,6 @@ var stringValidations = []struct {
 	val StringValidation
 }{
 	{"endpoint", EndpointStringValidation},
-	{"dns-endpoint", DNSEndpointStringValidation},
 	{"url-path", URLPathStringValidation},
 }
 
