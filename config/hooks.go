@@ -7,13 +7,17 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/c2h5oh/datasize"
 	"github.com/facebookgo/stackerr"
+
+	"github.com/yandex/pandora/plugin"
 )
 
 var InvalidURLError = errors.New("string is not valid URL")
@@ -76,4 +80,69 @@ func StringToDataSizeHook(f reflect.Type, t reflect.Type, data interface{}) (int
 	var size datasize.ByteSize
 	err := size.UnmarshalText([]byte(data.(string)))
 	return size, err
+}
+
+func PluginHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{}, err error) {
+	if !plugin.Lookup(t) {
+		return data, nil
+	}
+	if f.Kind() != reflect.Map {
+		return nil, stackerr.Newf("%s %v. plugin config should be map", t, data)
+	}
+	var (
+		pluginType string
+		confData   map[string]interface{}
+	)
+	pluginType, confData, err = parsePluginConf(data)
+	if err != nil {
+		return
+	}
+	return plugin.New(t, pluginType, func(conf interface{}) error {
+		err := DecodeAndValidate(confData, conf)
+		if err != nil {
+			err = fmt.Errorf("%s %s plugin. %v %s", t, pluginType, confData, err)
+		}
+		return err
+	})
+}
+
+func parsePluginConf(data interface{}) (pluginType string, conf map[string]interface{}, err error) {
+	conf = toStringKeyMap(data)
+	var typeValues []string
+	for key, val := range conf {
+		if strings.ToLower(key) == "type" {
+			strValue, ok := val.(string)
+			if !ok {
+				err = stackerr.Newf("type has non-string value %s", val)
+				return
+			}
+			typeValues = append(typeValues, strValue)
+			delete(conf, key)
+		}
+	}
+	if len(typeValues) == 0 {
+		err = stackerr.Newf("plugin type expected")
+		return
+	}
+	if len(typeValues) > 1 {
+		err = stackerr.Newf("too many type keys")
+		return
+	}
+	pluginType = typeValues[0]
+	return
+}
+
+func toStringKeyMap(data interface{}) map[string]interface{} {
+	out, ok := data.(map[string]interface{})
+	if !ok {
+		// map[interface{}]interface{}, where keys really are strings
+		// is last valid option. Panic otherwise, like mapstructure do.
+		untypedKeyInput := data.(map[interface{}]interface{})
+		out = make(map[string]interface{}, len(untypedKeyInput))
+		for key, val := range untypedKeyInput {
+			strKey := key.(string)
+			out[strKey] = val
+		}
+	}
+	return out
 }

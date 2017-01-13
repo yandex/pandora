@@ -6,13 +6,16 @@
 package config
 
 import (
+	"fmt"
 	"net"
 	"net/url"
+	"reflect"
 	"testing"
 
 	"github.com/c2h5oh/datasize"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yandex/pandora/plugin"
 )
 
 func TestStringToURLPtrHook(t *testing.T) {
@@ -102,4 +105,64 @@ func TestStringToDataSizeHook(t *testing.T) {
 
 	err = Decode(M{"size": "Bullshit"}, &data)
 	assert.Error(t, err)
+}
+
+type TestPlugin interface {
+	GetData() string
+}
+
+type testPluginImpl struct {
+	testPluginConf
+}
+
+type testPluginConf struct {
+	Data string `validate:"max=20"`
+}
+
+func (v *testPluginImpl) GetData() string { return v.Data }
+
+func TestPluginHook(t *testing.T) {
+	var data struct {
+		Plugin TestPlugin
+	}
+	dataConf := func(conf interface{}) map[string]interface{} {
+		return map[string]interface{}{
+			"plugin": conf,
+		}
+	}
+	const pluginName = "test_hook_plugin"
+	plugin.Register(reflect.TypeOf(&data.Plugin).Elem(), pluginName, func(c testPluginConf) TestPlugin { return &testPluginImpl{c} })
+
+	const expectedData = "expected data"
+
+	err := Decode(dataConf(map[string]interface{}{
+		"type": pluginName,
+		"data": expectedData,
+	}), &data)
+	require.NoError(t, err)
+	assert.Equal(t, expectedData, data.Plugin.GetData(), expectedData)
+
+	invalidConfigs := []map[interface{}]interface{}{
+		{},
+		{
+			"type": pluginName,
+			"Type": pluginName,
+		},
+		{
+			"type":   pluginName,
+			"data":   expectedData,
+			"unused": "wtf",
+		},
+		{
+			"type": pluginName,
+			"data": "invalid because is toooooo looooong",
+		},
+	}
+
+	for _, tc := range invalidConfigs {
+		t.Run(fmt.Sprintf("Invalid conf: %v", tc), func(t *testing.T) {
+			err := Decode(dataConf(tc), &data)
+			assert.Error(t, err)
+		})
+	}
 }

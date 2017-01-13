@@ -5,7 +5,4 @@
 
 // Package config provides advanced framework to decode and validate
 // configuration structs.
-// Package should not depend on other project packages.
-// So hooks which have dependencies from other project package should be added
-// from its packages via AddKindHook or AddTypeHook.
 package config
