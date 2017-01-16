@@ -47,21 +47,6 @@ func TestValidateEndpoint(t *testing.T) {
 	assert.Error(t, Validate(&WithEndpoint{"aaaaa"}))
 }
 
-type WithDNSEndpoint struct {
-	Endpoint string `validate:"required,dns-endpoint"`
-}
-
-func TestValidateDNSEndpoint(t *testing.T) {
-	assert.NoError(t, Validate(&WithDNSEndpoint{"192.168.0.1"}))
-	assert.NoError(t, Validate(&WithDNSEndpoint{"192.168.0.1:5353"}))
-	assert.NoError(t, Validate(&WithDNSEndpoint{"[192.168.0.1]:53"}))
-	assert.NoError(t, Validate(&WithDNSEndpoint{"::1"}))
-	assert.NoError(t, Validate(&WithDNSEndpoint{"[::1]:5353"}))
-	assert.Error(t, Validate(&WithDNSEndpoint{":53"}))
-	assert.Error(t, Validate(&WithDNSEndpoint{"yandex.ru:9999"}))
-	assert.Error(t, Validate(&WithDNSEndpoint{"aaaaa"}))
-}
-
 type WithURLPath struct {
 	Path string `validate:"url-path"`
 }

@@ -38,8 +38,8 @@ type HttpGun struct {
 
 var _ gun.Gun = (*HttpGun)(nil)
 
-func (hg *HttpGun) BindResultsTo(results chan<- *aggregate.Sample) {
-	hg.results = results
+func (g *HttpGun) BindResultsTo(results chan<- *aggregate.Sample) {
+	g.results = results
 }
 
 // Shoot to target, this method is not thread safe
@@ -101,12 +101,12 @@ func (g *HttpGun) Shoot(ctx context.Context, a ammo.Ammo) (err error) {
 	return
 }
 
-func (hg *HttpGun) Close() {
-	hg.client = nil
+func (g *HttpGun) Close() {
+	g.client = nil
 }
 
-func (hg *HttpGun) Connect() {
-	hg.Close()
+func (g *HttpGun) Connect() {
+	g.Close()
 	config := tls.Config{
 		InsecureSkipVerify: true,
 	}
@@ -120,5 +120,5 @@ func (hg *HttpGun) Connect() {
 		Dial:                dialer.Dial,
 		TLSHandshakeTimeout: dialTimeout * time.Second,
 	}
-	hg.client = &http.Client{Transport: tr}
+	g.client = &http.Client{Transport: tr}
 }

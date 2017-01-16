@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/c2h5oh/datasize"
@@ -121,48 +122,70 @@ type testPluginConf struct {
 
 func (v *testPluginImpl) GetData() string { return v.Data }
 
-func TestPluginHook(t *testing.T) {
-	var data struct {
-		Plugin TestPlugin
-	}
+func TestPluginHooks(t *testing.T) {
 	dataConf := func(conf interface{}) map[string]interface{} {
 		return map[string]interface{}{
 			"plugin": conf,
 		}
 	}
 	const pluginName = "test_hook_plugin"
-	plugin.Register(reflect.TypeOf(&data.Plugin).Elem(), pluginName, func(c testPluginConf) TestPlugin { return &testPluginImpl{c} })
+	plugin.Register(reflect.TypeOf((*TestPlugin)(nil)).Elem(), pluginName, func(c testPluginConf) TestPlugin { return &testPluginImpl{c} })
 
 	const expectedData = "expected data"
 
-	err := Decode(dataConf(map[string]interface{}{
-		"type": pluginName,
-		"data": expectedData,
-	}), &data)
-	require.NoError(t, err)
-	assert.Equal(t, expectedData, data.Plugin.GetData(), expectedData)
-
+	validConfig := func() interface{} {
+		return dataConf(map[interface{}]interface{}{
+			PluginNameKey: pluginName,
+			"data":        expectedData,
+		})
+	}
 	invalidConfigs := []map[interface{}]interface{}{
 		{},
 		{
-			"type": pluginName,
-			"Type": pluginName,
+			PluginNameKey:                  pluginName,
+			strings.ToUpper(PluginNameKey): pluginName,
 		},
 		{
-			"type":   pluginName,
-			"data":   expectedData,
-			"unused": "wtf",
+			PluginNameKey: pluginName,
+			"data":        expectedData,
+			"unused":      "wtf",
 		},
 		{
-			"type": pluginName,
-			"data": "invalid because is toooooo looooong",
+			PluginNameKey: pluginName,
+			"data":        "invalid because is toooooo looooong",
 		},
+	}
+	testInvalid := func(t *testing.T, data interface{}) {
+		for _, tc := range invalidConfigs {
+			t.Run(fmt.Sprintf("Invalid conf: %v", tc), func(t *testing.T) {
+				err := Decode(dataConf(tc), data)
+				assert.Error(t, err)
+			})
+		}
 	}
 
-	for _, tc := range invalidConfigs {
-		t.Run(fmt.Sprintf("Invalid conf: %v", tc), func(t *testing.T) {
-			err := Decode(dataConf(tc), &data)
-			assert.Error(t, err)
-		})
-	}
+	t.Run("plugin", func(t *testing.T) {
+		var data struct {
+			Plugin TestPlugin
+		}
+		err := Decode(validConfig(), &data)
+		require.NoError(t, err)
+		assert.Equal(t, expectedData, data.Plugin.GetData(), expectedData)
+
+		testInvalid(t, data)
+	})
+
+	t.Run("factory", func(t *testing.T) {
+		var data struct {
+			Plugin func() (TestPlugin, error)
+		}
+		require.True(t, plugin.LookupFactory(plugin.PtrType(&data.Plugin)))
+		err := Decode(validConfig(), &data)
+		require.NoError(t, err)
+		plugin, err := data.Plugin()
+		require.NoError(t, err)
+		assert.Equal(t, expectedData, plugin.GetData(), expectedData)
+
+		testInvalid(t, data)
+	})
 }

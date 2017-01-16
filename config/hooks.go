@@ -20,6 +20,8 @@ import (
 	"github.com/yandex/pandora/plugin"
 )
 
+const PluginNameKey = "type"
+
 var InvalidURLError = errors.New("string is not valid URL")
 
 var (
@@ -86,63 +88,76 @@ func PluginHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{}
 	if !plugin.Lookup(t) {
 		return data, nil
 	}
-	if f.Kind() != reflect.Map {
-		return nil, stackerr.Newf("%s %v. plugin config should be map", t, data)
-	}
-	var (
-		pluginType string
-		confData   map[string]interface{}
-	)
-	pluginType, confData, err = parsePluginConf(data)
+	name, fillConf, err := parseConf(t, data)
 	if err != nil {
 		return
 	}
-	return plugin.New(t, pluginType, func(conf interface{}) error {
-		err := DecodeAndValidate(confData, conf)
-		if err != nil {
-			err = fmt.Errorf("%s %s plugin. %v %s", t, pluginType, confData, err)
-		}
-		return err
-	})
+	return plugin.New(t, name, fillConf)
 }
 
-func parsePluginConf(data interface{}) (pluginType string, conf map[string]interface{}, err error) {
-	conf = toStringKeyMap(data)
-	var typeValues []string
-	for key, val := range conf {
-		if strings.ToLower(key) == "type" {
-			strValue, ok := val.(string)
+func PluginFactoryHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{}, err error) {
+	fmt.Printf("FactoryHook: %s\n", t)
+	if !plugin.LookupFactory(t) {
+		return data, nil
+	}
+	fmt.Println("Not skiped")
+	name, fillConf, err := parseConf(t, data)
+	if err != nil {
+		return
+	}
+	return plugin.NewFactory(t, name, fillConf)
+}
+
+func parseConf(t reflect.Type, data interface{}) (name string, fillConf func(conf interface{}) error, err error) {
+	confData, err := toStringKeyMap(data)
+	if err != nil {
+		return
+	}
+	var names []string
+	for key, val := range confData {
+		if PluginNameKey == strings.ToLower(key) {
+			strVal, ok := val.(string)
 			if !ok {
-				err = stackerr.Newf("type has non-string value %s", val)
+				err = stackerr.Newf("%s has non-string value %s", PluginNameKey, val)
 				return
 			}
-			typeValues = append(typeValues, strValue)
-			delete(conf, key)
+			names = append(names, strVal)
+			delete(confData, key)
 		}
 	}
-	if len(typeValues) == 0 {
-		err = stackerr.Newf("plugin type expected")
+	if len(names) == 0 {
+		err = stackerr.Newf("plugin %s expected", PluginNameKey)
 		return
 	}
-	if len(typeValues) > 1 {
-		err = stackerr.Newf("too many type keys")
+	if len(names) > 1 {
+		err = stackerr.Newf("too many %s keys", PluginNameKey)
 		return
 	}
-	pluginType = typeValues[0]
+	name = names[0]
+	fillConf = func(conf interface{}) error {
+		err := DecodeAndValidate(confData, conf)
+		if err != nil {
+			err = fmt.Errorf("%s %s plugin. %v %s", t, name, confData, err)
+		}
+		return err
+	}
 	return
 }
 
-func toStringKeyMap(data interface{}) map[string]interface{} {
+func toStringKeyMap(data interface{}) (out map[string]interface{}, err error) {
 	out, ok := data.(map[string]interface{})
-	if !ok {
-		// map[interface{}]interface{}, where keys really are strings
-		// is last valid option. Panic otherwise, like mapstructure do.
-		untypedKeyInput := data.(map[interface{}]interface{})
-		out = make(map[string]interface{}, len(untypedKeyInput))
-		for key, val := range untypedKeyInput {
-			strKey := key.(string)
-			out[strKey] = val
-		}
+	if ok {
+		return
 	}
-	return out
+	untypedKeyData, ok := data.(map[interface{}]interface{})
+	if !ok {
+		err = stackerr.Newf("unexpected config type %T: should be map[string or interface{}]interface{}", data)
+		return
+	}
+	out = make(map[string]interface{}, len(untypedKeyData))
+	for key, val := range untypedKeyData {
+		strKey := key.(string)
+		out[strKey] = val
+	}
+	return
 }

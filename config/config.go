@@ -16,7 +16,7 @@ import (
 const TagName = "config"
 
 // Decodes conf to result. Doesn't zero fields.
-func Decode(conf map[string]interface{}, result interface{}) error {
+func Decode(conf interface{}, result interface{}) error {
 	decoder, err := mapstructure.NewDecoder(newDecoderConfig(result))
 	if err != nil {
 		return stackerr.Wrap(err)
@@ -24,7 +24,7 @@ func Decode(conf map[string]interface{}, result interface{}) error {
 	return stackerr.Wrap(decoder.Decode(conf))
 }
 
-func DecodeAndValidate(conf map[string]interface{}, result interface{}) error {
+func DecodeAndValidate(conf interface{}, result interface{}) error {
 	err := Decode(conf, result)
 	if err != nil {
 		return err
@@ -90,7 +90,9 @@ var hooks = []mapstructure.DecodeHookFunc{
 	StringToDataSizeHook,
 }
 
-var _ = AddTypeHook(PluginHook) // Usual add causes "init loop" error.
+// Usual add causes "init loop" error.
+var _ = AddTypeHook(PluginHook)
+var _ = AddTypeHook(PluginFactoryHook)
 
 var compiledHook mapstructure.DecodeHookFunc
 var compileHookOnce = sync.Once{}

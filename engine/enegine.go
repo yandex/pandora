@@ -44,14 +44,15 @@ type Config struct {
 // elements. If it is true make config.SetDefault(default interface{})
 // where default is struct or struct factory, and use it to set default
 // unique Name and SharedLimits = true.
+
 type UserPool struct {
 	Name           string
-	AmmoProvider   ammo.Provider            `config:"ammo"`
-	ResultListener aggregate.ResultListener `config:"result"`
-	SharedLimits   bool                     `config:"shared-limits"`
-	StartupLimiter limiter.Limiter          `config:"startup-limiter"`
-	LimiterConfig  interface{}              `config:"user-limiter"`
-	GunConfig      interface{}              `config:"gun"`
+	AmmoProvider   ammo.Provider                   `config:"ammo"`
+	ResultListener aggregate.ResultListener        `config:"result"`
+	SharedLimits   bool                            `config:"shared-limits"`
+	StartupLimiter limiter.Limiter                 `config:"startup-limiter"`
+	NewUserLimiter func() (limiter.Limiter, error) `config:"user-limiter"`
+	NewGun         func() (gun.Gun, error)         `config:"gun"`
 }
 
 type User struct {
@@ -113,7 +114,7 @@ func (p *UserPool) Start(ctx context.Context) error {
 
 	if p.SharedLimits {
 		var err error
-		sharedLimiter, err = p.NewLimiter()
+		sharedLimiter, err = p.NewUserLimiter()
 		if err != nil {
 			return fmt.Errorf("could not make a user limiter from config due to %s", err)
 		}
@@ -130,7 +131,7 @@ func (p *UserPool) Start(ctx context.Context) error {
 			l = sharedLimiter
 		} else {
 			var err error
-			l, err = p.NewLimiter()
+			l, err = p.NewUserLimiter()
 			if err != nil {
 				return fmt.Errorf("could not make a user limiter from config due to %s", err)
 			}
@@ -163,12 +164,4 @@ func (p *UserPool) Start(ctx context.Context) error {
 		fmt.Printf("Error waiting utils promises: %s", err2.Error())
 	}
 	return err
-}
-
-func (p *UserPool) NewLimiter() (limiter.Limiter, error) {
-	panic("NIY") // TODO
-}
-
-func (p *UserPool) NewGun() (gun.Gun, error) {
-	panic("NIY") // TODO
 }

@@ -58,6 +58,10 @@ func Lookup(pluginType reflect.Type) bool {
 	return defaultRegistry.Lookup(pluginType)
 }
 
+func LookupFactory(pluginType reflect.Type) bool {
+	return defaultRegistry.LookupFactory(pluginType)
+}
+
 // New creates plugin by registered plugin factory. Returns error if creation
 // failed or no plugin were registered for given type and name.
 // Passed fillConf called on created config before calling plugin factory.
@@ -67,6 +71,29 @@ func Lookup(pluginType reflect.Type) bool {
 // New is thread safe, if there is no concurrent Register calls.
 func New(pluginType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
 	return defaultRegistry.New(pluginType, name, fillConfOptional...)
+}
+
+// TODO (skipor): add support for `func() PluginInterface` factories, that
+// panics on error.
+// TODO (skipor): add NewSharedConfigsFactory that decodes config once and use
+// it to create all plugin instances.
+
+// NewFactory behaves like New, but creates factory func() (PluginInterface, error), that on call
+// creates New plugin by registered factory.
+// New config is created filled for every factory call.
+func NewFactory(factoryType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (factory interface{}, err error) {
+	return defaultRegistry.NewFactory(factoryType, name, fillConfOptional...)
+}
+
+// PtrType is helper to extract plugin types.
+// Example: plugin.PtrType((*PluginInterface)(nil)) instead of
+// reflect.TypeOf((*PluginInterface)(nil)).Elem()
+func PtrType(ptr interface{}) reflect.Type {
+	t := reflect.TypeOf(ptr)
+	if t.Kind() != reflect.Ptr {
+		panic("passed value is not pointer")
+	}
+	return t.Elem()
 }
 
 type nameRegistryEntry struct {
@@ -93,7 +120,8 @@ func (r typeRegistry) Register(
 	newPluginImpl interface{},
 	newDefaultConfigOptional ...interface{},
 ) {
-	basicCheck(pluginType, name)
+	expect(pluginType.Kind() == reflect.Interface, "plugin type should be interface, but have: %T", pluginType)
+	expect(name != "", "empty name")
 	pluginReg := r[pluginType]
 	if pluginReg == nil {
 		pluginReg = newNameRegistry()
@@ -101,7 +129,7 @@ func (r typeRegistry) Register(
 	}
 	_, ok := pluginReg[name]
 	expect(!ok, "plugin %s with name %q had been already registered", pluginType, name)
-	pluginReg[name] = newPluginFactory(pluginType, newPluginImpl, newDefaultConfigOptional...)
+	pluginReg[name] = newNameRegistryEntry(pluginType, newPluginImpl, newDefaultConfigOptional...)
 }
 
 func (r typeRegistry) Lookup(pluginType reflect.Type) bool {
@@ -109,52 +137,111 @@ func (r typeRegistry) Lookup(pluginType reflect.Type) bool {
 	return ok
 }
 
+func (r typeRegistry) LookupFactory(factoryType reflect.Type) bool {
+	return IsFactoryType(factoryType) && r.Lookup(factoryType.Out(0))
+}
+
+func IsFactoryType(t reflect.Type) bool {
+	return t.Kind() == reflect.Func &&
+		t.NumIn() == 0 &&
+		t.NumOut() == 2 &&
+		t.Out(0).Kind() == reflect.Interface &&
+		t.Out(1) == errorType
+}
+
 func (r typeRegistry) New(pluginType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
-	basicCheck(pluginType, name)
-	expect(len(fillConfOptional) <= 1, "only fill config parameter could be passed")
-	var fillConf func(interface{}) error
-	if len(fillConfOptional) != 0 {
-		fillConf = fillConfOptional[0]
-	}
-	var factory nameRegistryEntry
-	factory, err = r.get(pluginType, name)
+	expect(pluginType.Kind() == reflect.Interface, "plugin type should be interface, but have: %T", pluginType)
+	expect(name != "", "empty name")
+	fillConf := getFillConf(fillConfOptional)
+	registered, err := r.get(pluginType, name)
 	if err != nil {
 		return
 	}
-	var args []reflect.Value
-	var conf interface{}
-	if factory.newPluginImpl.Type().NumIn() == 0 {
-		var emptyStruct struct{}
-		conf = &emptyStruct // Check than fill conf expects nothing.
-	} else {
-		args = append(factory.newDefaultConfig.Call(nil))
-		switch args[0].Kind() {
-		case reflect.Struct:
-			// Config can be filled only by pointer.
-			if !args[0].CanAddr() {
-				// Can't pass pointer into decoder. Let's make new addressable!
-				newArg := reflect.New(args[0].Type()).Elem()
-				newArg.Set(args[0])
-				args[0] = newArg
-			}
-			conf = args[0].Addr().Interface()
-		case reflect.Ptr:
-			if args[0].IsNil() {
-				// Can't fill nil config. Init with zero.
-				args[0] = reflect.New(args[0].Type().Elem())
-			}
-			conf = args[0].Interface()
-		default:
-			panic("unexpected type " + args[0].String())
-		}
-	}
+	confOptional, fillAddr := registered.NewDefaultConfig()
 	if fillConf != nil {
-		err = fillConf(conf)
+		err = fillConf(fillAddr)
 		if err != nil {
 			return
 		}
 	}
-	out := factory.newPluginImpl.Call(args)
+	return registered.NewPlugin(confOptional)
+}
+
+func (r typeRegistry) NewFactory(factoryType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (factory interface{}, err error) {
+	expect(IsFactoryType(factoryType), "plugin factory type should be like `func() (PluginInterface, error)`, but have: %T", factoryType)
+	expect(name != "", "empty name")
+	fillConf := getFillConf(fillConfOptional)
+	pluginType := factoryType.Out(0)
+	registered, err := r.get(pluginType, name)
+	if err != nil {
+		return
+	}
+	factory = reflect.MakeFunc(factoryType, func(in []reflect.Value) (out []reflect.Value) {
+		conf, fillAddr := registered.NewDefaultConfig()
+		if fillConf != nil {
+			// Check that config is correct.
+			err := fillConf(fillAddr)
+			if err != nil {
+				return []reflect.Value{reflect.Zero(pluginType), reflect.ValueOf(&err).Elem()}
+			}
+		}
+		out = registered.newPluginImpl.Call(conf)
+		if out[0].Type() != pluginType {
+			// Not plugin, but its implementation.
+			impl := out[0]
+			out[0] = reflect.New(pluginType).Elem()
+			out[0].Set(impl)
+		}
+
+		if len(out) < 2 {
+			// Registered newPluginImpl can return no error, but we should.
+			out = append(out, reflect.Zero(errorType))
+		}
+		return
+	}).Interface()
+	return
+}
+
+func getFillConf(fillConfOptional []func(conf interface{}) error) func(interface{}) error {
+	expect(len(fillConfOptional) <= 1, "only fill config parameter could be passed")
+	if len(fillConfOptional) == 0 {
+		return nil
+	}
+	return fillConfOptional[0]
+}
+
+func (e nameRegistryEntry) NewDefaultConfig() (confOptional []reflect.Value, fillAddr interface{}) {
+	if e.newPluginImpl.Type().NumIn() == 0 {
+		var emptyStruct struct{}
+		fillAddr = &emptyStruct // No fields to fill.
+		return
+	}
+	conf := e.newDefaultConfig.Call(nil)[0]
+	switch conf.Kind() {
+	case reflect.Struct:
+		// Config can be filled only by pointer.
+		if !conf.CanAddr() {
+			// Can't address to pass pointer into decoder. Let's make New addressable!
+			newArg := reflect.New(conf.Type()).Elem()
+			newArg.Set(conf)
+			conf = newArg
+		}
+		fillAddr = conf.Addr().Interface()
+	case reflect.Ptr:
+		if conf.IsNil() {
+			// Can't fill nil config. Init with zero.
+			conf = reflect.New(conf.Type().Elem())
+		}
+		fillAddr = conf.Interface()
+	default:
+		panic("unexpected type " + conf.String())
+	}
+	confOptional = []reflect.Value{conf}
+	return
+}
+
+func (e nameRegistryEntry) NewPlugin(confOptional []reflect.Value) (plugin interface{}, err error) {
+	out := e.newPluginImpl.Call(confOptional)
 	plugin = out[0].Interface()
 	if len(out) > 1 {
 		err = out[1].Interface().(error)
@@ -162,7 +249,7 @@ func (r typeRegistry) New(pluginType reflect.Type, name string, fillConfOptional
 	return
 }
 
-func newPluginFactory(pluginType reflect.Type, newPluginImpl interface{}, newDefaultConfigOptional ...interface{}) nameRegistryEntry {
+func newNameRegistryEntry(pluginType reflect.Type, newPluginImpl interface{}, newDefaultConfigOptional ...interface{}) nameRegistryEntry {
 	newPluginImplType := reflect.TypeOf(newPluginImpl)
 	expect(newPluginImplType.Kind() == reflect.Func, "newPluginImpl should be func")
 	expect(newPluginImplType.NumIn() <= 1, "newPluginImple should accept config or nothing")
@@ -171,7 +258,6 @@ func newPluginFactory(pluginType reflect.Type, newPluginImpl interface{}, newDef
 	pluginImplType := newPluginImplType.Out(0)
 	expect(pluginImplType.Implements(pluginType), "pluginImpl should implement plugin interface")
 	if newPluginImplType.NumOut() == 2 {
-		errorType := reflect.TypeOf((*error)(nil)).Elem()
 		expect(newPluginImplType.Out(1) == errorType, "pluginImpl should have no second return value, or it should be error")
 	}
 
@@ -214,14 +300,9 @@ func (r typeRegistry) get(pluginType reflect.Type, name string) (factory nameReg
 	}
 	factory, ok = pluginReg[name]
 	if !ok {
-		err = stackerr.Newf("no plugins  of type %s has been registered for name %s", pluginType, name)
+		err = stackerr.Newf("no plugins of type %s has been registered for name %s", pluginType, name)
 	}
 	return
-}
-
-func basicCheck(pluginType reflect.Type, name string) {
-	expect(pluginType.Kind() == reflect.Interface, "plugin type should be interface, but have: %T", pluginType)
-	expect(name != "", "empty name")
 }
 
 func expect(b bool, msg string, args ...interface{}) {
@@ -229,3 +310,5 @@ func expect(b bool, msg string, args ...interface{}) {
 		panic(fmt.Sprintf("expectation failed: "+msg, args...))
 	}
 }
+
+var errorType = reflect.TypeOf((*error)(nil)).Elem()
