@@ -1,16 +1,7 @@
 language: go
 go: 
-  - 1.5.2
+  - 1.7.3
   - tip
-
-before_install:
-  - go get github.com/amahi/spdy
-  - go get golang.org/x/net/context
-  - go get github.com/amahi/spdy
-  - go get github.com/stretchr/testify
-  - go get github.com/SlyMarbo/spdy
-  - go get github.com/davecgh/go-spew/spew
-  - go get github.com/pquerna/ffjson
 
 install: make tools
 
