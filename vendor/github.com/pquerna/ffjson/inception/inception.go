@@ -20,12 +20,11 @@ package ffjsoninception
 import (
 	"errors"
 	"fmt"
+	"github.com/pquerna/ffjson/shared"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"sort"
-
-	"github.com/pquerna/ffjson/shared"
 )
 
 type Inception struct {

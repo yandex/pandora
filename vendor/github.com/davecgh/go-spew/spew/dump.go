@@ -311,8 +311,8 @@ func (d *dumpState) dump(v reflect.Value) {
 
 	switch kind {
 	case reflect.Invalid:
-	// Do nothing.  We should never get here since invalid has already
-	// been handled above.
+		// Do nothing.  We should never get here since invalid has already
+		// been handled above.
 
 	case reflect.Bool:
 		printBool(d.w, v.Bool())
@@ -366,8 +366,8 @@ func (d *dumpState) dump(v reflect.Value) {
 		}
 
 	case reflect.Ptr:
-	// Do nothing.  We should never get here since pointers have already
-	// been handled above.
+		// Do nothing.  We should never get here since pointers have already
+		// been handled above.
 
 	case reflect.Map:
 		// nil maps should be indicated as different than empty maps

@@ -18,15 +18,15 @@
 package main
 
 import (
+	_ "github.com/pquerna/ffjson/fflib/v1"
+	"github.com/pquerna/ffjson/generator"
+	_ "github.com/pquerna/ffjson/inception"
+
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
-
-	_ "github.com/pquerna/ffjson/fflib/v1"
-	"github.com/pquerna/ffjson/generator"
-	_ "github.com/pquerna/ffjson/inception"
 )
 
 var outputPathFlag = flag.String("w", "", "Write generate code to this path instead of ${input}_ffjson.go.")

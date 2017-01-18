@@ -6,9 +6,9 @@
 package assert
 
 import (
-	"net/http"
-	"net/url"
-	"time"
+	http "net/http"
+	url "net/url"
+	time "time"
 )
 
 // Condition uses a Comparison to assert a complex condition.

@@ -16,9 +16,9 @@ func NewLinear(conf LinearConfig) Limiter {
 }
 
 type LinearConfig struct {
-	Period   time.Duration
-	StartRps float64
-	EndRps   float64
+	Period   time.Duration `validate:"min-time=1ms"`
+	StartRps float64       `config:"start-rps" validate:"min=0"`
+	EndRps   float64       `config:"end-rps" validate:"min=0"`
 }
 
 // linear implements Limiter interface

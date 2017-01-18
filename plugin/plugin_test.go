@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/facebookgo/stackerr"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -101,6 +102,23 @@ func TestNew(t *testing.T) {
 		{"no conf", func(t *testing.T) {
 			r.testRegister(newPlugin)
 			assert.Equal(t, testNewOk(), testInitValue)
+		}},
+		{"nil error", func(t *testing.T) {
+			r.testRegister(func() (TestPlugin, error) {
+				return newPlugin(), nil
+			})
+			assert.Equal(t, testNewOk(), testInitValue)
+		}},
+		{"non-nil error", func(t *testing.T) {
+			expectedErr := errors.New("fill conf err")
+			r.testRegister(func() (TestPlugin, error) {
+				return nil, expectedErr
+			})
+			_, err := testNew(r)
+			require.Error(t, err)
+			errs := stackerr.Underlying(err)
+			err = errs[len(errs)-1]
+			assert.Equal(t, expectedErr, err)
 		}},
 		{"no conf, fill conf error", func(t *testing.T) {
 			r.testRegister(newPlugin)

@@ -1,12 +1,11 @@
 package main
 
 import (
-	"crypto/tls"
+        "crypto/tls"
 	"fmt"
+	"github.com/amahi/spdy"
 	"io"
 	"net/http"
-
-	"github.com/amahi/spdy"
 )
 
 func handle(err error) {

@@ -112,7 +112,7 @@ func (b *Buffer) Truncate(n int) {
 		b.off = 0
 		b.buf = b.buf[0:0]
 	} else {
-		b.buf = b.buf[0: b.off + n]
+		b.buf = b.buf[0 : b.off+n]
 	}
 }
 
@@ -153,7 +153,7 @@ func (b *Buffer) grow(n int) int {
 		b.buf = buf
 		b.off = 0
 	}
-	b.buf = b.buf[0: b.off + m + n]
+	b.buf = b.buf[0 : b.off+m+n]
 	return b.off + m
 }
 
@@ -175,7 +175,7 @@ func (b *Buffer) Grow(n int) {
 // buffer becomes too large, Write will panic with ErrTooLarge.
 func (b *Buffer) Write(p []byte) (n int, err error) {
 	if b.skipTrailingByte {
-		p = p[:len(p) - 1]
+		p = p[:len(p)-1]
 	}
 	m := b.grow(len(p))
 	return copy(b.buf[m:], p), nil
@@ -215,11 +215,11 @@ func (b *Buffer) ReadFrom(r io.Reader) (n int64, err error) {
 			}
 			copy(newBuf, b.buf[b.off:])
 			Pool(b.buf)
-			b.buf = newBuf[:len(b.buf) - b.off]
+			b.buf = newBuf[:len(b.buf)-b.off]
 			b.off = 0
 		}
 		m, e := r.Read(b.buf[len(b.buf):cap(b.buf)])
-		b.buf = b.buf[0: len(b.buf) + m]
+		b.buf = b.buf[0 : len(b.buf)+m]
 		n += int64(m)
 		if e == io.EOF {
 			break
@@ -269,7 +269,7 @@ func (b *Buffer) WriteByte(c byte) error {
 }
 
 func (b *Buffer) Rewind(n int) error {
-	b.buf = b.buf[:len(b.buf) - n]
+	b.buf = b.buf[:len(b.buf)-n]
 	return nil
 }
 
@@ -324,7 +324,7 @@ func (b *Buffer) Next(n int) []byte {
 	if n > m {
 		n = m
 	}
-	data := b.buf[b.off: b.off + n]
+	data := b.buf[b.off : b.off+n]
 	b.off += n
 	return data
 }

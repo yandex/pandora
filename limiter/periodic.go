@@ -47,21 +47,20 @@ func newPeriodic(period time.Duration) Limiter {
 	}
 }
 
-// TODO: validate tags
 type PeriodicConfig struct {
-	Period    time.Duration
-	BatchSize int
-	MaxCount  int
+	Period time.Duration
+	Batch  int
+	Max    int
 }
 
 // NewPeriodic returns periodic limiter
 func NewPeriodic(conf PeriodicConfig) Limiter {
 	l := newPeriodic(conf.Period)
-	if conf.MaxCount > 0 {
-		l = NewSize(conf.MaxCount, l)
+	if conf.Max > 0 {
+		l = NewSize(conf.Max, l)
 	}
-	if conf.BatchSize > 0 {
-		l = NewBatch(conf.BatchSize, l)
+	if conf.Batch > 0 {
+		l = NewBatch(conf.Batch, l)
 	}
 	return l
 }

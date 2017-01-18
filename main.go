@@ -13,6 +13,7 @@ import (
 func init() {
 	gun.Register("http", http.New)
 	gun.Register("spdy", spdy.New)
+	gun.Register("log", gun.NewLog)
 
 	ammo.RegisterProvider("jsonline/http", ammo.NewHttpProvider)
 	ammo.RegisterProvider("jsonline/spdy", ammo.NewHttpProvider)

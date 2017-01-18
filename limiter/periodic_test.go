@@ -58,8 +58,8 @@ func TestPeriodicLimiterNoBatch(t *testing.T) {
 
 func TestPeriodicLimiterBatch(t *testing.T) {
 	l := NewPeriodic(PeriodicConfig{
-		Period:    time.Second,
-		BatchSize: 10,
+		Period: time.Second,
+		Batch:  10,
 	})
 	switch tt := l.(type) {
 	case *batch:
@@ -70,9 +70,9 @@ func TestPeriodicLimiterBatch(t *testing.T) {
 
 func TestPeriodicLimiterBatchMaxCount(t *testing.T) {
 	config := PeriodicConfig{
-		Period:    time.Millisecond,
-		BatchSize: 3,
-		MaxCount:  5,
+		Period: time.Millisecond,
+		Batch:  3,
+		Max:    5,
 	}
 	l := NewPeriodic(config)
 
@@ -89,7 +89,7 @@ func TestPeriodicLimiterBatchMaxCount(t *testing.T) {
 	i, err := Drain(ctx, l)
 	assert.NoError(t, err)
 	// we should take only 0 tick from master
-	assert.Equal(t, i, config.MaxCount*config.BatchSize)
+	assert.Equal(t, i, config.Max*config.Batch)
 
 	select {
 	case err := <-promise:

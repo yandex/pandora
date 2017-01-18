@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -31,9 +32,14 @@ func TestSampleBehaviour(t *testing.T) {
 	assert.True(t, rtt <= time.Since(sample.timeStamp), "expected: %v; actual: %v", rtt, time.Since(sample.timeStamp))
 	assert.True(t, sleep <= rtt)
 	sample.SetProtoCode(http.StatusBadRequest)
-	expected := fmt.Sprintf("%v.%3.f\t%s|%s\t%v\t0\t0\t0\t0\t0\t0\t0\t%v\t%v",
+	expectedTimeStamp := fmt.Sprintf("%v.%3.f",
 		sample.timeStamp.Unix(),
-		float32((sample.timeStamp.UnixNano()/1e6)%1000),
+		float32((sample.timeStamp.UnixNano()/1e6)%1000))
+	// 1484660999.  2 -> 1484660999.002
+	expectedTimeStamp = strings.Replace(expectedTimeStamp, " ", "0", -1)
+
+	expected := fmt.Sprintf("%s\t%s|%s\t%v\t0\t0\t0\t0\t0\t0\t0\t%v\t%v",
+		expectedTimeStamp,
 		tag, tag2,
 		sample.get(keyRTTMicro),
 		int(syscall.EINVAL), http.StatusBadRequest,
@@ -50,4 +56,4 @@ func TestGetErrno(t *testing.T) {
 	assert.Equal(t, int(syscall.EINVAL), getErrno(err))
 }
 
-// TODO: test getErrno on some real net error from stdlib.
+// TODO (skipor): test getErrno on some real net error from stdlib.

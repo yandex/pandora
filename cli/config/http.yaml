@@ -1,0 +1,22 @@
+pools:
+  - name: HTTP pool
+    gun:
+      type: http
+      target: localhost:3000
+    ammo:
+      type: jsonline/http
+      file: ./example/data/ammo.jsonline
+    result:
+      type: log/phout
+      destination: ./http_phout.log
+    shared-limits: true
+    user-limiter:
+      type: periodic
+      batch: 2
+      max: 3
+      period: 1s
+    startup-limiter:
+      type: periodic
+      batch: 1
+      max: 5
+      period: 0.5s

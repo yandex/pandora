@@ -244,7 +244,7 @@ func (e nameRegistryEntry) NewPlugin(confOptional []reflect.Value) (plugin inter
 	out := e.newPluginImpl.Call(confOptional)
 	plugin = out[0].Interface()
 	if len(out) > 1 {
-		err = out[1].Interface().(error)
+		err, _ = out[1].Interface().(error)
 	}
 	return
 }

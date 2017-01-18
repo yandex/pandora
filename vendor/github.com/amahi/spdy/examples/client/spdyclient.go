@@ -2,10 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/amahi/spdy"
 	"io"
 	"net/http"
-
-	"github.com/amahi/spdy"
 )
 
 func main() {

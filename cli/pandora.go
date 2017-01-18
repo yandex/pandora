@@ -44,7 +44,6 @@ func Run() {
 	if example {
 		panic("Not implemented yet")
 		// TODO: print example config file content
-		return
 	}
 
 	v := newViper()

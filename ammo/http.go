@@ -32,9 +32,9 @@ type httpProvider struct {
 
 // ffjson: skip
 type HttpProviderConfig struct {
-	AmmoFileName string
-	AmmoLimit    int
-	Passes       int
+	File   string
+	Limit  int
+	Passes int
 }
 
 // ffjson: noencoder
@@ -56,7 +56,7 @@ func (d *httpJSONDecoder) Decode(jsonDoc []byte, a Ammo) (Ammo, error) {
 
 func (ap *httpProvider) Start(ctx context.Context) error {
 	defer close(ap.sink)
-	ammoFile, err := os.Open(ap.AmmoFileName)
+	ammoFile, err := os.Open(ap.File)
 	if err != nil {
 		return fmt.Errorf("failed to open ammo source: %v", err)
 	}
@@ -68,7 +68,7 @@ loop:
 		passNum++
 		scanner := bufio.NewScanner(ammoFile)
 		scanner.Split(bufio.ScanLines)
-		for scanner.Scan() && (ap.AmmoLimit == 0 || ammoNumber < ap.AmmoLimit) {
+		for scanner.Scan() && (ap.Limit == 0 || ammoNumber < ap.Limit) {
 			data := scanner.Bytes()
 			if a, err := ap.decode(data); err != nil {
 				return fmt.Errorf("failed to decode ammo: %v", err)

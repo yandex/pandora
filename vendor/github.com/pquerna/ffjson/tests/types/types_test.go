@@ -19,11 +19,10 @@ package types
 
 import (
 	"encoding/json"
+	ff "github.com/pquerna/ffjson/tests/types/ff"
 	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/pquerna/ffjson/tests/types/ff"
 )
 
 func TestRoundTrip(t *testing.T) {

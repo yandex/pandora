@@ -18,9 +18,9 @@
 package tff
 
 import (
-	"testing"
-
 	fflib "github.com/pquerna/ffjson/fflib/v1"
+
+	"testing"
 )
 
 // Test data from https://github.com/akheron/jansson/tree/master/test/suites

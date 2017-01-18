@@ -19,9 +19,8 @@ package ffjsoninception
 
 import (
 	"fmt"
-	"reflect"
-
 	"github.com/pquerna/ffjson/shared"
+	"reflect"
 )
 
 func typeInInception(ic *Inception, typ reflect.Type, f shared.Feature) bool {

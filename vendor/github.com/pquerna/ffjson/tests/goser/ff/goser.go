@@ -18,11 +18,11 @@
 package goser
 
 import (
+	fflib "github.com/pquerna/ffjson/fflib/v1"
+
 	"io"
 	"net"
 	"time"
-
-	fflib "github.com/pquerna/ffjson/fflib/v1"
 )
 
 type CacheStatus int32

@@ -28,3 +28,5 @@ _testmain.go
 .goxc.local.json
 .idea/
 pandora.iml
+*.log
+*.out

@@ -18,10 +18,10 @@
 package tff
 
 import (
+	fflib "github.com/pquerna/ffjson/fflib/v1"
+
 	_ "encoding/json"
 	"testing"
-
-	fflib "github.com/pquerna/ffjson/fflib/v1"
 )
 
 // Test data from https://github.com/akheron/jansson/tree/master/test/suites/invalid

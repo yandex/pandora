@@ -21,8 +21,8 @@ const (
 
 func TestNewHttpProvider(t *testing.T) {
 	c := HttpProviderConfig{
-		AmmoFileName: httpTestFilename,
-		AmmoLimit:    10,
+		File:  httpTestFilename,
+		Limit: 10,
 	}
 	provider := NewHttpProvider(c)
 
@@ -30,7 +30,7 @@ func TestNewHttpProvider(t *testing.T) {
 	require.True(t, casted, "NewHttpProvider should return *httpProvider type")
 
 	// look at defaults
-	assert.Equal(t, 10, httpProvider.AmmoLimit)
+	assert.Equal(t, 10, httpProvider.Limit)
 	assert.Equal(t, 0, httpProvider.Passes)
 	assert.NotNil(t, httpProvider.sink)
 	assert.NotNil(t, httpProvider.BaseProvider.source)
@@ -41,13 +41,12 @@ func TestNewHttpProvider(t *testing.T) {
 func TestHttpProvider(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	providerCtx, _ := context.WithCancel(ctx)
 
 	ammoCh := make(chan Ammo, 128)
 	provider := &httpProvider{
 		HttpProviderConfig: HttpProviderConfig{
-			Passes:       2,
-			AmmoFileName: httpTestFilename,
+			Passes: 2,
+			File:   httpTestFilename,
 		},
 		sink: ammoCh,
 		BaseProvider: NewBaseProvider(
@@ -56,7 +55,7 @@ func TestHttpProvider(t *testing.T) {
 			func() interface{} { return &Http{} },
 		),
 	}
-	promise := utils.PromiseCtx(providerCtx, provider.Start)
+	promise := utils.PromiseCtx(ctx, provider.Start)
 
 	ammos := Drain(ctx, provider)
 	require.Len(t, ammos, 25*2) // two passes

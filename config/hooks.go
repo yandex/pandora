@@ -96,11 +96,9 @@ func PluginHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{}
 }
 
 func PluginFactoryHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{}, err error) {
-	fmt.Printf("FactoryHook: %s\n", t)
 	if !plugin.LookupFactory(t) {
 		return data, nil
 	}
-	fmt.Println("Not skiped")
 	name, fillConf, err := parseConf(t, data)
 	if err != nil {
 		return
@@ -137,7 +135,9 @@ func parseConf(t reflect.Type, data interface{}) (name string, fillConf func(con
 	fillConf = func(conf interface{}) error {
 		err := DecodeAndValidate(confData, conf)
 		if err != nil {
-			err = fmt.Errorf("%s %s plugin. %v %s", t, name, confData, err)
+			err = fmt.Errorf("%s %s plugin\n"+
+				"%s from %v %s",
+				t, name, reflect.TypeOf(conf).Elem(), confData, err)
 		}
 		return err
 	}
