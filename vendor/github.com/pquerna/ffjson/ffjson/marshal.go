@@ -20,9 +20,8 @@ package ffjson
 import (
 	"encoding/json"
 	"errors"
-	"reflect"
-
 	fflib "github.com/pquerna/ffjson/fflib/v1"
+	"reflect"
 )
 
 type marshalerFaster interface {

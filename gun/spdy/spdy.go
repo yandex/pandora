@@ -1,8 +1,8 @@
 package spdy
 
 import (
+	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,34 +14,44 @@ import (
 
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
-	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/gun"
-	"golang.org/x/net/context"
 )
 
-type SpdyGun struct {
-	target  string
+func New(conf Config) *SPDYGun {
+	g := &SPDYGun{config: conf}
+	g.startAutoPing()
+	return g
+}
+
+type Config struct {
+	PingPeriod time.Duration
+	Target     string
+}
+
+type SPDYGun struct {
+	config  Config
 	client  *spdy.Client
 	results chan<- *aggregate.Sample
-	closed  bool
 }
 
-func (sg *SpdyGun) BindResultsTo(results chan<- *aggregate.Sample) {
-	sg.results = results
+var _ gun.Gun = (*SPDYGun)(nil)
+
+func (g *SPDYGun) BindResultsTo(results chan<- *aggregate.Sample) {
+	g.results = results
 }
 
-func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo) error {
-	if sg.client == nil {
-		if err := sg.Connect(); err != nil {
+func (g *SPDYGun) Shoot(ctx context.Context, a ammo.Ammo) (err error) {
+	if g.client == nil {
+		if err = g.Connect(); err != nil {
 			return err
 		}
 	}
-
-	start := time.Now()
-	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "REQUEST")
+	ss := aggregate.AcquireSample("REQUEST")
 	defer func() {
-		ss.RT = int(time.Since(start).Seconds() * 1e6)
-		sg.results <- ss
+		if err != nil {
+			ss.SetErr(err)
+		}
+		g.results <- ss
 	}()
 	// now send the request to obtain a http response
 	ha, ok := a.(*ammo.Http)
@@ -49,102 +59,91 @@ func (sg *SpdyGun) Shoot(ctx context.Context, a ammo.Ammo) error {
 		panic(fmt.Sprintf("Got '%T' instead of 'HttpAmmo'", a))
 	}
 	if ha.Tag != "" {
-		ss.Tag += "|" + ha.Tag
+		ss.AddTag(ha.Tag)
 	}
 
-	req, err := http.NewRequest(ha.Method, "https://"+ha.Host+ha.Uri, nil)
+	var req *http.Request
+	req, err = http.NewRequest(ha.Method, "https://"+ha.Host+ha.Uri, nil)
 	if err != nil {
 		log.Printf("Error making HTTP request: %s\n", err)
-		ss.Err = err
-		ss.NetCode = 999
-		return err
+		return
 	}
-	res, err := sg.client.Do(req)
+
+	var res *http.Response
+	res, err = g.client.Do(req)
 	if err != nil {
 		log.Printf("Error performing a request: %s\n", err)
-		ss.Err = err
-		ss.NetCode = 999
-		return err
+		return
 	}
 
 	defer res.Body.Close()
 	_, err = io.Copy(ioutil.Discard, res.Body)
 	if err != nil {
 		log.Printf("Error reading response body: %s\n", err)
-		ss.Err = err
-		ss.NetCode = 999
-		return err
+		return
 	}
 	// TODO: make this an optional verbose answ_log output
 	//data := make([]byte, int(res.ContentLength))
 	// _, err = res.Body.(io.Reader).Read(data)
 	// fmt.Println(string(data))
-	ss.ProtoCode = res.StatusCode
+	ss.SetProtoCode(res.StatusCode)
 	return err
 }
 
-func (sg *SpdyGun) Close() {
-	sg.closed = true
-	if sg.client != nil {
-		sg.client.Close()
+func (g *SPDYGun) Close() {
+	if g.client != nil {
+		g.client.Close()
+		g.client = nil
 	}
 }
 
-func (sg *SpdyGun) Connect() error {
+func (g *SPDYGun) Connect() (err error) {
 	// FIXME: rewrite connection logic, it isn't thread safe right now.
-	start := time.Now()
-	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "CONNECT")
+	ss := aggregate.AcquireSample("CONNECT")
 	defer func() {
-		ss.RT = int(time.Since(start).Seconds() * 1e6)
-		sg.results <- ss
+		if err != nil {
+			ss.SetErr(err)
+		}
+		g.results <- ss
 	}()
-	config := tls.Config{
+	tlsConfig := tls.Config{
 		InsecureSkipVerify: true,
 		NextProtos:         []string{"spdy/3.1"},
 	}
-	conn, err := tls.Dial("tcp", sg.target, &config)
+	conn, err := tls.Dial("tcp", g.config.Target, &tlsConfig)
 	if err != nil {
-		ss.Err = err
-		ss.NetCode = 999
-		return err
+		return
 	}
 	client, err := spdy.NewClientConn(conn)
 	if err != nil {
-		ss.Err = err
-		ss.NetCode = 999
 		return err
 	} else {
-		ss.ProtoCode = 200
+		ss.SetProtoCode(http.StatusOK)
 	}
-	if sg.client != nil {
-		sg.Close()
+	if g.client != nil {
+		g.Close()
 	}
-	sg.client = client
+	g.client = client
 
 	return nil
 }
 
-func (sg *SpdyGun) Ping() {
+func (sg *SPDYGun) Ping() {
 	if sg.client == nil {
 		return
 	}
-	pingStart := time.Now()
-
+	ss := aggregate.AcquireSample("PING")
 	pinged, err := sg.client.Ping(time.Second * 15)
 	if err != nil {
-		log.Printf("client: ping: %s\n", err)
+		log.Printf("Client: ping: %s\n", err)
 	}
 	if !pinged {
-		log.Printf("client: ping: timed out\n")
+		log.Println("Client: ping: timed out")
 	}
-	ss := aggregate.AcquireSample(float64(pingStart.UnixNano())/1e9, "PING")
-	ss.RT = int(time.Since(pingStart).Seconds() * 1e6)
-
 	if err == nil && pinged {
-		ss.ProtoCode = 200
+		ss.SetProtoCode(http.StatusOK)
 	} else {
-		ss.Err = err
-		ss.ProtoCode = 500
+		ss.SetErr(err)
 	}
 	sg.results <- ss
 	if err != nil {
@@ -152,50 +151,15 @@ func (sg *SpdyGun) Ping() {
 	}
 }
 
-func (sg *SpdyGun) startAutoPing(pingPeriod time.Duration) {
-	if pingPeriod > 0 {
+func (sg *SPDYGun) startAutoPing() {
+	if sg.config.PingPeriod > 0 {
 		go func() {
-			for range time.NewTicker(pingPeriod).C {
-				if sg.closed {
+			for range time.NewTicker(sg.config.PingPeriod).C {
+				if sg.client == nil {
 					return
 				}
 				sg.Ping()
 			}
 		}()
 	}
-}
-
-func New(c *config.Gun) (gun.Gun, error) {
-	params := c.Parameters
-	if params == nil {
-		return nil, errors.New("Parameters not specified")
-	}
-	target, ok := params["Target"]
-	if !ok {
-		return nil, errors.New("Target not specified")
-	}
-	var pingPeriod time.Duration
-	paramPingPeriod, ok := params["PingPeriod"]
-	if !ok {
-		paramPingPeriod = 120.0 // TODO: move this default elsewhere
-	}
-	switch t := paramPingPeriod.(type) {
-	case float64:
-		pingPeriod = time.Duration(paramPingPeriod.(float64)*1e3) * time.Millisecond
-	default:
-		return nil, fmt.Errorf("Period is of the wrong type."+
-			" Expected 'float64' got '%T'", t)
-	}
-	var g gun.Gun
-	switch t := target.(type) {
-	case string:
-		g = &SpdyGun{
-			target: target.(string),
-		}
-	default:
-		return nil, fmt.Errorf("Target is of the wrong type."+
-			" Expected 'string' got '%T'", t)
-	}
-	g.(*SpdyGun).startAutoPing(pingPeriod)
-	return g, nil
 }

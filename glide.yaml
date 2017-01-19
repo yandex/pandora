@@ -1,12 +1,16 @@
 package: github.com/yandex/pandora
 import:
 - package: github.com/amahi/spdy
+- package: github.com/asaskevich/govalidator
+- package: github.com/c2h5oh/datasize
+- package: github.com/facebookgo/stackerr
+- package: github.com/fatih/structs
+- package: github.com/mitchellh/mapstructure
 - package: github.com/pquerna/ffjson
   subpackages:
   - fflib/v1
-- package: golang.org/x/net
-  subpackages:
-  - context
+- package: github.com/spf13/viper
+- package: gopkg.in/bluesuncorp/validator.v8
 testImport:
 - package: github.com/SlyMarbo/spdy
 - package: github.com/stretchr/testify

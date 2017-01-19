@@ -20,11 +20,10 @@ package ffjson
 import (
 	"encoding/json"
 	"errors"
+	fflib "github.com/pquerna/ffjson/fflib/v1"
 	"io"
 	"io/ioutil"
 	"reflect"
-
-	fflib "github.com/pquerna/ffjson/fflib/v1"
 )
 
 // This is a reusable decoder.

@@ -1,4 +1,5 @@
 # Pandora
+# TODO (skipor): update readme for version 0.2
 
 [![Join the chat at https://gitter.im/yandex/pandora](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/yandex/pandora?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/yandex/pandora.svg)](https://travis-ci.org/yandex/pandora)
@@ -7,42 +8,33 @@
 A load generator in Go language.
 
 ## Install
-Compile a binary with go tool (use go >= 1.5.2):
-```
+Compile a binary with go tool (use go >= 1.7):
+```bash
 go get github.com/yandex/pandora
-go build github.com/yandex/pandora
 ```
 
 There are also [binary releases](https://github.com/yandex/pandora/releases) available.
 
-Run this binary with your .json config (see [examples](https://github.com/yandex/pandora/tree/master/example/config)):
+Run this binary with your config (see examples at [examples](https://github.com/yandex/pandora/tree/master/cli/config)):
+
+```bash
+# $GOBIN should be added to $PATH
+pandora myconfig.yaml
 ```
-./pandora myconfig.json
-```
+// TODO (skipor): update yandex tank docs after 0.2 release
 Or let [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/configuration.html#pandora) make it easy for you.
 
 
-## Extension points
+## Plugins
 
-You can write plugins with the next [extension points](https://github.com/progrium/go-extpoints):
+// TODO (skipor)
 
-```
+
+```go
 ammo.Provider
 aggregate.ResultListener
 limiter.Limiter
 gun.Gun
-```
-
-## Build tags
-
-If you don want to build pandora without http gun:
-```
-go build -tags 'noHttpGun' github.com/yandex/pandora
-```
-
-If you don want to build pandora without spdy gun:
-```
-go build -tags 'noSpdyGun' github.com/yandex/pandora
 ```
 
 ## Basic concepts

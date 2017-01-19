@@ -2,31 +2,31 @@ package aggregate
 
 import (
 	"bufio"
+	"context"
 	"os"
+	"strconv"
+	"sync"
 	"time"
-
-	"github.com/yandex/pandora/config"
-	"golang.org/x/net/context"
 )
 
-type PhoutResultListener struct {
-	resultListener
+func GetPhoutResultListener(conf PhoutResultListenerConfig) (ResultListener, error) {
+	return defaultPhoutResultListeners.get(conf)
+}
 
+type PhoutResultListenerConfig struct {
+	Destination string
+}
+
+type phoutResultListener struct {
+	resultListener
 	source <-chan *Sample
 	phout  *bufio.Writer
-	buffer []byte
+	buf    []byte
 }
 
-func (rl *PhoutResultListener) handle(s *Sample) error {
+var _ ResultListener = (*phoutResultListener)(nil)
 
-	rl.buffer = s.AppendToPhout(rl.buffer)
-	_, err := rl.phout.Write(rl.buffer)
-	rl.buffer = rl.buffer[:0]
-	ReleaseSample(s)
-	return err
-}
-
-func (rl *PhoutResultListener) Start(ctx context.Context) error {
+func (rl *phoutResultListener) Start(ctx context.Context) error {
 	defer rl.phout.Flush()
 	shouldFlush := time.NewTicker(1 * time.Second).C
 loop:
@@ -60,7 +60,24 @@ loop:
 	return nil
 }
 
-func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
+func (rl *phoutResultListener) handle(s *Sample) error {
+	rl.buf = appendPhout(s, rl.buf)
+	rl.buf = append(rl.buf, '\n')
+	_, err := rl.phout.Write(rl.buf)
+	rl.buf = rl.buf[:0]
+	ReleaseSample(s)
+	return err
+}
+
+var defaultPhoutResultListeners = newPhoutResultListeners()
+
+type phoutResultListeners struct {
+	sync.Mutex
+	listeners map[string]ResultListener
+}
+
+func newPhoutResultListener(conf PhoutResultListenerConfig) (rl ResultListener, err error) {
+	filename := conf.Destination
 	var phoutFile *os.File
 	if filename == "" {
 		phoutFile = os.Stdout
@@ -69,34 +86,58 @@ func NewPhoutResultListener(filename string) (rl ResultListener, err error) {
 	}
 	writer := bufio.NewWriterSize(phoutFile, 1024*512) // 512 KB
 	ch := make(chan *Sample, 65536)
-	return &PhoutResultListener{
+	return &phoutResultListener{
 		source: ch,
 		resultListener: resultListener{
 			sink: ch,
 		},
-		phout:  writer,
-		buffer: make([]byte, 0, 1024),
+		phout: writer,
+		buf:   make([]byte, 0, 1024),
 	}, nil
 }
 
-type phoutResultListeners map[string]ResultListener
+func newPhoutResultListeners() *phoutResultListeners {
+	return &phoutResultListeners{listeners: make(map[string]ResultListener)}
+}
 
-func (prls phoutResultListeners) get(c *config.ResultListener) (ResultListener, error) {
-	rl, ok := prls[c.Destination]
+func (l *phoutResultListeners) get(conf PhoutResultListenerConfig) (ResultListener, error) {
+	dest := conf.Destination
+	l.Lock()
+	defer l.Unlock()
+	rl, ok := l.listeners[dest]
 	if !ok {
-		rl, err := NewPhoutResultListener(c.Destination)
+		rl, err := newPhoutResultListener(conf)
 		if err != nil {
 			return nil, err
 		}
-		prls[c.Destination] = rl
+		l.listeners[dest] = rl
 		return rl, nil
 	}
 	return rl, nil
 }
 
-var defaultPhoutResultListeners = phoutResultListeners{}
+const phoutDelimiter = '\t'
 
-// GetPhoutResultListener is not thread safe.
-func GetPhoutResultListener(c *config.ResultListener) (ResultListener, error) {
-	return defaultPhoutResultListeners.get(c)
+func appendPhout(s *Sample, dst []byte) []byte {
+	dst = appendTimestamp(s.timeStamp, dst)
+	dst = append(dst, phoutDelimiter)
+	dst = append(dst, s.tags...)
+	for _, v := range s.fields {
+		dst = append(dst, phoutDelimiter)
+		dst = strconv.AppendInt(dst, int64(v), 10)
+	}
+	return dst
+}
+
+func appendTimestamp(ts time.Time, dst []byte) []byte {
+	// Append time stamp in phout format. Example: 1335524833.562
+	// Algorithm: append milliseconds string, than insert dot in right place.
+	dst = strconv.AppendInt(dst, ts.UnixNano()/1e6, 10)
+	dotIndex := len(dst) - 3
+	dst = append(dst, 0)
+	for i := len(dst) - 1; i > dotIndex; i-- {
+		dst[i] = dst[i-1]
+	}
+	dst[dotIndex] = '.'
+	return dst
 }

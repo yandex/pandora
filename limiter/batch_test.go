@@ -1,12 +1,12 @@
 package limiter
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 
 	"github.com/yandex/pandora/utils"
 )
@@ -15,7 +15,7 @@ func TestBatchLimiter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 
-	master := &limiter{control: make(chan struct{}, 2)}
+	master := newBase(2)
 	for i := 0; i < 2; i++ {
 		master.control <- struct{}{}
 	}
@@ -43,7 +43,7 @@ func TestContextCancelInBatch(t *testing.T) {
 	limitCtx, limitCancel := context.WithCancel(ctx)
 	limitCancel()
 
-	master := &limiter{control: make(chan struct{}, 10)}
+	master := newBase(10)
 
 	batch := NewBatch(5, master)
 	promise := utils.PromiseCtx(limitCtx, batch.Start)
@@ -65,7 +65,7 @@ func TestContextCancelWhileControlBatchLimiter(t *testing.T) {
 	defer cancel()
 	limitCtx, limitCancel := context.WithCancel(ctx)
 
-	master := &limiter{control: make(chan struct{})}
+	master := &base{control: make(chan struct{})}
 
 	batch := NewBatch(5, master)
 	promise := utils.PromiseCtx(limitCtx, batch.Start)

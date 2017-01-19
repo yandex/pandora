@@ -18,13 +18,13 @@
 package ffjsoninception
 
 import (
+	fflib "github.com/pquerna/ffjson/fflib/v1"
+	"github.com/pquerna/ffjson/shared"
+
 	"bytes"
 	"encoding/json"
 	"reflect"
 	"unicode/utf8"
-
-	fflib "github.com/pquerna/ffjson/fflib/v1"
-	"github.com/pquerna/ffjson/shared"
 )
 
 type StructField struct {

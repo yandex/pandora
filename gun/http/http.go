@@ -1,54 +1,58 @@
 package http
 
 import (
+	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
-	"golang.org/x/net/context"
-
-	"net"
-
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
-	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/gun"
 )
-
-// === Gun ===
 
 const (
 	// TODO: extract to config?
 	dialTimeout = 3 // in sec
 )
 
+func New(conf Config) *HttpGun {
+	return &HttpGun{config: conf}
+}
+
+type Config struct {
+	Target string
+	SSL    bool
+}
+
 type HttpGun struct {
-	target  string
-	ssl     bool
+	config  Config
 	client  *http.Client
 	results chan<- *aggregate.Sample
 }
 
-func (hg *HttpGun) BindResultsTo(results chan<- *aggregate.Sample) {
-	hg.results = results
+var _ gun.Gun = (*HttpGun)(nil)
+
+func (g *HttpGun) BindResultsTo(results chan<- *aggregate.Sample) {
+	g.results = results
 }
 
 // Shoot to target, this method is not thread safe
-func (hg *HttpGun) Shoot(ctx context.Context, a ammo.Ammo) error {
-
-	if hg.client == nil {
-		hg.Connect()
+func (g *HttpGun) Shoot(ctx context.Context, a ammo.Ammo) (err error) {
+	if g.client == nil {
+		g.Connect()
 	}
-	start := time.Now()
-	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "REQUEST")
+	ss := aggregate.AcquireSample("REQUEST")
 	defer func() {
-		ss.RT = int(time.Since(start).Seconds() * 1e6)
-		hg.results <- ss
+		if err != nil {
+			ss.SetErr(err)
+		}
+		g.results <- ss
 	}()
 	// now send the request to obtain a http response
 	ha, ok := a.(*ammo.Http)
@@ -56,55 +60,53 @@ func (hg *HttpGun) Shoot(ctx context.Context, a ammo.Ammo) error {
 		panic(fmt.Sprintf("Got '%T' instead of 'HttpAmmo'", a))
 	}
 	if ha.Tag != "" {
-		ss.Tag += "|" + ha.Tag
+		ss.AddTag(ha.Tag)
 	}
 	var uri string
-	if hg.ssl {
+
+	// TODO: get rid of ha.Host that is overwrite by gh target
+	if g.config.SSL {
 		uri = "https://" + ha.Host + ha.Uri
 	} else {
 		uri = "http://" + ha.Host + ha.Uri
 	}
-	req, err := http.NewRequest(ha.Method, uri, nil)
+	var req *http.Request
+	req, err = http.NewRequest(ha.Method, uri, nil)
 	if err != nil {
 		log.Printf("Error making HTTP request: %s\n", err)
-		ss.Err = err
-		ss.NetCode = 999
-		return err
+		return
 	}
 	for k, v := range ha.Headers {
 		req.Header.Set(k, v)
 	}
-	req.URL.Host = hg.target
-	res, err := hg.client.Do(req)
+	req.URL.Host = g.config.Target
+	var res *http.Response
+	res, err = g.client.Do(req)
 	if err != nil {
 		log.Printf("Error performing a request: %s\n", err)
-		ss.Err = err
-		ss.NetCode = 999
-		return err
+		return
 	}
 	defer res.Body.Close()
 	_, err = io.Copy(ioutil.Discard, res.Body)
 	if err != nil {
 		log.Printf("Error reading response body: %s\n", err)
-		ss.Err = err
-		ss.NetCode = 999
-		return err
+		return
 	}
 
 	// TODO: make this an optional verbose answ_log output
 	//data := make([]byte, int(res.ContentLength))
 	// _, err = res.Body.(io.Reader).Read(data)
 	// fmt.Println(string(data))
-	ss.ProtoCode = res.StatusCode
-	return nil
+	ss.SetProtoCode(res.StatusCode)
+	return
 }
 
-func (hg *HttpGun) Close() {
-	hg.client = nil
+func (g *HttpGun) Close() {
+	g.client = nil
 }
 
-func (hg *HttpGun) Connect() {
-	hg.Close()
+func (g *HttpGun) Connect() {
+	g.Close()
 	config := tls.Config{
 		InsecureSkipVerify: true,
 	}
@@ -118,55 +120,5 @@ func (hg *HttpGun) Connect() {
 		Dial:                dialer.Dial,
 		TLSHandshakeTimeout: dialTimeout * time.Second,
 	}
-	hg.client = &http.Client{Transport: tr}
-	// 	connectStart := time.Now()
-	// 	config := tls.Config{
-	// 		InsecureSkipVerify: true,
-	// 		NextProtos:         []string{"HTTP/1.1"},
-	// 	}
-
-	// 	conn, err := tls.Dial("tcp", hg.target, &config)
-	// 	if err != nil {
-	// 		log.Printf("client: dial: %s\n", err)
-	// 		return
-	// 	}
-	// 	hg.client, err = Http.NewClientConn(conn)
-	// 	if err != nil {
-	// 		log.Printf("client: connect: %s\n", err)
-	// 		return
-	// 	}
-	// 	ss := aggregate.AcquireSample(float64(start.UnixNano())/1e9, "CONNECT")
-	// 	ss.rt = int(time.Since(connectStart).Seconds() * 1e6)
-	// 	ss.err = err
-	// 	if ss.err == nil {
-	// 		ss.StatusCode = 200
-	// 	}
-	// 	results <- ss
-}
-
-func New(c *config.Gun) (gun.Gun, error) {
-	params := c.Parameters
-	if params == nil {
-		return nil, errors.New("Parameters not specified")
-	}
-	target, ok := params["Target"]
-	if !ok {
-		return nil, errors.New("Target not specified")
-	}
-	g := &HttpGun{}
-	switch t := target.(type) {
-	case string:
-		g.target = target.(string)
-	default:
-		return nil, fmt.Errorf("Target is of the wrong type."+
-			" Expected 'string' got '%T'", t)
-	}
-	if ssl, ok := params["SSL"]; ok {
-		if sslVal, casted := ssl.(bool); casted {
-			g.ssl = sslVal
-		} else {
-			return nil, fmt.Errorf("SSL should be boolean type.")
-		}
-	}
-	return g, nil
+	g.client = &http.Client{Transport: tr}
 }

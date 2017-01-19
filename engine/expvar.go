@@ -1,5 +1,7 @@
 package engine
 
+// TODO: move as mach as possible to cli monitoring
+
 import (
 	"expvar"
 	"log"
@@ -50,7 +52,7 @@ func init() {
 	responses := evResponses.Get()
 	go func() {
 		var requestsNew, responsesNew int64
-		for _ = range time.NewTicker(1 * time.Second).C {
+		for range time.NewTicker(1 * time.Second).C {
 			requestsNew = evRequests.Get()
 			responsesNew = evResponses.Get()
 			rps := responsesNew - responses

@@ -1,6 +1,7 @@
 package spdy
 
 import (
+	"context"
 	"flag"
 	"log"
 	"net/http"
@@ -8,24 +9,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SlyMarbo/spdy" // we specially use spdy server from another library
+	"github.com/SlyMarbo/spdy" // we specially use SPDY server from another library
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
-	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/utils"
-	"golang.org/x/net/context"
 )
 
-func TestSpdyGun(t *testing.T) {
+func TestSPDYGun(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
 	result := make(chan *aggregate.Sample)
 
-	gun := &SpdyGun{
-		target:  "localhost:3000",
+	gun := &SPDYGun{
+		config: Config{
+			Target: "localhost:3000",
+		},
 		results: result,
 	}
 	promise := utils.Promise(func() error {
@@ -46,18 +47,12 @@ func TestSpdyGun(t *testing.T) {
 
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 2)
-	{
-		// first result is connect
-
-		assert.Equal(t, "CONNECT", results[0].Tag)
-		assert.Equal(t, 200, results[0].ProtoCode)
-	}
-	{
-		// second result is request
-
-		assert.Equal(t, "REQUEST", results[1].Tag)
-		assert.Equal(t, 200, results[1].ProtoCode)
-	}
+	// first result is connect
+	assert.Equal(t, "CONNECT", results[0].Tags())
+	assert.Equal(t, 200, results[0].ProtoCode())
+	// second result is request
+	assert.Equal(t, "REQUEST", results[1].Tags())
+	assert.Equal(t, 200, results[1].ProtoCode())
 
 	// TODO: test scenaries with errors
 
@@ -70,14 +65,16 @@ func TestSpdyGun(t *testing.T) {
 
 }
 
-func TestSpdyConnectPing(t *testing.T) {
+func TestSPDYConnectPing(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
 	result := make(chan *aggregate.Sample)
 
-	gun := &SpdyGun{
-		target:  "localhost:3000",
+	gun := &SPDYGun{
+		config: Config{
+			Target: "localhost:3000",
+		},
 		results: result,
 	}
 	promise := utils.Promise(func() error {
@@ -92,18 +89,12 @@ func TestSpdyConnectPing(t *testing.T) {
 
 	results := aggregate.Drain(ctx, result)
 	require.Len(t, results, 2)
-	{
-		// first result is connect
-
-		assert.Equal(t, "CONNECT", results[0].Tag)
-		assert.Equal(t, 200, results[0].ProtoCode)
-	}
-	{
-		// second result is PING
-
-		assert.Equal(t, "PING", results[1].Tag)
-		assert.Equal(t, 200, results[1].ProtoCode)
-	}
+	// first result is connect
+	assert.Equal(t, "CONNECT", results[0].Tags())
+	assert.Equal(t, 200, results[0].ProtoCode())
+	// second result is PING
+	assert.Equal(t, "PING", results[1].Tags())
+	assert.Equal(t, 200, results[1].ProtoCode())
 	select {
 	case err := <-promise:
 		require.NoError(t, err)
@@ -112,39 +103,14 @@ func TestSpdyConnectPing(t *testing.T) {
 	}
 
 }
-
-func TestNewSpdyGun(t *testing.T) {
-	spdyConfig := &config.Gun{
-		GunType: "spdy",
-		Parameters: map[string]interface{}{
-			"Target":     "localhost:3000",
-			"PingPeriod": 5.0,
-		},
-	}
-	g, err := New(spdyConfig)
-	assert.NoError(t, err)
-	_, ok := g.(*SpdyGun)
-	assert.Equal(t, true, ok)
-
-	failSpdyConfig := &config.Gun{
-		GunType: "spdy",
-		Parameters: map[string]interface{}{
-			"Target":     "localhost:3000",
-			"PingPeriod": "not-a-number",
-		},
-	}
-	_, err = New(failSpdyConfig)
-	assert.Error(t, err)
-}
-
-func runSpdyTestServer() {
+func runSPDYTestServer() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("This is an example server.\n"))
 	})
 
-	//use spdy's Listen and serve
-	log.Println("Run spdy server on localhost:3000")
+	//use SPDY's Listen and serve
+	log.Println("Run SPDY server on localhost:3000")
 	err := spdy.ListenAndServeTLS("localhost:3000",
 		"./testdata/test.crt", "./testdata/test.key", nil)
 	if err != nil {
@@ -155,7 +121,7 @@ func runSpdyTestServer() {
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	go runSpdyTestServer()
+	go runSPDYTestServer()
 	time.Sleep(time.Millisecond * 5) // wait for server
 	os.Exit(m.Run())
 }

@@ -1,13 +1,14 @@
 package limiter
 
 import (
+	"context"
+
 	"github.com/yandex/pandora/utils"
-	"golang.org/x/net/context"
 )
 
 // batch implements Limiter interface
 type batch struct {
-	limiter
+	base
 	master    Limiter
 	batchSize int
 }
@@ -45,7 +46,7 @@ loop:
 // master shouldn't be started
 func NewBatch(batchSize int, master Limiter) (l Limiter) {
 	return &batch{
-		limiter:   limiter{make(chan struct{})},
+		base:      base{make(chan struct{})},
 		master:    master,
 		batchSize: batchSize,
 	}

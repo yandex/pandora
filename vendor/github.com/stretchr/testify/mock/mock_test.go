@@ -2,11 +2,10 @@ package mock
 
 import (
 	"errors"
-	"testing"
-	"time"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 )
 
 /*

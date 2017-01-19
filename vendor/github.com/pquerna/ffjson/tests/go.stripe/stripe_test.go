@@ -19,10 +19,9 @@ package goser
 
 import (
 	"encoding/json"
+	base "github.com/pquerna/ffjson/tests/go.stripe/base"
+	ff "github.com/pquerna/ffjson/tests/go.stripe/ff"
 	"testing"
-
-	"github.com/pquerna/ffjson/tests/go.stripe/base"
-	"github.com/pquerna/ffjson/tests/go.stripe/ff"
 )
 
 func TestRoundTrip(t *testing.T) {

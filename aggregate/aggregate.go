@@ -1,6 +1,6 @@
 package aggregate
 
-import "golang.org/x/net/context"
+import "context"
 
 type ResultListener interface {
 	Start(context.Context) error

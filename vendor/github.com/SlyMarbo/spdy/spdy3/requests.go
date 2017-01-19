@@ -69,7 +69,7 @@ func (c *Conn) Request(request *http.Request, receiver common.Receiver, priority
 	// Prepare the request body, if any.
 	body := make([]*frames.DATA, 0, 1)
 	if request.Body != nil {
-		buf := make([]byte, 32 * 1024)
+		buf := make([]byte, 32*1024)
 		n, err := request.Body.Read(buf)
 		if err != nil && err != io.EOF {
 			return nil, err
@@ -92,7 +92,7 @@ func (c *Conn) Request(request *http.Request, receiver common.Receiver, priority
 			syn.Flags = common.FLAG_FIN
 		} else {
 			syn.Header.Set("Content-Length", fmt.Sprint(total))
-			body[len(body) - 1].Flags = common.FLAG_FIN
+			body[len(body)-1].Flags = common.FLAG_FIN
 		}
 		request.Body.Close()
 	} else {

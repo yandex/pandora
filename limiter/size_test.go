@@ -1,12 +1,12 @@
 package limiter
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 
 	"github.com/yandex/pandora/utils"
 )
@@ -15,7 +15,7 @@ func TestSizeLimiter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	master := &limiter{control: make(chan struct{}, 10)}
+	master := newBase(10)
 	for i := 0; i < 10; i++ {
 		master.control <- struct{}{}
 	}
@@ -40,7 +40,7 @@ func TestEmptySizeLimiter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	master := &limiter{control: make(chan struct{}, 10)}
+	master := newBase(10)
 	close(master.control)
 
 	size := NewSize(5, master)
@@ -65,7 +65,7 @@ func TestContextCancelInSizeLimiter(t *testing.T) {
 	sizeCtx, sizeCancel := context.WithCancel(ctx)
 	sizeCancel()
 
-	master := &limiter{control: make(chan struct{}, 10)}
+	master := newBase(10)
 
 	size := NewSize(5, master)
 	promise := utils.PromiseCtx(sizeCtx, size.Start)
@@ -87,7 +87,7 @@ func TestContextCancelWhileControlSizeLimiter(t *testing.T) {
 	defer cancel()
 	sizeCtx, sizeCancel := context.WithCancel(ctx)
 
-	master := &limiter{control: make(chan struct{})}
+	master := newBase(0)
 
 	size := NewSize(5, master)
 	promise := utils.PromiseCtx(sizeCtx, size.Start)

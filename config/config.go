@@ -1,58 +1,105 @@
+// Copyright (c) 2016 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MPL 2.0
+// license that can be found in the LICENSE file.
+// Author: Vladimir Skipor <skipor@yandex-team.ru>
+
 package config
 
 import (
-	"encoding/json"
+	"sync"
+
+	"github.com/facebookgo/stackerr"
+	"github.com/fatih/structs"
+	"github.com/mitchellh/mapstructure"
 )
 
-type Global struct {
-	Pools []UserPool
+const TagName = "config"
+
+// Decodes conf to result. Doesn't zero fields.
+func Decode(conf interface{}, result interface{}) error {
+	decoder, err := mapstructure.NewDecoder(newDecoderConfig(result))
+	if err != nil {
+		return stackerr.Wrap(err)
+	}
+	return stackerr.Wrap(decoder.Decode(conf))
 }
 
-type AmmoProvider struct {
-	AmmoType   string
-	AmmoSource string // filename for ammo file (decoder based on ammo type)
-	AmmoLimit  int    // limit of ammos, default is 0 - infinite ammos
-	Passes     int    // number of passes, default is 0 - infinite passes
+func DecodeAndValidate(conf interface{}, result interface{}) error {
+	err := Decode(conf, result)
+	if err != nil {
+		return err
+	}
+	return Validate(result)
 }
 
-type Gun struct {
-	GunType    string
-	Parameters map[string]interface{}
-}
+type TypeHook mapstructure.DecodeHookFuncType
+type KindHook mapstructure.DecodeHookFuncKind
 
-type ResultListener struct {
-	ListenerType string
-	Destination  string
-}
-
-type Limiter struct {
-	LimiterType string
-	Parameters  map[string]interface{}
-}
-
-type CompositeLimiter struct {
-	Steps []Limiter
-}
-
-type User struct {
-	Name           string
-	Gun            *Gun
-	AmmoProvider   AmmoProvider
-	ResultListener ResultListener
-	Limiter        *Limiter
-}
-
-type UserPool struct {
-	Name           string
-	Gun            *Gun
-	AmmoProvider   *AmmoProvider
-	ResultListener *ResultListener
-	UserLimiter    *Limiter
-	StartupLimiter *Limiter
-	SharedSchedule bool // wether or not will all Users from this pool have shared schedule
-}
-
-func NewGlobalFromJSON(jsonDoc []byte) (gc Global, err error) {
-	err = json.Unmarshal(jsonDoc, &gc)
+// Returning value allow do `var _ = AddHookType(xxx)`
+func AddTypeHook(hook TypeHook) (_ struct{}) {
+	addHook(hook)
 	return
+}
+
+func AddKindHook(hook KindHook) (_ struct{}) {
+	addHook(hook)
+	return
+}
+
+// Map maps with overwrite fields from src to dst.
+// if src filed have `map:""` tag, tag value will
+// be used as dst field destination.
+// src field destinations should be subset of dst fields.
+// dst should be struct pointer. src should be struct or struct pointer.
+// Example: you need to configure only some subset fields of struct Multi,
+// in such case you can from this subset of fields struct Single, decode config
+// into it, and map it on Multi.
+func Map(dst, src interface{}) error {
+	conf := &mapstructure.DecoderConfig{
+		ErrorUnused: true,
+		ZeroFields:  true,
+		Result:      dst,
+	}
+	d, err := mapstructure.NewDecoder(conf)
+	if err != nil {
+		return err
+	}
+	s := structs.New(src)
+	s.TagName = "map"
+	return d.Decode(s.Map())
+}
+
+func newDecoderConfig(result interface{}) *mapstructure.DecoderConfig {
+	compileHookOnce.Do(func() {
+		compiledHook = mapstructure.ComposeDecodeHookFunc(hooks...)
+	})
+	return &mapstructure.DecoderConfig{
+		DecodeHook:       compiledHook,
+		ErrorUnused:      true,
+		ZeroFields:       false,
+		WeaklyTypedInput: false,
+		TagName:          TagName,
+		Result:           result,
+	}
+}
+
+var hooks = []mapstructure.DecodeHookFunc{
+	mapstructure.StringToTimeDurationHookFunc(),
+	StringToURLHook,
+	StringToIPHook,
+	StringToDataSizeHook,
+}
+
+// Usual add causes "init loop" error.
+var _ = AddTypeHook(PluginHook)
+var _ = AddTypeHook(PluginFactoryHook)
+
+var compiledHook mapstructure.DecodeHookFunc
+var compileHookOnce = sync.Once{}
+
+func addHook(hook mapstructure.DecodeHookFunc) {
+	if compiledHook != nil {
+		panic("all hooks should be added before first decode")
+	}
+	hooks = append(hooks, hook)
 }
