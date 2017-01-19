@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -57,3 +58,28 @@ func TestGetErrno(t *testing.T) {
 }
 
 // TODO (skipor): test getErrno on some real net error from stdlib.
+
+func BenchmarkAppendTimestamp(b *testing.B) {
+	dst := make([]byte, 0, 512)
+	ts := time.Now()
+	b.Run("DotInsert", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			appendTimestamp(ts, dst)
+			dst = dst[:0]
+		}
+	})
+	b.Run("UseMod", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			dst = strconv.AppendInt(dst, ts.Unix(), 10)
+			dst = append(dst, '.')
+			dst = strconv.AppendInt(dst, (ts.UnixNano()/1e3)%1e3, 10)
+			dst = dst[:0]
+		}
+	})
+	b.Run("NoDot", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			dst = strconv.AppendInt(dst, ts.UnixNano()/1e3, 10)
+			dst = dst[:0]
+		}
+	})
+}

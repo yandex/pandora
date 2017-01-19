@@ -116,24 +116,28 @@ func (l *phoutResultListeners) get(conf PhoutResultListenerConfig) (ResultListen
 	return rl, nil
 }
 
-func appendPhout(s *Sample, dst []byte) []byte {
-	const phoutDelimiter = '\t'
-	// Append time stamp in phout format. Example: 1335524833.562
-	// Algorithm: append milliseconds string, than insert dot in right place.
-	dst = strconv.AppendInt(dst, s.timeStamp.UnixNano()/1e6, 10)
-	dotIndex := len(dst) - 3
-	dst = append(dst, 0) // Add byte for dot.
-	// Shift right last three digits, to get space for dot.
-	for i := len(dst) - 1; i > dotIndex; i-- {
-		dst[i] = dst[i-1]
-	}
-	dst[dotIndex] = '.'
-	dst = append(dst, phoutDelimiter)
+const phoutDelimiter = '\t'
 
+func appendPhout(s *Sample, dst []byte) []byte {
+	dst = appendTimestamp(s.timeStamp, dst)
+	dst = append(dst, phoutDelimiter)
 	dst = append(dst, s.tags...)
 	for _, v := range s.fields {
 		dst = append(dst, phoutDelimiter)
 		dst = strconv.AppendInt(dst, int64(v), 10)
 	}
+	return dst
+}
+
+func appendTimestamp(ts time.Time, dst []byte) []byte {
+	// Append time stamp in phout format. Example: 1335524833.562
+	// Algorithm: append milliseconds string, than insert dot in right place.
+	dst = strconv.AppendInt(dst, ts.UnixNano()/1e6, 10)
+	dotIndex := len(dst) - 3
+	dst = append(dst, 0)
+	for i := len(dst) - 1; i > dotIndex; i-- {
+		dst[i] = dst[i-1]
+	}
+	dst[dotIndex] = '.'
 	return dst
 }
