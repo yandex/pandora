@@ -1,0 +1,36 @@
+hash: 7a79047530288a629918d1c9c5ca0f272086af39cf933ec3b65d576297a77a43
+updated: 2017-01-16T17:11:49.159081077+03:00
+imports:
+- name: github.com/amahi/spdy
+  version: 31da8b754faf6833fa95192c69bdb10518e9fb7b
+- name: github.com/pquerna/ffjson
+  version: c24ab9baf274473906fbdba5fccb594aec4b9ff1
+  subpackages:
+  - fflib/v1
+  - fflib/v1/internal
+- name: golang.org/x/net
+  version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
+  subpackages:
+  - context
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
+- name: github.com/SlyMarbo/spdy
+  version: b5edf18e002bfc31aeef414fd7b023f214121070
+  subpackages:
+  - common
+  - spdy2
+  - spdy2/frames
+  - spdy3
+  - spdy3/frames
+- name: github.com/stretchr/testify
+  version: 2402e8e7a02fc811447d11f881aa9746cdc57983
+  subpackages:
+  - assert
+  - require

@@ -1,0 +1,15 @@
+package: github.com/yandex/pandora
+import:
+- package: github.com/amahi/spdy
+- package: github.com/pquerna/ffjson
+  subpackages:
+  - fflib/v1
+- package: golang.org/x/net
+  subpackages:
+  - context
+testImport:
+- package: github.com/SlyMarbo/spdy
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
+  - require

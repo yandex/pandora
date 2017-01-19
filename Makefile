@@ -4,17 +4,17 @@ NO_COLOR=\033[0m
 OK_COLOR=\033[32;01m
 ERROR_COLOR=\033[31;01m
 WARN_COLOR=\033[33;01m
-PKGSDIRS=$(shell find -L . -type f -name "*.go" -not -path "./Godeps/*")
+PKGSDIRS=`find -L . -type f -name "*.go" -not -path "./vendor/*"`
 
 all: test vet checkfmt
 
-travis: test checkfmt vet coverage
+travis: move_fork test checkfmt vet coverage
 
-prepare: fmt test vet checkfmt #m updep
+prepare: fmt test vet
 
 test:
 	@echo "$(OK_COLOR)Test packages$(NO_COLOR)"
-	@go test -v ./...
+	@go test -v `glide novendor`
 
 coverage:
 	@echo "$(OK_COLOR)Make coverage report$(NO_COLOR)"
@@ -23,11 +23,16 @@ coverage:
 
 lint:
 	@echo "$(OK_COLOR)Run lint$(NO_COLOR)"
-	test -z "$$(golint -min_confidence 0.1 ./... | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+	@for dir in `glide novendor` ; do \
+	    golint -set_exit_status -min_confidence 0.1 $$dir || FAIL="true" ;\
+	done
+	@if [[ FAIL ]] ; then  \
+        exit 1 ; \
+    fi
 
 vet:
 	@echo "$(OK_COLOR)Run vet$(NO_COLOR)"
-	@go vet ./...
+	@go vet `glide novendor`
 
 
 checkfmt:
@@ -40,18 +45,24 @@ fmt:
 
 tools:
 	@echo "$(OK_COLOR)Install tools$(NO_COLOR)"
-	go get github.com/tools/godep
 	go get golang.org/x/tools/cmd/goimports
 	go get github.com/golang/lint/golint
-	go get github.com/stretchr/testify
 	go get golang.org/x/tools/cmd/cover
 	go get github.com/modocache/gover
 	go get github.com/mattn/goveralls
 
 updep:
 	@echo "$(OK_COLOR)Update dependencies$(NO_COLOR)"
-	GOOS=linux godep save ./...
-	GOOS=linux godep update github.com/...
-	GOOS=linux godep update gopkg.in/...
-	GOOS=linux godep update golang.org/...
+	@glide up
+
+PARENT=$$GOPATH/src/github.com/yandex
+DIR=$(PARENT)/pandora
+
+move_fork:
+	@if [ `pwd` != $(DIR) ] ; then  \
+        echo "$(OK_COLOR)Moving fork$(NO_COLOR)" ; \
+        mkdir -p $(PARENT) || true ; \
+        mv -n `pwd` $(DIR) && cd $(DIR) || true ; \
+        echo "moved to " `pwd` ;\
+    fi
 
