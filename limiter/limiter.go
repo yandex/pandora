@@ -3,20 +3,13 @@ package limiter
 import (
 	"context"
 	"log"
-	"reflect"
 	"time"
-
-	"github.com/yandex/pandora/plugin"
 )
 
 // Limiter interface describes limiter control structure
 type Limiter interface {
 	Start(context.Context) error
 	Control() <-chan struct{}
-}
-
-func Register(name string, newLimiter interface{}, newDefaultConfigOptional ...interface{}) {
-	plugin.Register(reflect.TypeOf((*Limiter)(nil)).Elem(), name, newLimiter, newDefaultConfigOptional...)
 }
 
 // limiter helps to build more complex limiters

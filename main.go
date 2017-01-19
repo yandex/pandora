@@ -8,24 +8,27 @@ import (
 	"github.com/yandex/pandora/gun/http"
 	"github.com/yandex/pandora/gun/spdy"
 	"github.com/yandex/pandora/limiter"
+	"github.com/yandex/pandora/register"
 )
 
 func init() {
-	gun.Register("http", http.New)
-	gun.Register("spdy", spdy.New)
-	gun.Register("log", gun.NewLog)
+	// TODO: make and register NewDefaultConfig funcs
 
-	ammo.RegisterProvider("jsonline/http", ammo.NewHttpProvider)
-	ammo.RegisterProvider("jsonline/spdy", ammo.NewHttpProvider)
-	ammo.RegisterProvider("dummy/log", ammo.NewLogAmmoProvider)
+	register.ResultListener("log/simple", aggregate.NewLoggingResultListener)
+	register.ResultListener("log/phout", aggregate.GetPhoutResultListener)
 
-	aggregate.RegisterResultListener("log/simple", aggregate.NewLoggingResultListener)
-	aggregate.RegisterResultListener("log/phout", aggregate.GetPhoutResultListener)
+	register.Provider("jsonline/http", ammo.NewHttpProvider)
+	register.Provider("jsonline/spdy", ammo.NewHttpProvider)
+	register.Provider("dummy/log", ammo.NewLogAmmoProvider)
 
-	limiter.Register("periodic", limiter.NewPeriodic)
-	limiter.Register("composite", limiter.NewComposite)
-	limiter.Register("unlimited", limiter.NewUnlimited)
-	limiter.Register("linear", limiter.NewLinear)
+	register.Gun("http", http.New)
+	register.Gun("spdy", spdy.New)
+	register.Gun("log", gun.NewLog)
+
+	register.Limiter("periodic", limiter.NewPeriodic)
+	register.Limiter("composite", limiter.NewComposite)
+	register.Limiter("unlimited", limiter.NewUnlimited)
+	register.Limiter("linear", limiter.NewLinear)
 }
 
 func main() {
