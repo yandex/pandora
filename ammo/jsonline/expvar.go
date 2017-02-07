@@ -1,4 +1,4 @@
-package ammo
+package jsonline
 
 import (
 	"expvar"
@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// TODO: remove duplication with engine
 type Counter struct {
 	i int64
 }
@@ -38,10 +39,11 @@ var (
 	evPassesLeft = NewCounter("ammo_PassesLeft")
 )
 
+// TODO: use one rcrowley/go-metrics Registry and print metrics from it.
 func init() {
 	go func() {
 		passesLeft := evPassesLeft.Get()
-		for _ = range time.NewTicker(1 * time.Second).C {
+		for range time.NewTicker(1 * time.Second).C {
 			if passesLeft < 0 {
 				return // infinite number of passes
 			}
