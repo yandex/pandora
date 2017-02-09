@@ -3,11 +3,15 @@ go:
   - 1.7.3
   - tip
 
+go_import_path: github.com/yandex/pandora
+
 before_install:
   - sudo add-apt-repository ppa:masterminds/glide -y
   - sudo apt-get update -q
   - sudo apt-get install glide -y
 
-install: make tools
+install:
+  - make tools
+  - go get -t `glide novendor` # Required to make vendoring in different PRs.
 
 script: make travis
