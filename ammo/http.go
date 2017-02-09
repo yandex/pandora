@@ -6,15 +6,16 @@
 package ammo
 
 import (
-	"io"
 	"net/http"
 
 	"github.com/yandex/pandora/aggregate"
 )
 
+//go:generate mockery -name=HTTP -case=underscore -outpkg=ammomocks
+
 // HTTP ammo interface for http based guns.
-// HTTP ammo providers should produce ammo that implements HTTP.
-// HTTP guns should use convert ammo to HTTP interface, not to specific implementation.
+// http ammo providers should produce ammo that implements HTTP.
+// http guns should use convert ammo to HTTP, not to specific implementation.
 type HTTP interface {
 	// TODO (skipor) instead of sample use some more usable interface.
 	Request() (*http.Request, *aggregate.Sample)
@@ -35,14 +36,3 @@ func (a *SimpleHTTP) Reset(req *http.Request, tag string) {
 }
 
 var _ HTTP = (*SimpleHTTP)(nil)
-
-type ReadSeeker interface {
-	io.ReadSeeker
-	io.ReaderAt
-}
-
-// TODO (skipor): need it?
-type HTTPDecoder interface {
-	Decode(r *http.Request) error
-	Reset() error
-}

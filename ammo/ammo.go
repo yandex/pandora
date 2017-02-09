@@ -5,7 +5,8 @@ import "context"
 type Provider interface {
 	Start(context.Context) error
 	Source() <-chan Ammo
-	Release(Ammo) // return unused Ammo object to memory pool
+	// Release notifies that ammo usage is finished.
+	Release(Ammo)
 }
 
 type Ammo interface{}

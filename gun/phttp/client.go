@@ -14,13 +14,15 @@ import (
 	"github.com/yandex/pandora/config"
 )
 
+//go:generate mockery -name=Client -case=underscore -inpkg -testonly
+
 type Client interface {
 	Do(r *http.Request) (*http.Response, error)
 }
 
 type ClientConfig struct {
-	TransportConfig TransportConfig `config:",squash"`
-	DialerConfig    DialerConfig    `config:"dial"`
+	Transport TransportConfig `config:",squash"`
+	Dialer    DialerConfig    `config:"dial"`
 }
 
 func NewDefaultClientConfig() ClientConfig {

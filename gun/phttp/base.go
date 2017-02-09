@@ -19,6 +19,7 @@ import (
 	"github.com/yandex/pandora/gun"
 )
 
+// TODO: inject logger
 type Base struct {
 	Do      func(r *http.Request) (*http.Response, error) // Required.
 	Connect func(ctx context.Context) error               // Optional hook.
@@ -44,8 +45,10 @@ func (b *Base) Shoot(ctx context.Context, a ammo.Ammo) (err error) {
 	}
 	if b.Connect != nil {
 		err = b.Connect(ctx)
-		log.Printf("Connect error: %s\n", err)
-		return
+		if err != nil {
+			log.Printf("Connect error: %s\n", err)
+			return
+		}
 	}
 
 	ha := a.(ammo.HTTP)
@@ -63,14 +66,14 @@ func (b *Base) Shoot(ctx context.Context, a ammo.Ammo) (err error) {
 		log.Printf("Error performing a request: %s\n", err)
 		return
 	}
+	sample.SetProtoCode(res.StatusCode)
 	defer res.Body.Close()
-	// TODO: measure body read
+	// TODO: measure body read time
 	_, err = io.Copy(ioutil.Discard, res.Body)
 	if err != nil {
 		log.Printf("Error reading response body: %s\n", err)
 		return
 	}
-	sample.SetProtoCode(res.StatusCode)
 	// TODO: verbose logging
 	return
 }

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/amahi/spdy"
-
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/config"
 	"github.com/yandex/pandora/gun"

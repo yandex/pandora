@@ -28,7 +28,7 @@ func init() {
 	register.Provider("jsonline/spdy", newJsonlineProvider)
 	register.Provider("dummy/log", ammo.NewLogProvider)
 
-	register.Gun("http", phttp.NewHTTPGun, phttp.NewDefaultHTTPGunConfig)
+	register.Gun("http", phttp.NewHTTPGunClient, phttp.NewDefaultHTTPGunClientConfig)
 	register.Gun("spdy", phttp.NewSPDYGun)
 	register.Gun("log", gun.NewLog)
 
