@@ -21,7 +21,8 @@ type Client interface {
 }
 
 type ClientConfig struct {
-	Transport TransportConfig `config:",squash"`
+	// TODO: squash after fix https://github.com/mitchellh/mapstructure/issues/70
+	Transport TransportConfig // `config:",squash"`
 	Dialer    DialerConfig    `config:"dial"`
 }
 
