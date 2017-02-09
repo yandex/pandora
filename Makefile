@@ -8,7 +8,7 @@ PKGSDIRS=`find -L . -type f -name "*.go" -not -path "./vendor/*"`
 
 all: test vet checkfmt
 
-travis: test checkfmt vet coverage
+travis: test checkfmt coverage
 
 prepare: fmt test vet
 
