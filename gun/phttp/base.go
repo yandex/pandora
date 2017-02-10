@@ -38,7 +38,7 @@ func (b *Base) BindResultsTo(results chan<- *aggregate.Sample) {
 	b.Results = results
 }
 
-// Shoot to target, this method is not thread safe
+// Shoot is thread safe iff Do and Connect hooks are thread safe.
 func (b *Base) Shoot(ctx context.Context, a ammo.Ammo) (err error) {
 	if b.Results == nil {
 		log.Panic("must bind before shoot")
