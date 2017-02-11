@@ -12,12 +12,13 @@ import (
 )
 
 func TestPeriodicLimiter(t *testing.T) {
+	// TODO: get rid of flaky sleep based tests
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 
 	limiterCtx, cancelLimiter := context.WithCancel(ctx)
 
-	limiter := newPeriodic(time.Millisecond * 2)
+	limiter := newPeriodic(time.Millisecond * 20)
 	promise := utils.PromiseCtx(limiterCtx, limiter.Start)
 
 	ch := make(chan int)
@@ -28,7 +29,7 @@ func TestPeriodicLimiter(t *testing.T) {
 		}
 		ch <- i
 	}()
-	time.Sleep(time.Millisecond * 7)
+	time.Sleep(time.Millisecond * 70)
 	cancelLimiter()
 	select {
 

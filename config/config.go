@@ -84,6 +84,7 @@ func newDecoderConfig(result interface{}) *mapstructure.DecoderConfig {
 }
 
 var hooks = []mapstructure.DecodeHookFunc{
+	DebugHook,
 	mapstructure.StringToTimeDurationHookFunc(),
 	StringToURLHook,
 	StringToIPHook,

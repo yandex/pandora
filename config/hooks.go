@@ -15,9 +15,11 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/c2h5oh/datasize"
+	"github.com/facebookgo/stack"
 	"github.com/facebookgo/stackerr"
 
 	"github.com/yandex/pandora/plugin"
+	"github.com/yandex/pandora/tag"
 )
 
 const PluginNameKey = "type"
@@ -106,6 +108,25 @@ func PluginFactoryHook(f reflect.Type, t reflect.Type, data interface{}) (p inte
 	return plugin.NewFactory(t, name, fillConf)
 }
 
+// DebugHook used to debug config decode.
+func DebugHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{}, err error) {
+	p, err = data, nil
+	if !tag.Debug {
+		return
+	}
+	callers := stack.Callers(2)
+	var decodeCallers int
+	for _, caller := range callers {
+		if caller.Name == "(*Decoder).decode" {
+			decodeCallers++
+		}
+	}
+
+	offset := strings.Repeat("    ", decodeCallers)
+	fmt.Printf("%s %s from %s %v\n", offset, t, f, data)
+	return
+}
+
 func parseConf(t reflect.Type, data interface{}) (name string, fillConf func(conf interface{}) error, err error) {
 	confData, err := toStringKeyMap(data)
 	if err != nil {
@@ -133,6 +154,10 @@ func parseConf(t reflect.Type, data interface{}) (name string, fillConf func(con
 	}
 	name = names[0]
 	fillConf = func(conf interface{}) error {
+		if tag.Debug {
+			fmt.Printf("Decoding %s %s plugin\n"+"%s from %v",
+				t, name, reflect.TypeOf(conf).Elem(), confData)
+		}
 		err := DecodeAndValidate(confData, conf)
 		if err != nil {
 			err = fmt.Errorf("%s %s plugin\n"+

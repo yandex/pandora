@@ -16,6 +16,7 @@ import (
 	"github.com/c2h5oh/datasize"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/yandex/pandora/plugin"
 )
 

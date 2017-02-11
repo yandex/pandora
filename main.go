@@ -1,28 +1,35 @@
 package main
 
 import (
+	"github.com/spf13/afero"
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
+	"github.com/yandex/pandora/ammo/jsonline"
 	"github.com/yandex/pandora/cli"
 	"github.com/yandex/pandora/gun"
-	"github.com/yandex/pandora/gun/http"
-	"github.com/yandex/pandora/gun/spdy"
+	"github.com/yandex/pandora/gun/phttp"
 	"github.com/yandex/pandora/limiter"
 	"github.com/yandex/pandora/register"
 )
 
 func init() {
-	// TODO: make and register NewDefaultConfig funcs
+	// TODO move all registrations to different package,
+	// TODO: make and register NewDefaultConfig funcs.
+
+	fs := afero.NewReadOnlyFs(afero.NewOsFs())
 
 	register.ResultListener("log/simple", aggregate.NewLoggingResultListener)
 	register.ResultListener("log/phout", aggregate.GetPhoutResultListener)
 
-	register.Provider("jsonline/http", ammo.NewHttpProvider)
-	register.Provider("jsonline/spdy", ammo.NewHttpProvider)
-	register.Provider("dummy/log", ammo.NewLogAmmoProvider)
+	newJsonlineProvider := func(conf jsonline.Config) ammo.Provider {
+		return jsonline.NewProvider(fs, conf)
+	}
+	register.Provider("jsonline/http", newJsonlineProvider)
+	register.Provider("jsonline/spdy", newJsonlineProvider)
+	register.Provider("dummy/log", ammo.NewLogProvider)
 
-	register.Gun("http", http.New)
-	register.Gun("spdy", spdy.New)
+	register.Gun("http", phttp.NewHTTPGunClient, phttp.NewDefaultHTTPGunClientConfig)
+	register.Gun("spdy", phttp.NewSPDYGun)
 	register.Gun("log", gun.NewLog)
 
 	register.Limiter("periodic", limiter.NewPeriodic)

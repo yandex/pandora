@@ -11,17 +11,15 @@ type Log struct {
 	Message string
 }
 
-type LogAmmoProviderConfig struct {
+type LogProviderConfig struct {
 	AmmoLimit int
 }
 
-func NewLogAmmoProvider(conf LogAmmoProviderConfig) Provider {
-	ammoCh := make(chan Ammo, 128)
+func NewLogProvider(conf LogProviderConfig) Provider {
 	ap := &logProvider{
 		size: conf.AmmoLimit,
-		sink: ammoCh,
-		BaseProvider: NewBaseProvider(
-			ammoCh,
+		DecodeProvider: NewDecodeProvider(
+			128,
 			newLogJSONDecoder(),
 			func() interface{} { return &Log{} },
 		),
@@ -42,19 +40,18 @@ func newLogJSONDecoder() Decoder {
 }
 
 type logProvider struct {
-	*BaseProvider
+	*DecodeProvider
 
-	sink chan<- Ammo
 	size int
 }
 
 func (ap *logProvider) Start(ctx context.Context) error {
-	defer close(ap.sink)
+	defer close(ap.Sink)
 loop:
 	for i := 0; i < ap.size; i++ {
-		if a, err := ap.decode([]byte(fmt.Sprintf(`{"message": "Job #%d"}`, i))); err == nil {
+		if a, err := ap.Decode([]byte(fmt.Sprintf(`{"message": "Job #%d"}`, i))); err == nil {
 			select {
-			case ap.sink <- a:
+			case ap.Sink <- a:
 			case <-ctx.Done():
 				break loop
 			}

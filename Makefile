@@ -8,7 +8,7 @@ PKGSDIRS=`find -L . -type f -name "*.go" -not -path "./vendor/*"`
 
 all: test vet checkfmt
 
-travis: move_fork test checkfmt vet coverage
+travis: test checkfmt coverage
 
 prepare: fmt test vet
 
@@ -57,12 +57,4 @@ updep:
 
 PARENT=$$GOPATH/src/github.com/yandex
 DIR=$(PARENT)/pandora
-
-move_fork:
-	@if [ `pwd` != $(DIR) ] ; then  \
-        echo "$(OK_COLOR)Moving fork$(NO_COLOR)" ; \
-        mkdir -p $(PARENT) || true ; \
-        mv -n `pwd` $(DIR) && cd $(DIR) || true ; \
-        echo "moved to " `pwd` ;\
-    fi
 

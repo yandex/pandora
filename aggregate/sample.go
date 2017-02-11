@@ -47,8 +47,14 @@ type Sample struct {
 	err       error
 }
 
-func (s *Sample) Tags() string      { return s.tags }
-func (s *Sample) AddTag(tag string) { s.tags += "|" + tag }
+func (s *Sample) Tags() string { return s.tags }
+func (s *Sample) AddTag(tag string) {
+	if s.tags == "" {
+		s.tags = tag
+		return
+	}
+	s.tags += "|" + tag
+}
 
 func (s *Sample) ProtoCode() int { return s.get(keyProtoCode) }
 func (s *Sample) SetProtoCode(code int) {

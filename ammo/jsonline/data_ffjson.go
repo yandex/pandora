@@ -3,7 +3,7 @@
 // source: http.go
 // DO NOT EDIT!
 
-package ammo
+package jsonline
 
 import (
 	"bytes"
@@ -37,12 +37,12 @@ var ffj_key_Http_Headers = []byte("Headers")
 
 var ffj_key_Http_Tag = []byte("Tag")
 
-func (uj *Http) UnmarshalJSON(input []byte) error {
+func (d *data) UnmarshalJSON(input []byte) error {
 	fs := fflib.NewFFLexer(input)
-	return uj.UnmarshalJSONFFLexer(fs, fflib.FFParse_map_start)
+	return d.UnmarshalJSONFFLexer(fs, fflib.FFParse_map_start)
 }
 
-func (uj *Http) UnmarshalJSONFFLexer(fs *fflib.FFLexer, state fflib.FFParseState) error {
+func (d *data) UnmarshalJSONFFLexer(fs *fflib.FFLexer, state fflib.FFParseState) error {
 	var err error = nil
 	currentKey := ffj_t_Httpbase
 	_ = currentKey
@@ -213,7 +213,7 @@ mainparse:
 
 handle_Host:
 
-	/* handler: uj.Host type=string kind=string quoted=false*/
+	/* handler: d.Host type=string kind=string quoted=false*/
 
 	{
 
@@ -229,7 +229,7 @@ handle_Host:
 
 			outBuf := fs.Output.Bytes()
 
-			uj.Host = string(string(outBuf))
+			d.Host = string(string(outBuf))
 
 		}
 	}
@@ -239,7 +239,7 @@ handle_Host:
 
 handle_Method:
 
-	/* handler: uj.Method type=string kind=string quoted=false*/
+	/* handler: d.Method type=string kind=string quoted=false*/
 
 	{
 
@@ -255,7 +255,7 @@ handle_Method:
 
 			outBuf := fs.Output.Bytes()
 
-			uj.Method = string(string(outBuf))
+			d.Method = string(string(outBuf))
 
 		}
 	}
@@ -265,7 +265,7 @@ handle_Method:
 
 handle_Uri:
 
-	/* handler: uj.Uri type=string kind=string quoted=false*/
+	/* handler: d.Uri type=string kind=string quoted=false*/
 
 	{
 
@@ -281,7 +281,7 @@ handle_Uri:
 
 			outBuf := fs.Output.Bytes()
 
-			uj.Uri = string(string(outBuf))
+			d.Uri = string(string(outBuf))
 
 		}
 	}
@@ -291,7 +291,7 @@ handle_Uri:
 
 handle_Headers:
 
-	/* handler: uj.Headers type=map[string]string kind=map quoted=false*/
+	/* handler: d.Headers type=map[string]string kind=map quoted=false*/
 
 	{
 
@@ -302,10 +302,10 @@ handle_Headers:
 		}
 
 		if tok == fflib.FFTok_null {
-			uj.Headers = nil
+			d.Headers = nil
 		} else {
 
-			uj.Headers = make(map[string]string, 0)
+			d.Headers = make(map[string]string, 0)
 
 			wantVal := true
 
@@ -383,7 +383,7 @@ handle_Headers:
 					}
 				}
 
-				uj.Headers[k] = v
+				d.Headers[k] = v
 
 				wantVal = false
 			}
@@ -396,7 +396,7 @@ handle_Headers:
 
 handle_Tag:
 
-	/* handler: uj.Tag type=string kind=string quoted=false*/
+	/* handler: d.Tag type=string kind=string quoted=false*/
 
 	{
 
@@ -412,7 +412,7 @@ handle_Tag:
 
 			outBuf := fs.Output.Bytes()
 
-			uj.Tag = string(string(outBuf))
+			d.Tag = string(string(outBuf))
 
 		}
 	}

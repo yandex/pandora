@@ -7,9 +7,9 @@ package config
 
 import (
 	"testing"
-
 	"time"
 
+	"github.com/facebookgo/stack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -210,4 +210,30 @@ func TestDeltaUpdate(t *testing.T) {
 	assert.Equal(t, "val2", l2.Val1.Val2)
 	assert.Equal(t, "val3", l2.Val2.Val1)
 	assert.Equal(t, "val5", l2.Val2.Val2)
+}
+
+func TestNextSquash(t *testing.T) {
+	// TODO(skipor): fix mapstructure #70
+	t.Skip("Skipped until fix https://github.com/mitchellh/mapstructure/issues/70")
+	data := &struct {
+		Level1 struct {
+			Level2 struct {
+				Foo string
+			} `config:",squash"`
+		} `config:",squash"`
+	}{}
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		t.Fatalf("panic: %s\n %s", r, stack.Callers(3))
+	}()
+
+	err := Decode(M{
+		"foo": "baz",
+	}, &data)
+	require.NoError(t, err)
+	assert.Equal(t, "baz", data.Level1.Level2.Foo)
 }
