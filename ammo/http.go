@@ -22,6 +22,7 @@ type HTTP interface {
 }
 
 type SimpleHTTP struct {
+	// OPTIMIZE: reuse *http.Request
 	req *http.Request
 	tag string
 }

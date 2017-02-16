@@ -1,95 +1,56 @@
-package jsonline
+package uri
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"net/http"
-	"sync"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
-
 	"github.com/yandex/pandora/ammo"
 )
 
-func TestJsonline(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Jsonline Suite")
+const testFile = "./ammo.uri"
+const testFileData = `/0
+[A:b]
+/1
+[ C : d ]
+/2
+[A:]
+/3`
+
+var testData = []ammoData{
+	{"/0", http.Header{}},
+	{"/1", http.Header{"A": []string{"b"}}},
+	{"/2", http.Header{
+		"A": []string{"b"},
+		"C": []string{"d"},
+	}},
+	{"/3", http.Header{
+		"A": []string{""},
+		"C": []string{"d"},
+	}},
 }
 
-const testFile = "./ammo.jsonline"
-
-// testData holds jsonline.data that contains in testFile
-var testData = []data{
-	{
-		Host:    "example.com",
-		Method:  "GET",
-		Uri:     "/00",
-		Headers: map[string]string{"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "Host": "example.org", "User-Agent": "Pandora/0.0.1"},
-	},
-	{
-		Host:    "ya.ru",
-		Method:  "HEAD",
-		Uri:     "/01",
-		Headers: map[string]string{"Accept": "*/*", "Accept-Encoding": "gzip, brotli", "Host": "ya.ru", "User-Agent": "YaBro/0.1"},
-		Tag:     "head",
-	},
+type ammoData struct {
+	uri    string
+	header http.Header
 }
 
-var testFs = newTestFs()
-
-func newTestFs() afero.Fs {
+var testFs = func() afero.Fs {
 	fs := afero.NewMemMapFs()
-	file, err := fs.Create(testFile)
+	err := afero.WriteFile(fs, testFile, []byte(testFileData), 0)
 	if err != nil {
 		panic(err)
 	}
-	encoder := json.NewEncoder(file)
-	for _, d := range testData {
-		err := encoder.Encode(d)
-		if err != nil {
-			panic(err)
-		}
-	}
 	return afero.NewReadOnlyFs(fs)
-}
+}()
 
 func newTestProvider(conf Config) ammo.Provider {
 	return NewProvider(testFs, conf)
 }
-
-var _ = Describe("data", func() {
-	It("decoded well", func() {
-		data := data{
-			Host:    "ya.ru",
-			Method:  "GET",
-			Uri:     "/00",
-			Headers: map[string]string{"A": "a", "B": "b"},
-			Tag:     "tag",
-		}
-		req, err := data.ToRequest()
-		Expect(err).To(BeNil())
-		Expect(*req).To(MatchFields(IgnoreExtras, Fields{
-			"Proto":      Equal("HTTP/1.1"),
-			"ProtoMajor": Equal(1),
-			"ProtoMinor": Equal(1),
-			"Body":       BeNil(),
-			"URL": PointTo(MatchFields(IgnoreExtras, Fields{
-				"Scheme": Equal("http"),
-				"Host":   Equal(data.Host),
-				"Path":   Equal(data.Uri),
-			})),
-			"Header": Equal(http.Header{
-				"A": []string{"a"},
-				"B": []string{"b"},
-			}),
-			"Method": Equal(data.Method),
-		}))
-	})
-})
 
 var _ = Describe("provider start", func() {
 	It("ok", func() {
@@ -109,7 +70,6 @@ var _ = Describe("provider start", func() {
 		Expect(p.Start(context.Background())).NotTo(BeNil())
 	})
 })
-
 var _ = Describe("provider decode", func() {
 	var (
 		// Configured in BeforeEach.
@@ -140,6 +100,7 @@ var _ = Describe("provider decode", func() {
 		Expect(errch).NotTo(Receive())
 
 		for i := 0; i < successReceives; i++ {
+			By(fmt.Sprint(i))
 			var am ammo.Ammo
 			Eventually(provider.Source()).Should(Receive(&am))
 			ammos = append(ammos, am)
@@ -158,12 +119,23 @@ var _ = Describe("provider decode", func() {
 		}
 		for i := 0; i < len(ammos); i++ {
 			expectedData := testData[i%len(testData)]
-			expectedReq, err := expectedData.ToRequest()
-			Expect(err).To(BeNil())
 			ha := ammos[i].(ammo.HTTP)
 			req, ss := ha.Request()
-			Expect(req).To(Equal(expectedReq))
-			Expect(ss.Tags()).To(Equal(expectedData.Tag))
+			Expect(*req).To(MatchFields(IgnoreExtras, Fields{
+				"Method":     Equal("GET"),
+				"Proto":      Equal("HTTP/1.1"),
+				"ProtoMajor": Equal(1),
+				"ProtoMinor": Equal(1),
+				"Body":       BeNil(),
+				"Host":       BeEmpty(),
+				"URL": PointTo(MatchFields(IgnoreExtras, Fields{
+					"Scheme": BeEmpty(),
+					"Host":   BeEmpty(),
+					"Path":   Equal(expectedData.uri),
+				})),
+				"Header": Equal(expectedData.header),
+			}))
+			Expect(ss.Tags()).To(Equal("REQUEST"))
 		}
 	})
 
@@ -195,24 +167,3 @@ var _ = Describe("provider decode", func() {
 	})
 
 })
-
-func Benchmark(b *testing.B) {
-	RegisterTestingT(b)
-	jsonDoc, err := json.Marshal(testData[0])
-	Expect(err).To(BeNil())
-	pool := sync.Pool{
-		New: func() interface{} { return &ammo.SimpleHTTP{} },
-	}
-	b.Run("Decode", func(b *testing.B) {
-		for n := 0; n < b.N; n++ {
-			decoder{}.Decode(jsonDoc, &ammo.SimpleHTTP{})
-		}
-	})
-	b.Run("DecodeWithPool", func(b *testing.B) {
-		for n := 0; n < b.N; n++ {
-			h := pool.Get().(*ammo.SimpleHTTP)
-			decoder{}.Decode(jsonDoc, h)
-			pool.Put(h)
-		}
-	})
-}

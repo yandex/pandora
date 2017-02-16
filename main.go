@@ -2,9 +2,11 @@ package main
 
 import (
 	"github.com/spf13/afero"
+
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
 	"github.com/yandex/pandora/ammo/jsonline"
+	"github.com/yandex/pandora/ammo/uri"
 	"github.com/yandex/pandora/cli"
 	"github.com/yandex/pandora/gun"
 	"github.com/yandex/pandora/gun/phttp"
@@ -21,11 +23,12 @@ func init() {
 	register.ResultListener("log/simple", aggregate.NewLoggingResultListener)
 	register.ResultListener("log/phout", aggregate.GetPhoutResultListener)
 
-	newJsonlineProvider := func(conf jsonline.Config) ammo.Provider {
+	register.Provider("jsonline", func(conf jsonline.Config) ammo.Provider {
 		return jsonline.NewProvider(fs, conf)
-	}
-	register.Provider("jsonline/http", newJsonlineProvider)
-	register.Provider("jsonline/spdy", newJsonlineProvider)
+	})
+	register.Provider("uri", func(conf uri.Config) ammo.Provider {
+		return uri.NewProvider(fs, conf)
+	})
 	register.Provider("dummy/log", ammo.NewLogProvider)
 
 	register.Gun("http", phttp.NewHTTPGunClient, phttp.NewDefaultHTTPGunClientConfig)
