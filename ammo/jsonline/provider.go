@@ -8,7 +8,6 @@ package jsonline
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -76,43 +75,42 @@ func (d *data) ToRequest() (req *http.Request, err error) {
 	return
 }
 
-func (ap *Provider) Start(ctx context.Context) error {
-	defer close(ap.Sink)
-	ammoFile, err := ap.fs.Open(ap.File)
+func (p *Provider) Start(ctx context.Context) error {
+	defer close(p.Sink)
+	ammoFile, err := p.fs.Open(p.File)
 	if err != nil {
-		return fmt.Errorf("failed to open ammo source: %v", err)
+		return stackerr.Newf("failed to open ammo source: %v", err)
 	}
 	defer ammoFile.Close()
-	ammoNumber := 0
-	passNum := 0
+	var ammoNum, passNum int
 	for {
 		passNum++
 		scanner := bufio.NewScanner(ammoFile)
-		for scanner.Scan() && (ap.Limit == 0 || ammoNumber < ap.Limit) {
+		for line := 1; scanner.Scan() && (p.Limit == 0 || ammoNum < p.Limit); line++ {
 			data := scanner.Bytes()
-			if a, err := ap.Decode(data); err != nil {
-				return fmt.Errorf("failed to decode ammo: %v", err)
-			} else {
-				ammoNumber++
-				select {
-				case ap.Sink <- a:
-				case <-ctx.Done():
-					log.Printf("Context error: %s", ctx.Err())
-					return ctx.Err()
-				}
+			a, err := p.Decode(data)
+			if err != nil {
+				return stackerr.Newf("failed to decode ammo at line: %v; data: %q; error: %s", line, data, err)
+			}
+			ammoNum++
+			select {
+			case p.Sink <- a:
+			case <-ctx.Done():
+				log.Printf("Context error: %s", ctx.Err())
+				return ctx.Err()
 			}
 		}
-		if ap.Passes != 0 && passNum >= ap.Passes {
+		if p.Passes != 0 && passNum >= p.Passes {
 			break
 		}
 		ammoFile.Seek(0, 0)
 		// TODO: test metrics after https://github.com/yandex/pandora/issues/34 (Use rcrowley/go-metrics instead of ugly wrappers over expvar)
-		if ap.Passes == 0 {
+		if p.Passes == 0 {
 			evPassesLeft.Set(-1)
 			//log.Printf("Restarted ammo from the beginning. Infinite passes.\n") // TODO: log to debug
 		} else {
-			evPassesLeft.Set(int64(ap.Passes - passNum))
-			//log.Printf("Restarted ammo from the beginning. Passes left: %d\n", ap.passes-passNum) // TODO: log to debug
+			evPassesLeft.Set(int64(p.Passes - passNum))
+			//log.Printf("Restarted ammo from the beginning. Passes left: %d\n", p.passes-passNum) // TODO: log to debug
 		}
 	}
 	log.Println("Ran out of ammo")

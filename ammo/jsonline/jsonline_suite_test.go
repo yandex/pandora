@@ -20,9 +20,7 @@ func TestJsonline(t *testing.T) {
 	RunSpecs(t, "Jsonline Suite")
 }
 
-const (
-	testFile = "./ammo.jsonline"
-)
+const testFile = "./ammo.jsonline"
 
 // testData holds jsonline.data that contains in testFile
 var testData = []data{
@@ -74,12 +72,16 @@ var _ = Describe("data", func() {
 		}
 		req, err := data.ToRequest()
 		Expect(err).To(BeNil())
-		Expect(req, MatchFields(IgnoreExtras, Fields{
-			"URL": MatchFields(IgnoreExtras, Fields{
+		Expect(*req).To(MatchFields(IgnoreExtras, Fields{
+			"Proto":      Equal("HTTP/1.1"),
+			"ProtoMajor": Equal(1),
+			"ProtoMinor": Equal(1),
+			"Body":       BeNil(),
+			"URL": PointTo(MatchFields(IgnoreExtras, Fields{
 				"Scheme": Equal("http"),
 				"Host":   Equal(data.Host),
 				"Path":   Equal(data.Uri),
-			}),
+			})),
 			"Header": Equal(http.Header{
 				"A": []string{"a"},
 				"B": []string{"b"},
