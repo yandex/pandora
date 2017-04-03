@@ -58,7 +58,13 @@ func (d *decoder) decodeURI(line []byte) error {
 		return stackerr.Newf("uri decode error: ", err)
 	}
 	for k, v := range d.header {
-		req.Header[k] = v
+		// http.Request.Write sends Host header based on Host or URL.Host.
+		if k == "Host" {
+			req.URL.Host = v[0]
+			req.Host = v[0]
+		} else {
+			req.Header[k] = v
+		}
 	}
 	sh := d.ammoPool.Get().(*ammo.SimpleHTTP)
 	sh.Reset(req, "REQUEST")

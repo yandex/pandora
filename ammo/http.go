@@ -16,8 +16,9 @@ import (
 // HTTP ammo interface for http based guns.
 // http ammo providers should produce ammo that implements HTTP.
 // http guns should use convert ammo to HTTP, not to specific implementation.
+// Returned request have
 type HTTP interface {
-	// TODO (skipor) instead of sample use some more usable interface.
+	// TODO(skipor): instead of sample use some more usable interface.
 	Request() (*http.Request, *aggregate.Sample)
 }
 

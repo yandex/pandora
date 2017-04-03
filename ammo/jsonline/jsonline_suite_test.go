@@ -28,13 +28,13 @@ var testData = []data{
 		Host:    "example.com",
 		Method:  "GET",
 		Uri:     "/00",
-		Headers: map[string]string{"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "Host": "example.org", "User-Agent": "Pandora/0.0.1"},
+		Headers: map[string]string{"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "User-Agent": "Pandora/0.0.1"},
 	},
 	{
 		Host:    "ya.ru",
 		Method:  "HEAD",
 		Uri:     "/01",
-		Headers: map[string]string{"Accept": "*/*", "Accept-Encoding": "gzip, brotli", "Host": "ya.ru", "User-Agent": "YaBro/0.1"},
+		Headers: map[string]string{"Accept": "*/*", "Accept-Encoding": "gzip, brotli", "User-Agent": "YaBro/0.1"},
 		Tag:     "head",
 	},
 }

@@ -48,8 +48,9 @@ type HTTPGun struct {
 var _ gun.Gun = (*HTTPGun)(nil)
 
 func (g *HTTPGun) Do(req *http.Request) (*http.Response, error) {
-	req.URL.Scheme = g.scheme
+	req.Host = req.URL.Host
 	req.URL.Host = g.target
+	req.URL.Scheme = g.scheme
 	return g.client.Do(req)
 }
 
