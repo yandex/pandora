@@ -1,8 +1,9 @@
 pools:
-  - name: HTTP pool
-    gun:
-      type: http
+  - gun:
+      type: connect
       target: localhost:3000
+      ssl: true
+      connect-ssl: false
     ammo:
       type: jsonline
       file: ./example/data/ammo.jsonline

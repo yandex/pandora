@@ -9,5 +9,11 @@ import (
 
 type Gun interface {
 	Shoot(context.Context, ammo.Ammo) error
-	BindResultsTo(chan<- *aggregate.Sample)
+	BindResultsTo(Results)
+}
+
+type Results chan<- *aggregate.Sample
+
+func NewResults(buf int) chan *aggregate.Sample {
+	return make(chan *aggregate.Sample, buf)
 }

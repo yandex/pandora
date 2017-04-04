@@ -14,9 +14,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/yandex/pandora/aggregate"
+
 	"github.com/yandex/pandora/ammo"
 	"github.com/yandex/pandora/config"
+	"github.com/yandex/pandora/gun"
 )
 
 var _ = Describe("Base", func() {
@@ -43,7 +44,7 @@ var _ = Describe("Base", func() {
 		defer server.Close()
 		conf := NewDefaultHTTPGunClientConfig()
 		conf.Gun.Target = strings.TrimPrefix(server.URL, "http://")
-		results := make(chan<- *aggregate.Sample, 1)
+		results := gun.NewResults(1)
 		httpGun := NewHTTPGunClient(conf)
 		httpGun.BindResultsTo(results)
 

@@ -15,6 +15,7 @@ import (
 
 	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo/mocks"
+	"github.com/yandex/pandora/gun"
 )
 
 var _ = Describe("Base", func() {
@@ -34,11 +35,11 @@ var _ = Describe("Base", func() {
 			}).To(Panic())
 		})
 		It("second time panics", func() {
-			res := make(chan<- *aggregate.Sample)
+			res := make(gun.Results)
 			base.BindResultsTo(res)
 			Expect(base.Results).To(Equal(res))
 			Expect(func() {
-				base.BindResultsTo(make(chan<- *aggregate.Sample))
+				base.BindResultsTo(make(gun.Results))
 			}).To(Panic())
 		})
 	})

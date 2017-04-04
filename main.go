@@ -15,8 +15,8 @@ import (
 )
 
 func init() {
-	// TODO move all registrations to different package,
-	// TODO: make and register NewDefaultConfig funcs.
+	// TODO(skipor): move all registrations to different package,
+	// TODO(skipor): make and register NewDefaultConfig funcs.
 
 	fs := afero.NewReadOnlyFs(afero.NewOsFs())
 
@@ -32,6 +32,7 @@ func init() {
 	register.Provider("dummy/log", ammo.NewLogProvider)
 
 	register.Gun("http", phttp.NewHTTPGunClient, phttp.NewDefaultHTTPGunClientConfig)
+	register.Gun("connect", phttp.NewConnectGun, phttp.NewDefaultConnectGunConfig)
 	register.Gun("spdy", phttp.NewSPDYGun)
 	register.Gun("log", gun.NewLog)
 

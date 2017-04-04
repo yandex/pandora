@@ -9,10 +9,10 @@ import (
 )
 
 type logGun struct {
-	results chan<- *aggregate.Sample
+	results Results
 }
 
-func (l *logGun) BindResultsTo(results chan<- *aggregate.Sample) {
+func (l *logGun) BindResultsTo(results Results) {
 	l.results = results
 }
 
