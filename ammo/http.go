@@ -16,15 +16,21 @@ import (
 // HTTP ammo interface for http based guns.
 // http ammo providers should produce ammo that implements HTTP.
 // http guns should use convert ammo to HTTP, not to specific implementation.
+// Returned request have
 type HTTP interface {
-	// TODO (skipor) instead of sample use some more usable interface.
+	// TODO(skipor): instead of sample use some more usable interface.
 	Request() (*http.Request, *aggregate.Sample)
 }
 
 type SimpleHTTP struct {
-	// OPTIMIZE: reuse *http.Request
+	// OPTIMIZE(skipor): reuse *http.Request.
+	// Need to research is it possible. http.Transport can hold reference to http.Request.
 	req *http.Request
 	tag string
+}
+
+func NewSimpleHTTP(req *http.Request, tag string) *SimpleHTTP {
+	return &SimpleHTTP{req, tag}
 }
 
 func (a *SimpleHTTP) Request() (*http.Request, *aggregate.Sample) {

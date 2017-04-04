@@ -14,21 +14,20 @@ import (
 
 	"github.com/facebookgo/stackerr"
 
-	"github.com/yandex/pandora/aggregate"
 	"github.com/yandex/pandora/ammo"
 	"github.com/yandex/pandora/gun"
 )
 
 // TODO: inject logger
 type Base struct {
-	Do      func(r *http.Request) (*http.Response, error) // Required.
-	Connect func(ctx context.Context) error               // Optional hook.
-	Results chan<- *aggregate.Sample                      // Lazy set via BindResultTo.
+	Do          func(r *http.Request) (*http.Response, error) // Required.
+	Connect     func(ctx context.Context) error               // Optional hook.
+	gun.Results                                               // Lazy set via BindResultTo.
 }
 
 var _ gun.Gun = (*Base)(nil)
 
-func (b *Base) BindResultsTo(results chan<- *aggregate.Sample) {
+func (b *Base) BindResultsTo(results gun.Results) {
 	if b.Results != nil {
 		log.Panic("already binded")
 	}

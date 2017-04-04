@@ -6,6 +6,7 @@
 package phttp
 
 import (
+	"context"
 	"log"
 	"net"
 	"net/http"
@@ -49,7 +50,17 @@ func NewDefaultDialerConfig() DialerConfig {
 	}
 }
 
-func NewDialer(conf DialerConfig) *net.Dialer {
+type Dialer interface {
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
+type DialerFunc func(ctx context.Context, network, address string) (net.Conn, error)
+
+func (f DialerFunc) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	return f(ctx, network, address)
+}
+
+func NewDialer(conf DialerConfig) Dialer {
 	d := &net.Dialer{}
 	err := config.Map(d, conf)
 	if err != nil {

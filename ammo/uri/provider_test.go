@@ -16,26 +16,29 @@ const testFile = "./ammo.uri"
 const testFileData = `/0
 [A:b]
 /1
+[Host : example.com]
 [ C : d ]
 /2
 [A:]
+[Host : other.net]
 /3`
 
 var testData = []ammoData{
-	{"/0", http.Header{}},
-	{"/1", http.Header{"A": []string{"b"}}},
-	{"/2", http.Header{
+	{"", "/0", http.Header{}},
+	{"", "/1", http.Header{"A": []string{"b"}}},
+	{"example.com", "/2", http.Header{
 		"A": []string{"b"},
 		"C": []string{"d"},
 	}},
-	{"/3", http.Header{
+	{"other.net", "/3", http.Header{
 		"A": []string{""},
 		"C": []string{"d"},
 	}},
 }
 
 type ammoData struct {
-	uri    string
+	host   string
+	path   string
 	header http.Header
 }
 
@@ -121,17 +124,18 @@ var _ = Describe("provider decode", func() {
 			expectedData := testData[i%len(testData)]
 			ha := ammos[i].(ammo.HTTP)
 			req, ss := ha.Request()
+			By(fmt.Sprintf("%v", i))
 			Expect(*req).To(MatchFields(IgnoreExtras, Fields{
 				"Method":     Equal("GET"),
 				"Proto":      Equal("HTTP/1.1"),
 				"ProtoMajor": Equal(1),
 				"ProtoMinor": Equal(1),
 				"Body":       BeNil(),
-				"Host":       BeEmpty(),
+				"Host":       Equal(expectedData.host),
 				"URL": PointTo(MatchFields(IgnoreExtras, Fields{
 					"Scheme": BeEmpty(),
-					"Host":   BeEmpty(),
-					"Path":   Equal(expectedData.uri),
+					"Host":   Equal(expectedData.host),
+					"Path":   Equal(expectedData.path),
 				})),
 				"Header": Equal(expectedData.header),
 			}))

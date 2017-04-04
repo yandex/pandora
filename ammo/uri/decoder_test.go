@@ -53,6 +53,8 @@ var _ = Describe("Decoder", func() {
 		for k, v := range header {
 			decoder.header[k] = v
 		}
+		const host = "example.com"
+		decoder.header.Set("Host", host)
 		line := "/some/path"
 		Decode(line)
 		var am ammo.Ammo
@@ -62,10 +64,12 @@ var _ = Describe("Decoder", func() {
 		req, sample := sh.Request()
 		Expect(*req.URL).To(MatchFields(IgnoreExtras, Fields{
 			"Path":   Equal(line),
-			"Host":   BeEmpty(),
+			"Host":   Equal(host),
 			"Scheme": BeEmpty(),
 		}))
+		Expect(req.Host).To(Equal(host))
 		Expect(req.Header).To(Equal(header))
+		header.Set("Host", host)
 		Expect(decoder.header).To(Equal(header))
 		Expect(decoder.ammoNum).To(Equal(1))
 		Expect(sample.Tags()).To(Equal("REQUEST"))
