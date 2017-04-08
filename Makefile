@@ -55,6 +55,3 @@ updep:
 	@echo "$(OK_COLOR)Update dependencies$(NO_COLOR)"
 	@glide up
 
-PARENT=$$GOPATH/src/github.com/yandex
-DIR=$(PARENT)/pandora
-

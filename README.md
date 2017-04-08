@@ -31,10 +31,10 @@ Or let [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/configuration.h
 
 
 ```go
-ammo.Provider
+core.Provider
+core.Gun
 aggregate.ResultListener
 limiter.Limiter
-gun.Gun
 ```
 
 ## Basic concepts
