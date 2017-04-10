@@ -14,31 +14,31 @@ import (
 
 	"github.com/facebookgo/stackerr"
 
-	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/aggregate/netsample"
 )
 
 // TODO: inject logger
 type Base struct {
-	Do           func(r *http.Request) (*http.Response, error) // Required.
-	Connect      func(ctx context.Context) error               // Optional hook.
-	core.Results                                               // Lazy set via BindResultTo.
+	Do         func(r *http.Request) (*http.Response, error) // Required.
+	Connect    func(ctx context.Context) error               // Optional hook.
+	Aggregator netsample.Aggregator                          // Lazy set via BindResultTo.
 }
 
-var _ core.Gun = (*Base)(nil)
+var _ Gun = (*Base)(nil)
 
-func (b *Base) BindResultsTo(results core.Results) {
-	if b.Results != nil {
+func (b *Base) Bind(aggregator netsample.Aggregator) {
+	if b.Aggregator != nil {
 		log.Panic("already binded")
 	}
-	if results == nil {
-		log.Panic("nil results")
+	if aggregator == nil {
+		log.Panic("nil aggregator")
 	}
-	b.Results = results
+	b.Aggregator = aggregator
 }
 
 // Shoot is thread safe iff Do and Connect hooks are thread safe.
-func (b *Base) Shoot(ctx context.Context, a core.Ammo) (err error) {
-	if b.Results == nil {
+func (b *Base) Shoot(ctx context.Context, ammo Ammo) (err error) {
+	if b.Aggregator == nil {
 		log.Panic("must bind before shoot")
 	}
 	if b.Connect != nil {
@@ -49,13 +49,12 @@ func (b *Base) Shoot(ctx context.Context, a core.Ammo) (err error) {
 		}
 	}
 
-	ha := a.(Ammo)
-	req, sample := ha.Request()
+	req, sample := ammo.Request()
 	defer func() {
 		if err != nil {
 			sample.SetErr(err)
 		}
-		b.Results <- sample
+		b.Aggregator.Release(sample)
 		err = stackerr.WrapSkip(err, 1)
 	}()
 	var res *http.Response
@@ -76,5 +75,3 @@ func (b *Base) Shoot(ctx context.Context, a core.Ammo) (err error) {
 	// TODO: verbose logging
 	return
 }
-
-func (b *Base) Close() {}

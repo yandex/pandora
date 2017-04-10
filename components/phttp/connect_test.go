@@ -1,4 +1,6 @@
 // Copyright (c) 2017 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MPL 2.0
+// license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
 package phttp
@@ -12,11 +14,7 @@ import (
 	"net/url"
 	"strings"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate"
+	"github.com/yandex/pandora/core/aggregate/netsample"
 )
 
 var _ = Describe("connect", func() {
@@ -92,15 +90,13 @@ var _ = Describe("connect", func() {
 		conf.Target = strings.TrimPrefix(proxy.URL, "http://")
 		connectGun := NewConnectGun(conf)
 
-		results := core.NewResults(1)
-		connectGun.BindResultsTo(results)
+		results := &netsample.TestAggregator{}
+		connectGun.Bind(results)
 
 		err = connectGun.Shoot(context.Background(), newTestAmmo(req))
 		Expect(err).To(BeNil())
 
-		var sample *aggregate.Sample
-		Expect(results).To(Receive(&sample))
-
-		Expect(sample.ProtoCode()).To(Equal(http.StatusOK))
+		Expect(results.Samples).To(HaveLen(1))
+		Expect(results.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
 	})
 })

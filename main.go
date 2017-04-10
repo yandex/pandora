@@ -1,3 +1,8 @@
+// Copyright (c) 2017 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MPL 2.0
+// license that can be found in the LICENSE file.
+// Author: Vladimir Skipor <skipor@yandex-team.ru>
+
 package main
 
 import (
@@ -5,43 +10,38 @@ import (
 
 	"github.com/yandex/pandora/cli"
 	"github.com/yandex/pandora/components/example"
-	"github.com/yandex/pandora/components/phttp"
-	"github.com/yandex/pandora/components/phttp/ammo/jsonline"
-	"github.com/yandex/pandora/components/phttp/ammo/uri"
+	"github.com/yandex/pandora/components/phttp/import"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregate"
-	"github.com/yandex/pandora/core/limiter"
+	"github.com/yandex/pandora/core/aggregate/netsample"
 	"github.com/yandex/pandora/core/register"
+	"github.com/yandex/pandora/core/schedule"
 )
 
 func init() {
-	// TODO(skipor): move all registrations to different package,
+	// TODO(skipor): move all registrations to its packages.
 	// TODO(skipor): make and register NewDefaultConfig funcs.
 
-	// TODO(skipor): use afero in result listeners
-	register.ResultListener("simple", aggregate.NewLoggingResultListener)
-	register.ResultListener("phout", aggregate.GetPhoutResultListener)
-
-	register.Limiter("periodic", limiter.NewPeriodic)
-	register.Limiter("composite", limiter.NewComposite)
-	register.Limiter("unlimited", limiter.NewUnlimited)
-	register.Limiter("linear", limiter.NewLinear)
-
-	fs := afero.NewReadOnlyFs(afero.NewOsFs())
-
-	register.Provider("jsonline", func(conf jsonline.Config) core.Provider {
-		return jsonline.NewProvider(fs, conf)
-	})
-	register.Provider("uri", func(conf uri.Config) core.Provider {
-		return uri.NewProvider(fs, conf)
+	fs := afero.NewOsFs()
+	register.Aggregator("phout", func(conf netsample.PhoutConfig) (core.Aggregator, error) {
+		a, err := netsample.GetPhout(fs, conf)
+		return netsample.WrapAggregator(a), err
 	})
 
-	register.Gun("http", phttp.NewHTTPGunClient, phttp.NewDefaultHTTPGunClientConfig)
-	register.Gun("connect", phttp.NewConnectGun, phttp.NewDefaultConnectGunConfig)
-	register.Gun("spdy", phttp.NewSPDYGun)
+	register.Limiter("periodic", schedule.NewPeriodic)
+	register.Limiter("unlimited", schedule.NewUnlimited)
+	register.Limiter("linear", schedule.NewLinear)
 
-	register.Provider("example", example.NewLogProvider)
+	register.Aggregator("discard", aggregate.NewDiscard)
+	register.Aggregator("log", aggregate.NewLog)
+
+	register.Provider("example", example.NewProvider, example.NewDefaultProviderConfig)
 	register.Gun("example", example.NewGun)
+
+	// Components should not write anything to files.
+	readOnlyFs := afero.NewReadOnlyFs(fs)
+
+	phttp.Import(readOnlyFs)
 }
 
 func main() {

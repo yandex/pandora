@@ -1,3 +1,7 @@
+// Copyright (c) 2017 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MPL 2.0
+// license that can be found in the LICENSE file.
+// Author: Vladimir Skipor <skipor@yandex-team.ru>
 package phttp
 
 import (
@@ -9,37 +13,34 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/yandex/pandora/components/phttp/mocks"
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate"
+	"github.com/yandex/pandora/core/aggregate/netsample"
 )
 
 var _ = Describe("Base", func() {
 	var (
 		base Base
-		ammo *ammomocks.Ammo
+		ammo *ammomock.Ammo
 	)
 	BeforeEach(func() {
 		base = Base{}
-		ammo = &ammomocks.Ammo{}
+		ammo = &ammomock.Ammo{}
 	})
 
 	Context("BindResultTo", func() {
 		It("nil panics", func() {
 			Expect(func() {
-				base.BindResultsTo(nil)
+				base.Bind(nil)
 			}).To(Panic())
 		})
 		It("second time panics", func() {
-			res := make(core.Results)
-			base.BindResultsTo(res)
-			Expect(base.Results).To(Equal(res))
+			res := &netsample.TestAggregator{}
+			base.Bind(res)
+			Expect(base.Aggregator).To(Equal(res))
 			Expect(func() {
-				base.BindResultsTo(make(core.Results))
+				base.Bind(&netsample.TestAggregator{})
 			}).To(Panic())
 		})
 	})
@@ -49,7 +50,7 @@ var _ = Describe("Base", func() {
 			Fail("should not be called")
 			return
 		}
-		am := &ammomocks.Ammo{}
+		am := &ammomock.Ammo{}
 		am.On("Request").Return(nil, nil).Run(
 			func(mock.Arguments) {
 				Fail("should not be caled")
@@ -64,21 +65,21 @@ var _ = Describe("Base", func() {
 			body io.ReadCloser
 
 			ctx      context.Context
-			am       *ammomocks.Ammo
+			am       *ammomock.Ammo
 			req      *http.Request
 			res      *http.Response
-			sample   *aggregate.Sample
-			results  chan *aggregate.Sample
+			sample   *netsample.Sample
+			results  *netsample.TestAggregator
 			shootErr error
 		)
 		BeforeEach(func() {
 			ctx = context.Background()
-			am = &ammomocks.Ammo{}
+			am = &ammomock.Ammo{}
 			req = httptest.NewRequest("GET", "/", nil)
-			sample = aggregate.AcquireSample("REQUEST")
+			sample = netsample.Acquire("REQUEST")
 			am.On("Request").Return(req, sample)
-			results = make(chan *aggregate.Sample, 1) // Results buffered.
-			base.BindResultsTo(results)
+			results = &netsample.TestAggregator{}
+			base.Bind(results)
 		})
 
 		JustBeforeEach(func() {
@@ -100,9 +101,8 @@ var _ = Describe("Base", func() {
 			})
 
 			It("ammo sample sent to results", func() {
-				var gotSample *aggregate.Sample
-				Eventually(results).Should(Receive(&gotSample))
-				Expect(gotSample).To(Equal(sample))
+				Expect(results.Samples).To(HaveLen(1))
+				Expect(results.Samples[0]).To(Equal(sample))
 				Expect(sample.ProtoCode()).To(Equal(res.StatusCode))
 			})
 			It("body read well", func() {

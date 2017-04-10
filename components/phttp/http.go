@@ -1,17 +1,32 @@
+// Copyright (c) 2017 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MPL 2.0
+// license that can be found in the LICENSE file.
+// Author: Vladimir Skipor <skipor@yandex-team.ru>
+
 package phttp
 
 import (
 	"net/http"
-
-	"github.com/yandex/pandora/core"
 )
 
-type HTTPGunConfig struct {
+type ClientGunConfig struct {
 	Target string `validate:"endpoint,required"`
 	SSL    bool
 }
 
-func NewHTTPGun(client Client, conf HTTPGunConfig) *HTTPGun {
+type HTTPGunConfig struct {
+	Gun    ClientGunConfig `config:",squash"`
+	Client ClientConfig    `config:",squash"`
+}
+
+func NewHTTPGun(conf HTTPGunConfig) *HTTPGun {
+	transport := NewTransport(conf.Client.Transport)
+	transport.DialContext = NewDialer(conf.Client.Dialer).DialContext
+	client := &http.Client{Transport: transport}
+	return NewClientGun(client, conf.Gun)
+}
+
+func NewClientGun(client Client, conf ClientGunConfig) *HTTPGun {
 	scheme := "http"
 	if conf.SSL {
 		scheme = "https"
@@ -26,18 +41,6 @@ func NewHTTPGun(client Client, conf HTTPGunConfig) *HTTPGun {
 	return &g
 }
 
-type HTTPGunClientConfig struct {
-	Gun    HTTPGunConfig `config:",squash"`
-	Client ClientConfig  `config:",squash"`
-}
-
-func NewHTTPGunClient(conf HTTPGunClientConfig) *HTTPGun {
-	transport := NewTransport(conf.Client.Transport)
-	transport.DialContext = NewDialer(conf.Client.Dialer).DialContext
-	client := &http.Client{Transport: transport}
-	return NewHTTPGun(client, conf.Gun)
-}
-
 type HTTPGun struct {
 	Base
 	scheme string
@@ -45,7 +48,7 @@ type HTTPGun struct {
 	client Client
 }
 
-var _ core.Gun = (*HTTPGun)(nil)
+var _ Gun = (*HTTPGun)(nil)
 
 func (g *HTTPGun) Do(req *http.Request) (*http.Response, error) {
 	req.Host = req.URL.Host
@@ -54,15 +57,15 @@ func (g *HTTPGun) Do(req *http.Request) (*http.Response, error) {
 	return g.client.Do(req)
 }
 
-func NewDefaultHTTPGunClientConfig() HTTPGunClientConfig {
-	return HTTPGunClientConfig{
-		Gun:    NewDefaultHTTPGunConfig(),
+func NewDefaultHTTPGunConfig() HTTPGunConfig {
+	return HTTPGunConfig{
+		Gun:    NewDefaultClientGunConfig(),
 		Client: NewDefaultClientConfig(),
 	}
 }
 
-func NewDefaultHTTPGunConfig() HTTPGunConfig {
-	return HTTPGunConfig{
+func NewDefaultClientGunConfig() ClientGunConfig {
+	return ClientGunConfig{
 		SSL: false,
 	}
 }

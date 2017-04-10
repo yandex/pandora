@@ -7,8 +7,6 @@ package register
 
 import (
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate"
-	"github.com/yandex/pandora/core/limiter"
 	"github.com/yandex/pandora/core/plugin"
 )
 
@@ -22,7 +20,7 @@ func Provider(name string, newProvider interface{}, newDefaultConfigOptional ...
 }
 
 func Limiter(name string, newLimiter interface{}, newDefaultConfigOptional ...interface{}) {
-	var ptr *limiter.Limiter
+	var ptr *core.Schedule
 	RegisterPtr(ptr, name, newLimiter, newDefaultConfigOptional...)
 }
 
@@ -31,7 +29,7 @@ func Gun(name string, newGun interface{}, newDefaultConfigOptional ...interface{
 	RegisterPtr(ptr, name, newGun, newDefaultConfigOptional...)
 }
 
-func ResultListener(name string, newResultListener interface{}, newDefaultConfigOptional ...interface{}) {
-	var ptr *aggregate.ResultListener
+func Aggregator(name string, newResultListener interface{}, newDefaultConfigOptional ...interface{}) {
+	var ptr *core.Aggregator
 	RegisterPtr(ptr, name, newResultListener, newDefaultConfigOptional...)
 }

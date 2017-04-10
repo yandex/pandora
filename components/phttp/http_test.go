@@ -11,19 +11,14 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
-
 	"github.com/yandex/pandora/components/phttp/mocks"
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate"
+	"github.com/yandex/pandora/core/aggregate/netsample"
 	"github.com/yandex/pandora/core/config"
 )
 
 var _ = Describe("Base", func() {
 	It("GunClientConfig decode", func() {
-		conf := NewDefaultHTTPGunClientConfig()
+		conf := NewDefaultHTTPGunConfig()
 		data := map[interface{}]interface{}{
 			"target": "test-trbo01e.haze.yandex.net:3000",
 		}
@@ -43,11 +38,11 @@ var _ = Describe("Base", func() {
 			actualReq = req
 		}))
 		defer server.Close()
-		conf := NewDefaultHTTPGunClientConfig()
+		conf := NewDefaultHTTPGunConfig()
 		conf.Gun.Target = strings.TrimPrefix(server.URL, "http://")
-		results := core.NewResults(1)
-		httpGun := NewHTTPGunClient(conf)
-		httpGun.BindResultsTo(results)
+		results := &netsample.TestAggregator{}
+		httpGun := NewHTTPGun(conf)
+		httpGun.Bind(results)
 
 		am := newTestAmmo(expectedReq)
 		err = httpGun.Shoot(context.Background(), am)
@@ -66,7 +61,7 @@ var _ = Describe("Base", func() {
 })
 
 func newTestAmmo(req *http.Request) Ammo {
-	ammo := &ammomocks.Ammo{}
-	ammo.On("Request").Return(req, aggregate.AcquireSample("REQUEST"))
+	ammo := &ammomock.Ammo{}
+	ammo.On("Request").Return(req, netsample.Acquire("REQUEST"))
 	return ammo
 }

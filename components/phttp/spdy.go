@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/amahi/spdy"
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate"
+
+	"github.com/yandex/pandora/core/aggregate/netsample"
 	"github.com/yandex/pandora/core/config"
 )
 
@@ -66,7 +66,7 @@ type SPDYGun struct {
 	client     *spdy.Client // Lazy set in connect.
 }
 
-var _ core.Gun = (*SPDYGun)(nil)
+var _ Gun = (*SPDYGun)(nil)
 
 func (g *SPDYGun) Do(req *http.Request) (*http.Response, error) {
 	req.Method = "https"
@@ -110,13 +110,13 @@ func (g *SPDYGun) connect(ctx context.Context) (err error) {
 		g.clientLock.Unlock()
 	}()
 	g.startPingOnce.Do(g.startAutoPing)
-	ss := aggregate.AcquireSample("CONNECT")
+	ss := netsample.Acquire("CONNECT")
 	// TODO: metrics
 	defer func() {
 		if err != nil {
 			ss.SetErr(err)
 		}
-		g.Results <- ss
+		g.Aggregator.Release(ss)
 	}()
 	tlsConfig := tls.Config{
 		InsecureSkipVerify: true,
@@ -148,7 +148,7 @@ func (g *SPDYGun) Ping() {
 		// Not connected yet. Ignore.
 		return
 	}
-	ss := aggregate.AcquireSample("PING")
+	ss := netsample.Acquire("PING")
 	pinged, err := client.Ping(deadline.Sub(time.Now()))
 	if err != nil {
 		log.Printf("Client: ping: %s\n", err)
@@ -160,7 +160,7 @@ func (g *SPDYGun) Ping() {
 	} else {
 		ss.SetErr(context.DeadlineExceeded)
 	}
-	g.Results <- ss
+	g.Aggregator.Release(ss)
 	if err != nil {
 		g.connect(context.Background())
 	}

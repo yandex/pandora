@@ -1,3 +1,8 @@
+// Copyright (c) 2017 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MPL 2.0
+// license that can be found in the LICENSE file.
+// Author: Vladimir Skipor <skipor@yandex-team.ru>
+
 package phttp
 
 import (
@@ -10,8 +15,6 @@ import (
 	"net/url"
 
 	"github.com/facebookgo/stackerr"
-
-	"github.com/yandex/pandora/core"
 )
 
 type ConnectGunConfig struct {
@@ -41,7 +44,7 @@ type ConnectGun struct {
 	client Client
 }
 
-var _ core.Gun = (*ConnectGun)(nil)
+var _ Gun = (*ConnectGun)(nil)
 
 func (g *ConnectGun) Do(req *http.Request) (*http.Response, error) {
 	req.URL.Scheme = g.scheme
