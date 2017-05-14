@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -180,7 +181,7 @@ var _ = Describe("provider decode", func() {
 		It("ok", func() {
 			cancel()
 			expectedStartErr = context.Canceled
-			Eventually(provider.Sink).Should(BeClosed())
+			Eventually(provider.Sink, time.Second, time.Millisecond).Should(BeClosed())
 		})
 	})
 
