@@ -1,47 +1,29 @@
+// Copyright (c) 2017 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MPL 2.0
+// license that can be found in the LICENSE file.
+// Author: Vladimir Skipor <skipor@yandex-team.ru>
+
 package main
 
 import (
 	"github.com/spf13/afero"
 
-	"github.com/yandex/pandora/aggregate"
-	"github.com/yandex/pandora/ammo"
-	"github.com/yandex/pandora/ammo/jsonline"
-	"github.com/yandex/pandora/ammo/uri"
 	"github.com/yandex/pandora/cli"
-	"github.com/yandex/pandora/gun"
-	"github.com/yandex/pandora/gun/phttp"
-	"github.com/yandex/pandora/limiter"
-	"github.com/yandex/pandora/register"
+	"github.com/yandex/pandora/components/example/import"
+	"github.com/yandex/pandora/components/phttp/import"
+	"github.com/yandex/pandora/core/import"
 )
 
-func init() {
-	// TODO(skipor): move all registrations to different package,
-	// TODO(skipor): make and register NewDefaultConfig funcs.
-
-	fs := afero.NewReadOnlyFs(afero.NewOsFs())
-
-	register.ResultListener("log/simple", aggregate.NewLoggingResultListener)
-	register.ResultListener("log/phout", aggregate.GetPhoutResultListener)
-
-	register.Provider("jsonline", func(conf jsonline.Config) ammo.Provider {
-		return jsonline.NewProvider(fs, conf)
-	})
-	register.Provider("uri", func(conf uri.Config) ammo.Provider {
-		return uri.NewProvider(fs, conf)
-	})
-	register.Provider("dummy/log", ammo.NewLogProvider)
-
-	register.Gun("http", phttp.NewHTTPGunClient, phttp.NewDefaultHTTPGunClientConfig)
-	register.Gun("connect", phttp.NewConnectGun, phttp.NewDefaultConnectGunConfig)
-	register.Gun("spdy", phttp.NewSPDYGun)
-	register.Gun("log", gun.NewLog)
-
-	register.Limiter("periodic", limiter.NewPeriodic)
-	register.Limiter("composite", limiter.NewComposite)
-	register.Limiter("unlimited", limiter.NewUnlimited)
-	register.Limiter("linear", limiter.NewLinear)
-}
-
 func main() {
+	// CLI don't know anything about components initially.
+	// All extpoints constructors and default configurations should be registered, before CLI run.
+	fs := afero.NewOsFs()
+	core.Import(fs)
+
+	// Components should not write anything to files.
+	readOnlyFs := afero.NewReadOnlyFs(fs)
+	example.Import()
+	phttp.Import(readOnlyFs)
+
 	cli.Run()
 }
