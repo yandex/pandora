@@ -7,12 +7,12 @@ pools:
       limit: 100
     result:
       type: log
-    rps-schedule:
+    rps:
       type: periodic
       batch: 2
       max: 3
       period: 1s
-    startup-schedule:
+    startup:
       type: periodic
       batch: 1
       max: 5

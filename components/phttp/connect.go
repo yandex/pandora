@@ -20,7 +20,7 @@ import (
 type ConnectGunConfig struct {
 	Target     string       `validate:"endpoint,required"`
 	ConnectSSL bool         `config:"connect-ssl"` // Defines if tunnel encrypted.
-	SSL        bool         // As in Ammo gun, defines scheme for http requests.
+	SSL        bool         // As in HTTP gun, defines scheme for http requests.
 	Client     ClientConfig `config:",squash"`
 }
 

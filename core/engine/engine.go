@@ -43,13 +43,13 @@ type Config struct {
 // unique Id and SharedLimits = true.
 
 type InstancePool struct {
-	Id                 string
-	Provider           core.Provider                 `config:"ammo"`
-	Aggregator         core.Aggregator               `config:"result"`
-	NewGun             func() (core.Gun, error)      `config:"gun"`
-	IndividualSchedule bool                          `config:"individual-schedule"`
-	StartupSchedule    core.Schedule                 `config:"startup-schedule"`
-	NewRPSSchedule     func() (core.Schedule, error) `config:"rps-schedule"`
+	Id              string
+	Provider        core.Provider                 `config:"ammo"`
+	Aggregator      core.Aggregator               `config:"result"`
+	NewGun          func() (core.Gun, error)      `config:"gun"`
+	RPSPerInstance  bool                          `config:"rps-per-instance"`
+	NewRPSSchedule  func() (core.Schedule, error) `config:"rps"`
+	StartupSchedule core.Schedule                 `config:"startup"`
 }
 
 type Instance struct {
@@ -79,7 +79,7 @@ func (u *Instance) Start(ctx context.Context) error {
 		}
 		_, more = <-control
 		if !more {
-			log.Println("Schedule ended.")
+			log.Println("Schedule ended")
 			break
 		}
 		evRequests.Add(1)
@@ -107,7 +107,7 @@ func (p *InstancePool) Start(ctx context.Context) error {
 	}
 	var sharedSchedule core.Schedule
 
-	if !p.IndividualSchedule {
+	if !p.RPSPerInstance {
 		var err error
 		sharedSchedule, err = p.NewRPSSchedule()
 		if err != nil {
@@ -122,7 +122,7 @@ func (p *InstancePool) Start(ctx context.Context) error {
 
 	for range p.StartupSchedule.Control() {
 		var l core.Schedule
-		if !p.IndividualSchedule {
+		if !p.RPSPerInstance {
 			l = sharedSchedule
 		} else {
 			var err error
@@ -143,7 +143,7 @@ func (p *InstancePool) Start(ctx context.Context) error {
 			Limiter:    l,
 			Gun:        g,
 		}
-		if p.IndividualSchedule {
+		if p.RPSPerInstance {
 			utilsPromises = append(utilsPromises, utils.PromiseCtx(utilCtx, l.Start))
 		}
 		userPromises = append(userPromises, utils.PromiseCtx(ctx, u.Start))
