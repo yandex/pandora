@@ -13,6 +13,8 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/yandex/pandora/components/phttp/mocks"

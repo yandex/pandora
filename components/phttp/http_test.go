@@ -11,6 +11,10 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+
 	"github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core/aggregate/netsample"
 	"github.com/yandex/pandora/core/config"

@@ -8,6 +8,7 @@ package phttp
 import (
 	"github.com/spf13/afero"
 
+	. "github.com/yandex/pandora/components/phttp"
 	"github.com/yandex/pandora/components/phttp/ammo/simple/jsonline"
 	"github.com/yandex/pandora/components/phttp/ammo/simple/uri"
 	"github.com/yandex/pandora/core"

@@ -93,7 +93,7 @@ func newConnectDialer(target string, connectSSL bool, dialer Dialer) Dialer {
 		req := &http.Request{
 			Method:     "CONNECT",
 			URL:        &url.URL{},
-			Proto:      "Ammo/1.1",
+			Proto:      "HTTP/1.1",
 			ProtoMajor: 1,
 			ProtoMinor: 1,
 			Header:     make(http.Header),
@@ -127,7 +127,7 @@ func newConnectDialer(target string, connectSSL bool, dialer Dialer) Dialer {
 		}
 		// No need to close body.
 		if r.Buffered() != 0 {
-			// Already receive something non Ammo from proxy or dialed server.
+			// Already receive something non HTTP from proxy or dialed server.
 			// Anyway it is incorrect situation.
 			peek, _ := r.Peek(r.Buffered())
 			err = stackerr.Newf("Unexpected extra data after connect: %q", peek)

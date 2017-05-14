@@ -14,6 +14,9 @@ import (
 	"net/url"
 	"strings"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/yandex/pandora/core/aggregate/netsample"
 )
 
