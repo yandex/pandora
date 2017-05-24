@@ -30,3 +30,5 @@ _testmain.go
 pandora.iml
 *.log
 *.out
+
+vendor/
