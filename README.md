@@ -1,5 +1,4 @@
 # Pandora
-# TODO (skipor): update readme for version 0.2
 
 [![Join the chat at https://gitter.im/yandex/pandora](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/yandex/pandora?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/yandex/pandora.svg)](https://travis-ci.org/yandex/pandora)
@@ -7,22 +6,30 @@
 
 A load generator in Go language.
 
-## Install
-Compile a binary with go tool (use go >= 1.7):
+## How to start
+
+### Binary releases
+[Download](https://github.com/yandex/pandora/releases) available.
+
+### Building from sources
+We use [glide](https://glide.sh) for package management. Install it before compiling Pandora
+Compile a binary with go tool (use go >= 1.8):
 ```bash
 go get github.com/yandex/pandora
+glide install github.com/yandex/pandora
+go build github.com/yandex/pandora
 ```
 
-There are also [binary releases](https://github.com/yandex/pandora/releases) available.
-
-Run this binary with your config (see examples at [examples](https://github.com/yandex/pandora/tree/master/cli/config)):
+### Running your tests
+Run the binary with your config (see config examples at [examples](https://github.com/yandex/pandora/tree/master/cli/config)):
 
 ```bash
 # $GOBIN should be added to $PATH
 pandora myconfig.yaml
 ```
-// TODO (skipor): update yandex tank docs after 0.2 release
-Or let [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/configuration.html#pandora) make it easy for you.
+
+Or use Pandora with [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/configuration.html#pandora) and
+[Overload](https://overload.yandex.net).
 
 
 ## Plugins
@@ -42,33 +49,47 @@ limiter.Limiter
 ### Architectural scheme
 
 See architectural scheme source in ```docs/architecture.graphml```. It was created with
-[YeD](https://www.yworks.com/en/products/yfiles/yed/) editor, so you’ll probably
-need it to open the file.
+[YeD](https://www.yworks.com/en/products/yfiles/yed/) editor.
 
 ![Architectural scheme](/docs/architecture.png)
 
-Pandora is made of components. Components talk to each other over the channels. There are different types of components.
+Pandora is a set of components talking to each other through the channels. There are different types of components.
 
 ### Component types
 
-#### Ammo provider and decoder
+#### Ammo Provider
 
-Ammo decoder knows how to make an ammo object from an ammo file or other external resource. Ammo provider uses a decoder
-to decode ammo and passes ammo objects to the Users.
+Ammo Provider knows how to make an ammo object from an ammo file or other external resource. Instances get ammo objects
+from Ammo Provider.
 
-#### User pool
+#### Instances Pool
 
-User pool controls the creation of Users. All users from one user pool will get ammo from one ammo provider. User creation
-schedule is controlled with Startup Limiter. All users from one user pool will also have guns of the same type.
+Instances Pool manages the creation of Instances. You can think of one Instance as a single user that sends requests to
+a server sequentially. All Instances from one Instances Pool get their ammo from one Ammo Provider. Instances creation
+times are controlled by Startup Scheduler. All Instances from one Instances Pool also have Guns of the same type.
 
-#### Limiters
+#### Scheduler
 
-Limiters are objects that will put messages to its underlying channel according to a schedule. User creation, shooting or
-other processes thus can be controlled by a Limiter.
+Scheduler controls other events' times by pushing messages to its underlying channel according to the Schedule.
+It can control Instances startup times, RPS amount (requests per second) or other processes.
 
-#### Users and Guns
-User takes an ammo, waits for a limiter tick and then shoots with a Gun it has. Guns are the tools to send a request to your
-service and measure the parameters of the response.
+By combining two types of Schedulers, RPS Scheduler and Instance Startup Scheduler, you can simulate different types of load.
+Instace Startup Scheduler controls the level of parallelism and RPS Scheduler controls throughput.
 
-#### Result Listener
-Result listener's task is to collect measured samples and save them somewhere.
+If you set RPS Scheduler to 'unlimited' and then gradually raise the number of Instances in your system by using Instance
+Startup Scheduler, you'll be able to study the [scalability](http://www.perfdynamics.com/Manifesto/USLscalability.html)
+of your service. 
+
+If you set Instances count to a big, unchanged value (you can estimate the needed amount by using
+[Little's Law](https://en.wikipedia.org/wiki/Little%27s_law)) and then gradually raise the RPS by using RPS Scheduler,
+you'll be able to simulate Internet and push your service to its limits.
+
+You can also combine two methods mentioned above. And, one more thing, RPS Scheduler can control a whole Instances Pool or
+each Instance individually.
+
+#### Instances and Guns
+Instances takes an ammo, waits for a Scheduler tick and then shoots with a Gun it has. Gun is a tool that sends
+a request to your service and measures the parameters (time, error codes, etc.) of the response.
+
+#### Aggregator
+Aggregator collects measured samples and saves them somewhere.
