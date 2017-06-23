@@ -11,6 +11,7 @@ import:
   - fflib/v1
 - package: github.com/spf13/viper
 - package: gopkg.in/bluesuncorp/validator.v8
+- package: github.com/uber-go/atomic
 testImport:
 - package: github.com/SlyMarbo/spdy
 - package: github.com/stretchr/testify
