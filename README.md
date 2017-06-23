@@ -32,16 +32,45 @@ Or use Pandora with [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/co
 [Overload](https://overload.yandex.net).
 
 
-## Plugins
+## Example
 
-// TODO (skipor)
+`load.yaml`:
 
+```yaml
+pools:
+  - id: HTTP pool                    # Pool name
+    gun:
+      type: http                     # Gun type
+      target: example.com:80         # Gun target
+    ammo:
+      type: uri                      # Ammo format                        
+      file: ./ammo.uri               # Ammo File
+    result:
+      type: phout                    # Report format (phout is for Yandex.Tank)
+      destination: ./http_phout.log  # Report file name
 
-```go
-core.Provider
-core.Gun
-aggregate.ResultListener
-limiter.Limiter
+    rps:                             # RPS Schedule
+      type: periodic                 # shoot periodically
+      period: 0.1s                   # ten batches each second
+      max: 30                        # thirty batches total
+      batch: 2                       # in batches of two shoots
+
+    startup:                         # Startup Schedule
+      type: periodic                 # start Instances periodically
+      period: 0.5s                   # every 0.5 seconds
+      batch: 1                       # one Instance at a time
+      max: 5                         # five Instances total
+```
+
+`ammo.uri`:
+
+```
+/my/first/url
+/my/second/url
+```
+
+```
+pandora load.yaml
 ```
 
 ## Basic concepts
