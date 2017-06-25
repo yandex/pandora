@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"time"
 )
 
 // TODO(skipor): doc
@@ -37,7 +38,15 @@ type Gun interface {
 
 //go:generate mockery -name=Schedule -case=underscore -outpkg=coremock
 
+// Schedule represents started operation schedule. Schedule is goroutine safe.
 type Schedule interface {
-	Start(context.Context) error
-	Control() <-chan struct{}
+	// Start starts schedule at passed time.
+	// Start may be called once, before any Next call.
+	// If start is not called, schedule started at first Next call.
+	Start(startAt time.Time)
+	// Next withdraw one operation token and returns next operation time and
+	// ok equal true, when schedule is not finished.
+	// If there is no operation tokens left, Next returns Schedule
+	// finish time and ok equals false.
+	Next() (ts time.Time, ok bool)
 }

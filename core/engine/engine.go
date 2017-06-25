@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/coreutil"
 	"github.com/yandex/pandora/lib/utils"
 )
 
@@ -56,36 +58,34 @@ type Instance struct {
 	Id         string
 	Provider   core.Provider
 	Aggregator core.Aggregator
-	Limiter    core.Schedule
+	Schedule   core.Schedule
 	Gun        core.Gun
 }
 
-func (u *Instance) Start(ctx context.Context) error {
+func (i *Instance) Start(ctx context.Context) error {
 	// TODO(skipor): debug log about start and finish
-	//log.Printf("Starting user: %s\n", u.Id)
+	//log.Printf("Starting user: %s\n", i.Id)
 	evUsersStarted.Add(1)
 	defer func() {
-		//log.Printf("Exit user: %s\n", u.Id)
+		//log.Printf("Exit user: %s\n", i.Id)
 		evUsersFinished.Add(1)
 	}()
-	control := u.Limiter.Control()
-	u.Gun.Bind(u.Aggregator)
-	for ctx.Err() == nil {
+	i.Gun.Bind(i.Aggregator)
+	nextShoot := coreutil.NewWaiter(i.Schedule, ctx)
+	for {
 		// Acquire should unblock in case of context cancel.
-		ammo, more := u.Provider.Acquire()
+		ammo, more := i.Provider.Acquire()
 		if !more {
 			log.Println("Ammo ended")
 			break
 		}
-		_, more = <-control
-		if !more {
-			log.Println("Schedule ended")
+		if !nextShoot.Wait() {
 			break
 		}
 		evRequests.Add(1)
-		u.Gun.Shoot(ctx, ammo)
+		i.Gun.Shoot(ctx, ammo)
 		evResponses.Add(1)
-		u.Provider.Release(ammo)
+		i.Provider.Release(ammo)
 	}
 	return ctx.Err()
 }
@@ -93,58 +93,42 @@ func (u *Instance) Start(ctx context.Context) error {
 func (p *InstancePool) Start(ctx context.Context) error {
 	// TODO(skipor): info log about start and finish
 
-	// TODO(skipor): check that gun is compatible with ammo provider and
-	// result listener before start, and print nice error message.
-
 	utilCtx, utilCancel := context.WithCancel(ctx)
 	defer utilCancel()
 
+	start := time.Now()
+	p.StartupSchedule.Start(start)
 	userPromises := utils.Promises{}
 	utilsPromises := utils.Promises{
 		utils.PromiseCtx(utilCtx, p.Provider.Start),
 		utils.PromiseCtx(utilCtx, p.Aggregator.Start),
-		utils.PromiseCtx(utilCtx, p.StartupSchedule.Start),
 	}
-	var sharedSchedule core.Schedule
-
-	if !p.RPSPerInstance {
-		var err error
-		sharedSchedule, err = p.NewRPSSchedule()
-		if err != nil {
-			return fmt.Errorf("could not make a user limiter from config due to %s", err)
+	newInstanceSchedule := func() func() (core.Schedule, error) {
+		if p.RPSPerInstance {
+			return p.NewRPSSchedule
 		}
-		// Starting shared schedule.
-		// This may cause spike load in the beginning of a test if it takes time
-		// to initialize a user, because we don't wait for them to initialize in
-		// case of shared limiter and there might be some ticks accumulated
-		utilsPromises = append(utilsPromises, utils.PromiseCtx(utilCtx, sharedSchedule.Start))
-	}
-
-	for range p.StartupSchedule.Control() {
-		var l core.Schedule
-		if !p.RPSPerInstance {
-			l = sharedSchedule
-		} else {
-			var err error
-			l, err = p.NewRPSSchedule()
-			if err != nil {
-				return fmt.Errorf("could not make a user limiter from config due to %s", err)
-			}
+		sharedSchedule, err := p.NewRPSSchedule()
+		return func() (core.Schedule, error) {
+			return sharedSchedule, err
 		}
-		g, err := p.NewGun()
+	}()
+	startInstance := coreutil.NewWaiter(p.StartupSchedule, ctx)
+	for startInstance.Wait() {
+		shed, err := newInstanceSchedule()
 		if err != nil {
-			return fmt.Errorf("could not make a gun from config due to %s", err)
+			return fmt.Errorf("schedule create failed: %s", err)
+		}
+		gun, err := p.NewGun()
+		if err != nil {
+			return fmt.Errorf("gun create failed: %s", err)
 		}
 		// TODO(skipor): set unique user name
 		u := &Instance{
 			Id:         p.Id,
 			Provider:   p.Provider,
 			Aggregator: p.Aggregator,
-			Limiter:    l,
-			Gun:        g,
-		}
-		if p.RPSPerInstance {
-			utilsPromises = append(utilsPromises, utils.PromiseCtx(utilCtx, l.Start))
+			Schedule:   shed,
+			Gun:        gun,
 		}
 		userPromises = append(userPromises, utils.PromiseCtx(ctx, u.Start))
 	}
