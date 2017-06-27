@@ -24,7 +24,7 @@ func TestLinearLimiter(t *testing.T) {
 	limiter := NewLinear(LinearConfig{
 		StartRps: 5,
 		EndRps:   6,
-		Period:   time.Second,
+		Duration: time.Second,
 	})
 	promise := utils.PromiseCtx(ctx, limiter.Start)
 
@@ -57,7 +57,7 @@ func TestLinearLimiterFromConfig(t *testing.T) {
 	defer cancel()
 
 	limiter := NewLinear(LinearConfig{
-		Period:   46 * time.Second / 100,
+		Duration: 46 * time.Second / 100,
 		StartRps: 10.0,
 		EndRps:   10.1,
 	})

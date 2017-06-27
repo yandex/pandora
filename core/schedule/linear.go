@@ -18,7 +18,7 @@ func NewLinear(conf LinearConfig) core.Schedule {
 }
 
 type LinearConfig struct {
-	Period   time.Duration `validate:"min-time=1ms"`
+	Duration time.Duration `validate:"min-time=1ms"`
 	StartRps float64       `config:"start-rps" validate:"min=0"`
 	EndRps   float64       `config:"end-rps" validate:"min=0"`
 }
@@ -33,9 +33,9 @@ var _ core.Schedule = (*linear)(nil)
 
 func (l *linear) Start(ctx context.Context) error {
 	defer close(l.control)
-	a := (l.EndRps - l.StartRps) / l.Period.Seconds() / 2.0
+	a := (l.EndRps - l.StartRps) / l.Duration.Seconds() / 2.0
 	b := l.StartRps
-	maxCount := a*math.Pow(l.Period.Seconds(), 2) + b*l.Period.Seconds()
+	maxCount := a*math.Pow(l.Duration.Seconds(), 2) + b*l.Duration.Seconds()
 	startTime := time.Now()
 loop:
 	for n := 0.0; n < maxCount; n += 1.0 {
@@ -60,7 +60,7 @@ loop:
 
 	}
 	// now wait until the end of specified period
-	waitPeriod := l.Period.Seconds() - time.Since(startTime).Seconds()
+	waitPeriod := l.Duration.Seconds() - time.Since(startTime).Seconds()
 	if waitPeriod > 0 {
 		select {
 		case <-time.After(time.Duration(waitPeriod*1e9) * time.Nanosecond):

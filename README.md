@@ -127,6 +127,27 @@ you'll be able to simulate Internet and push your service to its limits.
 You can also combine two methods mentioned above. And, one more thing, RPS Scheduler can control a whole Instances Pool or
 each Instance individually.
 
+##### Schedule types
+
+**periodic**
+
+Shoot in batches with fixed intervals. Parameters:
+    * `period` – interval between batches, example: `0.1s` – 10 batches in a second
+    * `batch` – batch size, default: `1`
+    * `max` – total number of batches, default: `unlimited`
+    
+**linear**
+
+RPS (requests per second) will grow linearly during test.
+
+    * `duration` – schedule part duration
+    * `start-rps` – RPS on the left side of the schedule
+    * `end-rps` – RPS on the right side of the schedule
+    
+**unlimited**
+
+Produces ticks without any limits.
+
 #### Instances and Guns
 Instances takes an ammo, waits for a Scheduler tick and then shoots with a Gun it has. Gun is a tool that sends
 a request to your service and measures the parameters (time, error codes, etc.) of the response.
