@@ -53,7 +53,7 @@ pools:
       file: ./ammo.uri               # Ammo File
     result:
       type: phout                    # Report format (phout is for Yandex.Tank)
-      destination: ./http_phout.log  # Report file name
+      destination: ./phout.log  # Report file name
 
     rps:                             # RPS Schedule
       type: periodic                 # shoot periodically
