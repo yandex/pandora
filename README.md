@@ -132,17 +132,18 @@ each Instance individually.
 **periodic**
 
 Shoot in batches with fixed intervals. Parameters:
-    * `period` – interval between batches, example: `0.1s` – 10 batches in a second
-    * `batch` – batch size, default: `1`
-    * `max` – total number of batches, default: `unlimited`
+
+* `period` – interval between batches, example: `0.1s` – 10 batches in a second
+* `batch` – batch size, default: `1`
+* `max` – total number of batches, default: `unlimited`
     
 **linear**
 
 RPS (requests per second) will grow linearly during test.
 
-    * `duration` – schedule part duration
-    * `start-rps` – RPS on the left side of the schedule
-    * `end-rps` – RPS on the right side of the schedule
+* `duration` – schedule part duration
+* `start-rps` – RPS on the left side of the schedule
+* `end-rps` – RPS on the right side of the schedule
     
 **unlimited**
 
