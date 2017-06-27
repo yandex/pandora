@@ -81,7 +81,7 @@ Run your tests:
 pandora load.yaml
 ```
 
-The results are in `http_phout.log`. Use [Yandex.Tank](http://yandextank.readthedocs.io/en/latest/core_and_modules.html#pandora)
+The results are in `phout.log`. Use [Yandex.Tank](http://yandextank.readthedocs.io/en/latest/core_and_modules.html#pandora)
 and [Overload](https://overload.yandex.net) to plot them.
 
 ## Basic concepts
