@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/facebookgo/stackerr"
@@ -49,7 +50,15 @@ func (d *decoder) Decode(line []byte) error {
 
 func (d *decoder) decodeURI(line []byte) error {
 	// OPTIMIZE: reuse *http.Request, http.Header. Benchmark both variants.
-	req, err := http.NewRequest("GET", string(line), nil)
+	parts := strings.SplitN(string(line), " ", 2)
+	url := parts[0]
+	var tag string
+	if len(parts) > 1 {
+		tag = parts[1]
+	} else {
+		tag = "__EMPTY__"
+	}
+	req, err := http.NewRequest("GET", string(url), nil)
 	if err != nil {
 		return stackerr.Newf("uri decode error: ", err)
 	}
@@ -63,7 +72,7 @@ func (d *decoder) decodeURI(line []byte) error {
 		}
 	}
 	sh := d.pool.Get().(*simple.Ammo)
-	sh.Reset(req, "REQUEST")
+	sh.Reset(req, tag)
 	select {
 	case d.sink <- sh:
 		d.ammoNum++

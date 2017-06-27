@@ -79,7 +79,33 @@ var _ = Describe("Decoder", func() {
 		header.Set("Host", host)
 		Expect(decoder.header).To(Equal(header))
 		Expect(decoder.ammoNum).To(Equal(1))
-		Expect(sample.Tags()).To(Equal("REQUEST"))
+		Expect(sample.Tags()).To(Equal("__EMPTY__"))
+	})
+	It("uri and tag", func() {
+		header := http.Header{"a": []string{"b"}, "c": []string{"d"}}
+		for k, v := range header {
+			decoder.header[k] = v
+		}
+		const host = "example.com"
+		decoder.header.Set("Host", host)
+		line := "/some/path some tag"
+		Decode(line)
+		var am core.Ammo
+		Expect(ammoCh).To(Receive(&am))
+		sh, ok := am.(*simple.Ammo)
+		Expect(ok).To(BeTrue())
+		req, sample := sh.Request()
+		Expect(*req.URL).To(MatchFields(IgnoreExtras, Fields{
+			"Path":   Equal("/some/path"),
+			"Host":   Equal(host),
+			"Scheme": BeEmpty(),
+		}))
+		Expect(req.Host).To(Equal(host))
+		Expect(req.Header).To(Equal(header))
+		header.Set("Host", host)
+		Expect(decoder.header).To(Equal(header))
+		Expect(decoder.ammoNum).To(Equal(1))
+		Expect(sample.Tags()).To(Equal("some tag"))
 	})
 	Context("header", func() {
 		AfterEach(func() {
