@@ -49,6 +49,9 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		scanner := bufio.NewScanner(ammoFile)
 		for line := 1; scanner.Scan() && (p.Limit == 0 || p.decoder.ammoNum < p.Limit); line++ {
 			data := scanner.Bytes()
+			if len(data) == 0 {
+				continue
+			}
 			err := p.decoder.Decode(data)
 			if err != nil {
 				if err == ctx.Err() {

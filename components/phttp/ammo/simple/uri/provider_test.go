@@ -23,25 +23,33 @@ const testFileData = `/0
 /2
 [A:]
 [Host : other.net]
-/3`
+
+/3
+/4 some tag
+`
 
 var testData = []ammoData{
-	{"", "/0", http.Header{}},
-	{"", "/1", http.Header{"A": []string{"b"}}},
+	{"", "/0", http.Header{}, "__EMPTY__"},
+	{"", "/1", http.Header{"A": []string{"b"}}, "__EMPTY__"},
 	{"example.com", "/2", http.Header{
 		"A": []string{"b"},
 		"C": []string{"d"},
-	}},
+	}, "__EMPTY__"},
 	{"other.net", "/3", http.Header{
 		"A": []string{""},
 		"C": []string{"d"},
-	}},
+	}, "__EMPTY__"},
+	{"other.net", "/4", http.Header{
+		"A": []string{""},
+		"C": []string{"d"},
+	}, "some tag"},
 }
 
 type ammoData struct {
 	host   string
 	path   string
 	header http.Header
+	tag    string
 }
 
 var testFs = func() afero.Fs {
@@ -142,7 +150,7 @@ var _ = Describe("provider decode", func() {
 				})),
 				"Header": Equal(expectedData.header),
 			}))
-			Expect(ss.Tags()).To(Equal("REQUEST"))
+			Expect(ss.Tags()).To(Equal(expectedData.tag))
 		}
 	})
 
