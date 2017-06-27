@@ -16,8 +16,14 @@ We use [glide](https://glide.sh) for package management. Install it before compi
 Compile a binary with go tool (use go >= 1.8):
 ```bash
 go get github.com/yandex/pandora
-glide install github.com/yandex/pandora
-go build github.com/yandex/pandora
+cd $GOPATH/src/github.com/yandex/pandora
+glide install
+go build
+```
+
+You can also cross-compile for other arch/os:
+```
+GOOS=linux GOARCH=amd64 go build
 ```
 
 ### Running your tests
