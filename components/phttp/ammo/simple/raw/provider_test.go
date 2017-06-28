@@ -139,7 +139,8 @@ var _ = Describe("provider decode", func() {
 					//"Host":   Equal(expectedData.host),
 					"Path": Equal(expectedData.path),
 				})),
-				"Header": Equal(expectedData.header),
+				"Header":     Equal(expectedData.header),
+				"RequestURI": Equal(""),
 			}))
 			Expect(ss.Tags()).To(Equal(expectedData.tag))
 			var bout bytes.Buffer

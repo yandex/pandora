@@ -20,5 +20,7 @@ func decodeHeader(headerString []byte) (reqSize int, tag string, err error) {
 }
 
 func decodeRequest(reqString []byte) (req *http.Request, err error) {
-	return http.ReadRequest(bufio.NewReader(bytes.NewReader(reqString)))
+	req, err = http.ReadRequest(bufio.NewReader(bytes.NewReader(reqString)))
+	req.RequestURI = ""
+	return
 }

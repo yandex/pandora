@@ -35,6 +35,7 @@ var _ = Describe("Decoder", func() {
 			"Path":   Equal("/some/path"),
 			"Scheme": BeEmpty(),
 		}))
+		Expect(req.RequestURI).To(Equal(""))
 		Expect(req.Host).To(Equal("foo.com"))
 		Expect(req.Header).To(Equal(http.Header{"Connection": []string{"close"}}))
 	})
@@ -54,6 +55,7 @@ var _ = Describe("Decoder", func() {
 			"Path":   Equal("/some/path"),
 			"Scheme": BeEmpty(),
 		}))
+		Expect(req.RequestURI).To(Equal(""))
 		Expect(req.Host).To(Equal("foo.com"))
 		Expect(req.Header).To(Equal(http.Header{"Foo": []string{"bar"}}))
 		var bout bytes.Buffer
