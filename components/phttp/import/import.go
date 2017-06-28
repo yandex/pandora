@@ -10,6 +10,7 @@ import (
 
 	. "github.com/yandex/pandora/components/phttp"
 	"github.com/yandex/pandora/components/phttp/ammo/simple/jsonline"
+	"github.com/yandex/pandora/components/phttp/ammo/simple/raw"
 	"github.com/yandex/pandora/components/phttp/ammo/simple/uri"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/register"
@@ -22,6 +23,10 @@ func Import(fs afero.Fs) {
 
 	register.Provider("uri", func(conf uri.Config) core.Provider {
 		return uri.NewProvider(fs, conf)
+	})
+
+	register.Provider("raw", func(conf raw.Config) core.Provider {
+		return raw.NewProvider(fs, conf)
 	})
 
 	register.Gun("http", func(conf HTTPGunConfig) core.Gun {
