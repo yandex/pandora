@@ -13,14 +13,14 @@ import (
 var _ = Describe("Decoder", func() {
 	It("should parse header with tag", func() {
 		raw := "123 tag"
-		reqSize, tag, err := DecodeHeader([]byte(raw))
+		reqSize, tag, err := decodeHeader([]byte(raw))
 		Expect(err).To(BeNil())
 		Expect(reqSize).To(Equal(123))
 		Expect(tag).To(Equal("tag"))
 	})
 	It("should parse header without tag", func() {
 		raw := "123"
-		reqSize, tag, err := DecodeHeader([]byte(raw))
+		reqSize, tag, err := decodeHeader([]byte(raw))
 		Expect(err).To(BeNil())
 		Expect(reqSize).To(Equal(123))
 		Expect(tag).To(Equal("__EMPTY__"))
@@ -29,7 +29,7 @@ var _ = Describe("Decoder", func() {
 		raw := "GET /some/path HTTP/1.0\r\n" +
 			"Host: foo.com\r\n" +
 			"Connection: close\r\n\r\n"
-		req, err := DecodeRequest([]byte(raw))
+		req, err := decodeRequest([]byte(raw))
 		Expect(err).To(BeNil())
 		Expect(*req.URL).To(MatchFields(IgnoreExtras, Fields{
 			"Path":   Equal("/some/path"),
@@ -48,7 +48,7 @@ var _ = Describe("Decoder", func() {
 			"3\r\nbar\r\n" +
 			"0\r\n" +
 			"\r\n"
-		req, err := DecodeRequest([]byte(raw))
+		req, err := decodeRequest([]byte(raw))
 		Expect(err).To(BeNil())
 		Expect(*req.URL).To(MatchFields(IgnoreExtras, Fields{
 			"Path":   Equal("/some/path"),

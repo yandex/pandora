@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"time"
 
-
 	"github.com/asaskevich/govalidator"
 	"github.com/c2h5oh/datasize"
 	"gopkg.in/go-playground/validator.v8"

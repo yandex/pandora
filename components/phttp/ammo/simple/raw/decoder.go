@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func DecodeHeader(headerString []byte) (reqSize int, tag string, err error) {
+func decodeHeader(headerString []byte) (reqSize int, tag string, err error) {
 	parts := strings.SplitN(string(headerString), " ", 2)
 	reqSize, err = strconv.Atoi(parts[0])
 	if len(parts) > 1 {
@@ -19,6 +19,6 @@ func DecodeHeader(headerString []byte) (reqSize int, tag string, err error) {
 	return
 }
 
-func DecodeRequest(reqString []byte) (req *http.Request, err error) {
+func decodeRequest(reqString []byte) (req *http.Request, err error) {
 	return http.ReadRequest(bufio.NewReader(bytes.NewReader(reqString)))
 }
