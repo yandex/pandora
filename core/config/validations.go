@@ -11,9 +11,10 @@ import (
 	"regexp"
 	"time"
 
+
 	"github.com/asaskevich/govalidator"
 	"github.com/c2h5oh/datasize"
-	"gopkg.in/bluesuncorp/validator.v8"
+	"gopkg.in/go-playground/validator.v8"
 )
 
 func MinTimeValidation(v *validator.Validate, topStruct reflect.Value, currentStruct reflect.Value, field reflect.Value, fieldtype reflect.Type, fieldKind reflect.Kind, param string) bool {

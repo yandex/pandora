@@ -10,7 +10,7 @@ import:
   subpackages:
   - fflib/v1
 - package: github.com/spf13/viper
-- package: gopkg.in/bluesuncorp/validator.v8
+- package: gopkg.in/go-playground/validator.v8
 - package: github.com/uber-go/atomic
 testImport:
 - package: github.com/SlyMarbo/spdy

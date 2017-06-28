@@ -1,5 +1,5 @@
-hash: ec284130994e53b21e6f05287ae8c51c1546774b4db3a2fe553c9fea1bd4e356
-updated: 2017-06-23T19:51:34.585157223+03:00
+hash: a8b2fdb8271a2c1bd63bd71b95e59c4016ff29336a21dd6fbabc3c4c5ca9f069
+updated: 2017-06-28T17:00:37.572449106+03:00
 imports:
 - name: github.com/amahi/spdy
   version: 31da8b754faf6833fa95192c69bdb10518e9fb7b
@@ -92,7 +92,7 @@ imports:
   - runes
   - transform
   - unicode/norm
-- name: gopkg.in/bluesuncorp/validator.v8
+- name: gopkg.in/go-playground/validator.v8
   version: 5f57d2222ad794d0dffb07e664ea05e2ee07d60c
 - name: gopkg.in/yaml.v2
   version: a5b47d31c556af34a302ce5d659e6fea44d90de0
