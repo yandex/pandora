@@ -86,9 +86,6 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 				break // start over from the beginning
 			}
 			if err != nil {
-				if err == ctx.Err() {
-					return err
-				}
 				return stackerr.Newf("error reading ammo at position: %v; error: %s", filePosition(ammoFile), err)
 			}
 			if len(data) == 0 {
@@ -100,16 +97,10 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			}
 			buff := make([]byte, reqSize)
 			if n, err := io.ReadFull(reader, buff); err != nil {
-				if err == ctx.Err() {
-					return err
-				}
 				return stackerr.Newf("failed to read ammo at position: %v; tried to read: %v; have read: %v; error: %s", filePosition(ammoFile), reqSize, n, err)
 			}
 			req, err := decodeRequest(buff)
 			if err != nil {
-				if err == ctx.Err() {
-					return err
-				}
 				return stackerr.Newf("failed to decode ammo at position: %v; data: %q; error: %s", filePosition(ammoFile), buff, err)
 			}
 			sh := p.Pool.Get().(*simple.Ammo)
