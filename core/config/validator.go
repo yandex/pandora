@@ -9,7 +9,7 @@ import (
 	"reflect"
 
 	"github.com/facebookgo/stackerr"
-	"gopkg.in/bluesuncorp/validator.v8"
+	"gopkg.in/go-playground/validator.v8"
 )
 
 var validations = []struct {
