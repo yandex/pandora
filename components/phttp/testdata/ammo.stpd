@@ -16,7 +16,7 @@ Host: www.ya.ru
 Connection: close
 
 
-94 tag
+84 tag
 POST /test3 HTTP/1.1
 Host: www.ya.ru
 Connection: close

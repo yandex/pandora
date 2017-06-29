@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -12,8 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
-
-	"io/ioutil"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
