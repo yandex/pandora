@@ -18,16 +18,25 @@ func NewTest() *Test {
 
 type Test struct {
 	lock    sync.Mutex
-	Samples []core.Sample
+	samples []core.Sample
 }
+
+var _ core.Aggregator = (*Test)(nil)
 
 func (t *Test) Start(ctx context.Context) error {
 	<-ctx.Done()
 	return nil
 }
 
-func (t *Test) Release(s core.Sample) {
+func (t *Test) Report(s core.Sample) {
 	t.lock.Lock()
-	t.Samples = append(t.Samples, s)
+	t.samples = append(t.samples, s)
 	t.lock.Unlock()
+}
+
+func (t *Test) GetSamples() []core.Sample {
+	t.lock.Lock()
+	s := t.samples
+	t.lock.Unlock()
+	return s
 }

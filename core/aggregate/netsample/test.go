@@ -16,6 +16,6 @@ func (t *TestAggregator) Start(ctx context.Context) error {
 	return nil
 }
 
-func (t *TestAggregator) Release(s *Sample) {
+func (t *TestAggregator) Report(s *Sample) {
 	t.Samples = append(t.Samples, s)
 }

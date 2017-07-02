@@ -19,7 +19,7 @@ func TestCoreutil(t *testing.T) {
 var _ = Describe("waiter", func() {
 
 	It("unstarted", func() {
-		sched := schedule.NewOnce(schedule.OnceConfig{1})
+		sched := schedule.NewOnce(1)
 		ctx := context.Background()
 		w := NewWaiter(sched, ctx)
 		var i int
@@ -30,7 +30,7 @@ var _ = Describe("waiter", func() {
 
 	It("wait as expected", func() {
 		conf := schedule.ConstConfig{100, 100 * time.Millisecond}
-		sched := schedule.NewConst(conf)
+		sched := schedule.NewConstConf(conf)
 		ctx := context.Background()
 		w := NewWaiter(sched, ctx)
 		start := time.Now()
@@ -45,7 +45,7 @@ var _ = Describe("waiter", func() {
 	})
 
 	It("context canceled before wait", func() {
-		sched := schedule.NewOnce(schedule.OnceConfig{1})
+		sched := schedule.NewOnce(1)
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		w := NewWaiter(sched, ctx)
@@ -53,7 +53,7 @@ var _ = Describe("waiter", func() {
 	})
 
 	It("context canceled during wait", func() {
-		sched := schedule.NewConst(schedule.ConstConfig{Ops: 0.1, Duration: 100 * time.Second})
+		sched := schedule.NewConstConf(schedule.ConstConfig{Ops: 0.1, Duration: 100 * time.Second})
 		timeout := 10 * time.Millisecond
 		start := time.Now()
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)

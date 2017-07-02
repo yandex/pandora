@@ -23,8 +23,9 @@ func Import(fs afero.Fs) {
 	register.Aggregator("discard", aggregate.NewDiscard)
 	register.Aggregator("log", aggregate.NewLog)
 
-	register.Limiter("periodic", schedule.NewPeriodic)
-	register.Limiter("unlimited", schedule.NewUnlimited)
-	register.Limiter("linear", schedule.NewLinear)
+	register.Limiter("line", schedule.NewLineConf)
+	register.Limiter("const", schedule.NewConstConf)
+	register.Limiter("once", schedule.NewOnceConf)
+	register.Limiter("unlimited", schedule.NewUnlimitedConf)
 
 }

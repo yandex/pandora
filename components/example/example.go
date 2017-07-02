@@ -36,7 +36,7 @@ func (l *Gun) Shoot(ctx context.Context, a core.Ammo) error {
 	// Do work here.
 	log.Println("example Gun mesage: ", a.(*Ammo).Message)
 	sample.SetProtoCode(200)
-	l.aggregator.Release(sample)
+	l.aggregator.Report(sample)
 	return nil
 }
 

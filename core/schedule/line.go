@@ -12,21 +12,25 @@ import (
 	"github.com/yandex/pandora/core"
 )
 
+func NewLine(from, to float64, duration time.Duration) core.Schedule {
+	if from == to {
+		return NewConst(from, duration)
+	}
+	a := (to - from) / float64(duration/1e9)
+	b := from
+	xn := float64(duration) / 1e9
+	n := int64(a*xn*xn/2 + b*xn)
+	return NewDoAtSchedule(duration, n, lineDoAt(a, b))
+}
+
 type LineConfig struct {
 	From     float64       `validate:"min=0"`
 	To       float64       `validate:"min=0"`
 	Duration time.Duration `validate:"min-time=1ms"`
 }
 
-func NewLine(conf LineConfig) core.Schedule {
-	if conf.From == conf.To {
-		return NewConst(ConstConfig{conf.From, conf.Duration})
-	}
-	a := (conf.To - conf.From) / float64(conf.Duration/1e9)
-	b := conf.From
-	xn := float64(conf.Duration) / 1e9
-	n := int64(a*xn*xn/2 + b*xn)
-	return NewDoAtSchedule(conf.Duration, n, lineDoAt(a, b))
+func NewLineConf(conf LineConfig) core.Schedule {
+	return NewLine(conf.From, conf.To, conf.Duration)
 }
 
 // x - duration from 0 to max.

@@ -29,7 +29,7 @@ type phoutAggregator struct {
 
 var _ Aggregator = (*phoutAggregator)(nil)
 
-func (b *phoutAggregator) Release(s *Sample) { b.sink <- s }
+func (a *phoutAggregator) Report(s *Sample) { a.sink <- s }
 
 func (a *phoutAggregator) Start(ctx context.Context) error {
 	shouldFlush := time.NewTicker(1 * time.Second)

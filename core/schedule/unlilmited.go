@@ -11,13 +11,17 @@ import (
 	"github.com/yandex/pandora/core"
 )
 
+// NewUnlimited returns schedule that generates unlimited ops for passed duration.
+func NewUnlimited(duration time.Duration) core.Schedule {
+	return &unlimitedSchedule{duration: duration}
+}
+
 type UnlimitedConfig struct {
 	Duration time.Duration `validate:"min-time=1ms"`
 }
 
-// NewUnlimited returns schedule that generates unlimited ops for passed duration.
-func NewUnlimited(conf UnlimitedConfig) core.Schedule {
-	return &unlimitedSchedule{duration: conf.Duration}
+func NewUnlimitedConf(conf UnlimitedConfig) core.Schedule {
+	return NewUnlimited(conf.Duration)
 }
 
 type unlimitedSchedule struct {

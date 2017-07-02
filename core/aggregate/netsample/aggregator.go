@@ -8,7 +8,7 @@ import (
 
 type Aggregator interface {
 	Start(context.Context) error
-	Release(*Sample)
+	Report(*Sample)
 }
 
 func WrapAggregator(a Aggregator) core.Aggregator { return &aggregatorWrapper{a} }
@@ -23,8 +23,8 @@ func UnwrapAggregator(a core.Aggregator) Aggregator {
 
 type aggregatorWrapper struct{ Aggregator }
 
-func (a *aggregatorWrapper) Release(s core.Sample) { a.Aggregator.Release(s.(*Sample)) }
+func (a *aggregatorWrapper) Report(s core.Sample) { a.Aggregator.Report(s.(*Sample)) }
 
 type aggregatorUnwrapper struct{ core.Aggregator }
 
-func (a *aggregatorUnwrapper) Release(s *Sample) { a.Aggregator.Release(s) }
+func (a *aggregatorUnwrapper) Report(s *Sample) { a.Aggregator.Report(s) }

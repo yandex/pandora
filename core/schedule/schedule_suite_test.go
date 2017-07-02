@@ -19,7 +19,7 @@ func TestSchedule(t *testing.T) {
 var _ = Describe("unlimited", func() {
 	It("", func() {
 		conf := UnlimitedConfig{50 * time.Millisecond}
-		testee := NewUnlimited(conf)
+		testee := NewUnlimitedConf(conf)
 		start := time.Now()
 		finish := start.Add(conf.Duration)
 		testee.Start(start)
@@ -38,7 +38,7 @@ var _ = Describe("unlimited", func() {
 
 var _ = Describe("once", func() {
 	It("started", func() {
-		testee := NewOnce(OnceConfig{1})
+		testee := NewOnce(1)
 		start := time.Now()
 		testee.Start(start)
 
@@ -52,7 +52,7 @@ var _ = Describe("once", func() {
 	})
 
 	It("unstarted", func() {
-		testee := NewOnce(OnceConfig{1})
+		testee := NewOnce(1)
 		start := time.Now()
 		x1, ok := testee.Next()
 		threshold := time.Since(start)
@@ -76,7 +76,7 @@ var _ = Describe("const", func() {
 	)
 
 	JustBeforeEach(func() {
-		testee = NewConst(conf)
+		testee = NewConstConf(conf)
 		underlying = testee.(*doAtSchedule)
 		start = time.Now()
 		testee.Start(start)
@@ -130,7 +130,7 @@ var _ = Describe("line", func() {
 	)
 
 	JustBeforeEach(func() {
-		testee = NewLine(conf)
+		testee = NewLineConf(conf)
 		underlying = testee.(*doAtSchedule)
 		start = time.Now()
 		testee.Start(start)

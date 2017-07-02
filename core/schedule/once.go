@@ -11,14 +11,18 @@ import (
 	"github.com/yandex/pandora/core"
 )
 
+// NewOnce returns schedule that emits all passed operation token at start time.
+// That is, is schedule for zero duration, unlimited RPS, and n operations.
+func NewOnce(n int64) core.Schedule {
+	return NewDoAtSchedule(0, n, func(i int64) time.Duration {
+		return 0
+	})
+}
+
 type OnceConfig struct {
 	N int64 `validate:"min=1"`
 }
 
-// NewOnce returns shcedule that emits all passed operation token at start time.
-// That is, is scheule for zero duration, unlimited RPS, and conf.N operations.
-func NewOnce(conf OnceConfig) core.Schedule {
-	return NewDoAtSchedule(0, conf.N, func(i int64) time.Duration {
-		return 0
-	})
+func NewOnceConf(conf OnceConfig) core.Schedule {
+	return NewOnce(conf.N)
 }

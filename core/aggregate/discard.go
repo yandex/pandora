@@ -11,17 +11,16 @@ import (
 	"github.com/yandex/pandora/core"
 )
 
-func NewDiscard() discard {
+// NewDiscard returns Aggregator that just throws reported ammo away.
+func NewDiscard() core.Aggregator {
 	return discard{}
 }
 
 type discard struct{}
-
-var _ core.Aggregator = discard{}
 
 func (discard) Start(ctx context.Context) error {
 	<-ctx.Done()
 	return nil
 }
 
-func (discard) Release(core.Sample) {}
+func (discard) Report(core.Sample) {}
