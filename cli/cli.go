@@ -26,14 +26,13 @@ var configSearchDirs = []string{"./", "./config", "/etc/pandora"}
 
 type cliConfig struct {
 	Engine engine.Config `config:",squash"`
-	// TODO monitoring config should be there
+	// TODO(skipor): monitoring, logging configs should be there
 }
 
 // TODO(skipor): make nice spf13/cobra CLI and integrate it with viper
 // TODO(skipor): on special command (help or smth else) print list of available plugins
 
 func Run() {
-	// TODO(skipor): configurable log level
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of Pandora: pandora [<config_filename>]\n"+"<config_filename> is './%s.(yaml|json|...)' by default\n", defaultConfigFile)
 		flag.PrintDefaults()
@@ -74,7 +73,7 @@ func Run() {
 			log.Fatal("Engine tasks timeout exceeded.")
 		})
 		pandora.Wait()
-		return
+		os.Exit(1)
 	}
 	log.Info("Engine run successfully finished")
 }

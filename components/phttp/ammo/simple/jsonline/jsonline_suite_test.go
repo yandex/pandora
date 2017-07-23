@@ -107,12 +107,13 @@ var _ = Describe("provider start", func() {
 		cancel()
 		var err error
 		Eventually(errch).Should(Receive(&err))
-		Expect(err).To(Equal(ctx.Err()))
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("fail", func() {
 		p := newTestProvider(Config{File: "no_such_file"})
-		Expect(p.Start(context.Background())).NotTo(BeNil())
+		err := p.Start(context.Background())
+		Expect(err).To(HaveOccurred())
 	})
 })
 
@@ -180,7 +181,7 @@ var _ = Describe("provider decode", func() {
 		})
 		It("ok", func() {
 			cancel()
-			expectedStartErr = context.Canceled
+			expectedStartErr = nil
 			Eventually(provider.Sink, time.Second, time.Millisecond).Should(BeClosed())
 		})
 	})

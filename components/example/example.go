@@ -27,17 +27,18 @@ type Gun struct {
 	aggregator core.Aggregator
 }
 
-func (l *Gun) Bind(results core.Aggregator) {
-	l.aggregator = results
+var _ core.Gun = &Gun{}
+
+func (l *Gun) Bind(aggregator core.Aggregator) {
+	l.aggregator = aggregator
 }
 
-func (l *Gun) Shoot(ctx context.Context, a core.Ammo) error {
+func (l *Gun) Shoot(ctx context.Context, a core.Ammo) {
 	sample := netsample.Acquire("REQUEST")
 	// Do work here.
 	log.Println("example Gun mesage: ", a.(*Ammo).Message)
 	sample.SetProtoCode(200)
 	l.aggregator.Report(sample)
-	return nil
 }
 
 type ProviderConfig struct {

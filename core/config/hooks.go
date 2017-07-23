@@ -20,6 +20,7 @@ import (
 
 	"github.com/yandex/pandora/core/plugin"
 	"github.com/yandex/pandora/lib/tag"
+	"go.uber.org/zap"
 )
 
 const PluginNameKey = "type"
@@ -121,13 +122,22 @@ func DebugHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{},
 			decodeCallers++
 		}
 	}
-
-	offset := strings.Repeat("    ", decodeCallers)
-	fmt.Printf("%s %s from %s %v\n", offset, t, f, data)
+	zap.L().Debug("Config decode",
+		zap.Int("depth", decodeCallers),
+		zap.Stringer("type", t),
+		zap.Stringer("from", f),
+		zap.String("data", fmt.Sprint(data)),
+	)
 	return
 }
 
 func parseConf(t reflect.Type, data interface{}) (name string, fillConf func(conf interface{}) error, err error) {
+	if tag.Debug {
+		zap.L().Debug("Parsing plugin config",
+			zap.Stringer("plugin", t),
+			zap.Reflect("conf", data),
+		)
+	}
 	confData, err := toStringKeyMap(data)
 	if err != nil {
 		return
@@ -155,8 +165,12 @@ func parseConf(t reflect.Type, data interface{}) (name string, fillConf func(con
 	name = names[0]
 	fillConf = func(conf interface{}) error {
 		if tag.Debug {
-			fmt.Printf("Decoding %s %s plugin\n"+"%s from %v",
-				t, name, reflect.TypeOf(conf).Elem(), confData)
+			zap.L().Debug("Decoding plugin",
+				zap.String("name", name),
+				zap.Stringer("type", t),
+				zap.Stringer("config type", reflect.TypeOf(conf).Elem()),
+				zap.String("config data", fmt.Sprint(confData)),
+			)
 		}
 		err := DecodeAndValidate(confData, conf)
 		if err != nil {
@@ -181,7 +195,10 @@ func toStringKeyMap(data interface{}) (out map[string]interface{}, err error) {
 	}
 	out = make(map[string]interface{}, len(untypedKeyData))
 	for key, val := range untypedKeyData {
-		strKey := key.(string)
+		strKey, ok := key.(string)
+		if !ok {
+			err = stackerr.Newf("unexpected key type %T: %v", key, key)
+		}
 		out[strKey] = val
 	}
 	return

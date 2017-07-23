@@ -20,9 +20,9 @@ func NewOnce(n int64) core.Schedule {
 }
 
 type OnceConfig struct {
-	N int64 `validate:"min=1"`
+	Times int64 `validate:"min=1"` // N is decoded like bool
 }
 
 func NewOnceConf(conf OnceConfig) core.Schedule {
-	return NewOnce(conf.N)
+	return NewOnce(conf.Times)
 }

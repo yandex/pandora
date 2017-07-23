@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
 
+	"github.com/pkg/errors"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
 
@@ -75,7 +76,7 @@ var _ = Describe("provider start", func() {
 		cancel()
 		var err error
 		Eventually(errch).Should(Receive(&err))
-		Expect(err).To(Equal(ctx.Err()))
+		Expect(errors.Cause(err)).To(Equal(ctx.Err()))
 	})
 
 	It("fail", func() {
@@ -127,9 +128,9 @@ var _ = Describe("provider decode", func() {
 		var err error
 		Eventually(errch).Should(Receive(&err))
 		if expectedStartErr == nil {
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 		} else {
-			Expect(err).To(Equal(expectedStartErr))
+			Expect(errors.Cause(err)).To(Equal(expectedStartErr))
 		}
 		for i := 0; i < len(ammos); i++ {
 			expectedData := testData[i%len(testData)]

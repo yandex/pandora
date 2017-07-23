@@ -35,8 +35,8 @@ type instanceDeps struct {
 	Metrics
 }
 
-// Start blocks until ammo finish, error or context cancel.
-func (i *instance) Start(ctx context.Context) error {
+// Run blocks until ammo finish, error or context cancel.
+func (i *instance) Run(ctx context.Context) error {
 	// Creating deps in instance start, which is running in separate goroutine.
 	// That allows to create instances parallel and faster.
 

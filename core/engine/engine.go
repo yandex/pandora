@@ -13,13 +13,14 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coreutil"
 	"github.com/yandex/pandora/lib/monitoring"
 )
 
 type Config struct {
-	Pool []InstancePoolConfig `config:"pool"`
+	Pools []InstancePoolConfig `config:"pools"`
 }
 
 type InstancePoolConfig struct {
@@ -63,7 +64,7 @@ func (e *Engine) Run(ctx context.Context) error {
 	}()
 
 	runRes := make(chan runResult, 1)
-	for i, conf := range e.config.Pool {
+	for i, conf := range e.config.Pools {
 		if conf.Id == "" {
 			conf.Id = fmt.Sprintf("pool_%v", i)
 		}
@@ -80,11 +81,16 @@ func (e *Engine) Run(ctx context.Context) error {
 		}()
 	}
 
-	for i := 0; i < len(e.config.Pool); i++ {
+	for i := 0; i < len(e.config.Pools); i++ {
 		select {
 		case res := <-runRes:
 			e.log.Debug("Pool awaited", zap.Int("awaited", i), zap.String("id", res.Id), zap.Error(res.Err))
 			if res.Err != nil {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+				}
 				return fmt.Errorf("%q pool run failed: %s", res.Id, res.Err)
 			}
 		case <-ctx.Done():
@@ -127,8 +133,9 @@ func (p *instancePool) Run(ctx context.Context) error {
 	p.log.Info("Pool started")
 	originalCtx := ctx                     // Canceled only in case of other pool fail.
 	ctx, cancel := context.WithCancel(ctx) // Canceled in case of fail, or all instances finish.
+
 	defer func() {
-		p.log.Info("Pool finished")
+		p.log.Info("Pool run finished")
 		cancel()
 	}()
 	var (
@@ -159,12 +166,11 @@ func (p *instancePool) Run(ctx context.Context) error {
 			}
 		}
 	}
-
 	// Await all launched in separate goroutine, so we can return first execution
 	// error, and still wait results in background.
 	go func() {
 		defer func() {
-			p.log.Debug("Wait finished")
+			p.log.Debug("Pool wait finished")
 			close(awaitErr)
 			if p.onWaitDone != nil {
 				p.onWaitDone()
@@ -175,6 +181,14 @@ func (p *instancePool) Run(ctx context.Context) error {
 			startedInstances = -1
 			awaitedInstances = 0
 		)
+		onAllInstancesFinished := func() {
+			close(runRes) // Nothing should be sent more.
+			runRes = nil
+			toWait--
+			p.log.Info("All instances runs awaited.", zap.Int("awaited", awaitedInstances))
+			cancel() // Signal to provider and aggregator, that pool run is finished.
+		}
+
 		for toWait > 0 {
 			select {
 			case err := <-providerErr:
@@ -182,14 +196,14 @@ func (p *instancePool) Run(ctx context.Context) error {
 				// TODO(skipor): not wait for provider, to return success result?
 				toWait--
 				p.log.Debug("Provider awaited", zap.Error(err))
-				if err != nil {
+				if nonCtxErr(ctx, err) {
 					errAwaited(fmt.Errorf("provider failed: %s", err))
 				}
 			case err := <-aggregatorErr:
 				aggregatorErr = nil
 				toWait--
 				p.log.Debug("Aggregator awaited", zap.Error(err))
-				if err != nil {
+				if nonCtxErr(ctx, err) {
 					errAwaited(fmt.Errorf("aggregator failed: %s", err))
 				}
 			case res := <-startRes:
@@ -199,6 +213,9 @@ func (p *instancePool) Run(ctx context.Context) error {
 				p.log.Debug("Instances start awaited", zap.Int("started", startedInstances), zap.Error(res.Err))
 				if res.Err != nil {
 					errAwaited(fmt.Errorf("instances start failed: %s", res.Err))
+				}
+				if startedInstances <= awaitedInstances {
+					onAllInstancesFinished()
 				}
 			case res := <-runRes:
 				awaitedInstances++
@@ -212,11 +229,7 @@ func (p *instancePool) Run(ctx context.Context) error {
 				if !startFinished || awaitedInstances < startedInstances {
 					continue
 				}
-				close(runRes) // Nothing should be sent more.
-				runRes = nil
-				toWait--
-				p.log.Info("All instances runs awaited.", zap.Int("awaited", awaitedInstances))
-				cancel() // Signal to provider and aggregator, that pool run is finished.
+				onAllInstancesFinished()
 			}
 		}
 	}()
@@ -250,7 +263,7 @@ func (p *instancePool) startInstances(ctx context.Context, runRes chan<- runResu
 		id := strconv.Itoa(started)
 		instance := newInstance(p.log, id, deps)
 		go func() {
-			runRes <- runResult{instance.id, instance.Start(ctx)}
+			runRes <- runResult{instance.id, instance.Run(ctx)}
 		}()
 	}
 	err = ctx.Err()
@@ -265,4 +278,18 @@ type runResult struct {
 type startResult struct {
 	Started int
 	Err     error
+}
+
+func nonCtxErr(ctx context.Context, err error) bool {
+	if err == nil {
+		return false
+	}
+	select {
+	case <-ctx.Done():
+		if ctx.Err() == errors.Cause(err) { // Support github.com/pkg/errors wrapping
+			return false
+		}
+	default:
+	}
+	return true
 }

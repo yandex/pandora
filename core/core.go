@@ -29,6 +29,8 @@ type Ammo interface{}
 type Provider interface {
 	// Start starts provider routine. Blocks until ammo finish, error or context cancel.
 	// Start must be called once before any Acquire or Release calls.
+	// In case of context cancel, return nil (recommended), ctx.Err(), or error caused ctx.Err()
+	// in terms of github.com/pkg/errors.Cause.
 	Start(context.Context) error
 	// Acquire acquires ammo for shoot. Should be lightweight, so instance can shoot as
 	// soon as possible. That means ammo format parsing done in provider background routine,
@@ -51,6 +53,8 @@ type Sample interface{}
 // An Aggregator must goroutine safe.
 type Aggregator interface {
 	// Start starts aggregator routine. Blocks until error or context cancel.
+	// In case of context cancel, return nil, ctx.Err(), or error caused ctx.Err()
+	// in terms of github.com/pkg/errors.Cause.
 	Start(context.Context) error
 	// Report reports sample to aggregator. Should be lightweight, so instance can shoot as soon as possible.
 	// That means, that sample encode and reporting IO done in aggregator provider routine.

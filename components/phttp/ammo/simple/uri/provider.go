@@ -8,10 +8,10 @@ package uri
 import (
 	"bufio"
 	"context"
-	"log"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
@@ -54,14 +54,11 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			}
 			err := p.decoder.Decode(data)
 			if err != nil {
-				if err == ctx.Err() {
-					return err
-				}
-				return stackerr.Newf("failed to decode ammo at line: %v; data: %q; error: %s", line, data, err)
+				return errors.Wrapf(err, "failed to decode ammo at line: %v; data: %q", line, data)
 			}
 		}
 		if p.decoder.ammoNum == 0 {
-			return stackerr.Newf("no ammo in file")
+			return errors.New("no ammo in file")
 		}
 		if p.Passes != 0 && passNum >= p.Passes {
 			break
@@ -69,6 +66,6 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		ammoFile.Seek(0, 0)
 		p.decoder.ResetHeader()
 	}
-	log.Println("Ran out of ammo")
+	zap.L().Debug("Ran out of ammo")
 	return nil
 }

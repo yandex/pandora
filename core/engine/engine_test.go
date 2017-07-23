@@ -2,7 +2,6 @@ package engine
 
 import (
 	"context"
-	"errors"
 	"sync"
 
 	. "github.com/onsi/ginkgo"
@@ -10,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/atomic"
 
+	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregate"
 	"github.com/yandex/pandora/core/mocks"
@@ -106,18 +106,19 @@ var _ = Describe("instance pool", func() {
 	})
 
 	Context("provider failed", func() {
-		failErr := errors.New("test err")
+		var (
+			failErr    = errors.New("test err")
+			blockShoot sync.WaitGroup
+		)
 		BeforeEach(func() {
-			startCtxC := make(chan context.Context, 1)
+			blockShoot.Add(1)
 			prov := &coremock.Provider{}
 			prov.On("Start", mock.Anything).
 				Return(func(startCtx context.Context) error {
-				startCtxC <- startCtx
 				return failErr
 			})
 			prov.On("Acquire").Return(func() (core.Ammo, bool) {
-				startCtx := <-startCtxC
-				<-startCtx.Done()
+				blockShoot.Wait()
 				return nil, false
 			})
 			conf.Provider = prov
@@ -127,8 +128,10 @@ var _ = Describe("instance pool", func() {
 			Expect(err).ToNot(BeNil())
 			Expect(err.Error()).To(ContainSubstring(failErr.Error()))
 			testutil.AssertNotCalled(gun, "Shoot")
+			Consistently(waitDoneCalled.Load, 0.1).Should(BeFalse())
+			blockShoot.Done()
 			Eventually(waitDoneCalled.Load).Should(BeTrue())
-		}, 1)
+		})
 	})
 
 	Context("aggregator failed", func() {
@@ -163,7 +166,7 @@ var _ = Describe("instance pool", func() {
 
 })
 
-var _ = FDescribe("engine", func() {
+var _ = Describe("engine", func() {
 	var (
 		gun1, gun2 *coremock.Gun
 		//conf1, conf2 InstancePoolConfig
@@ -196,20 +199,21 @@ var _ = FDescribe("engine", func() {
 		// Cancel context on ammo acquire, an check that engine returns before
 		// instance finish.
 		var (
-			blockShoot sync.WaitGroup
+			blockPools sync.WaitGroup
 		)
 		BeforeEach(func() {
-			blockShoot.Add(1)
+			blockPools.Add(1)
 			for i := range confs {
 				prov := &coremock.Provider{}
 				prov.On("Start", mock.Anything).
 					Return(func(startCtx context.Context) error {
 					<-startCtx.Done()
+					blockPools.Wait()
 					return nil
 				})
 				prov.On("Acquire").Return(func() (core.Ammo, bool) {
 					cancel()
-					blockShoot.Wait()
+					blockPools.Wait()
 					return struct{}{}, true
 				})
 				confs[i].Provider = prov
@@ -225,7 +229,7 @@ var _ = FDescribe("engine", func() {
 				engine.Wait()
 			}()
 			Consistently(awaited, 0.1).ShouldNot(BeClosed())
-			blockShoot.Done()
+			blockPools.Done()
 			Eventually(awaited).Should(BeClosed())
 		})
 	})
@@ -247,5 +251,28 @@ var _ = FDescribe("engine", func() {
 			Expect(err.Error()).To(ContainSubstring(failErr.Error()))
 			engine.Wait()
 		}, 1)
+	})
+})
+
+var _ = Describe("nonCtxErr", func() {
+	canceledContext, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	It("nil error", func() {
+		Expect(nonCtxErr(context.Background(), nil)).To(BeFalse())
+	})
+
+	It("context error", func() {
+		Expect(nonCtxErr(canceledContext, context.Canceled)).To(BeFalse())
+	})
+
+	It("caused by context error", func() {
+		Expect(nonCtxErr(canceledContext, errors.Wrap(context.Canceled, "new err"))).To(BeFalse())
+	})
+
+	It("usual error", func() {
+		err := errors.New("new err")
+		Expect(nonCtxErr(canceledContext, err)).To(BeTrue())
+		Expect(nonCtxErr(context.Background(), err)).To(BeTrue())
 	})
 })

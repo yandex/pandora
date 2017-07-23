@@ -17,7 +17,7 @@ import (
 )
 
 func Import(fs afero.Fs) {
-	register.Provider("jsonline", func(conf jsonline.Config) core.Provider {
+	register.Provider("http/json", func(conf jsonline.Config) core.Provider {
 		return jsonline.NewProvider(fs, conf)
 	})
 

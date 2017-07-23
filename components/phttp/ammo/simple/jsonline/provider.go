@@ -8,11 +8,11 @@ package jsonline
 import (
 	"bufio"
 	"context"
-	"log"
 	"net/http"
 
 	"github.com/facebookgo/stackerr"
 	"github.com/spf13/afero"
+	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
@@ -55,8 +55,7 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			select {
 			case p.Sink <- a:
 			case <-ctx.Done():
-				log.Printf("Context error: %s", ctx.Err())
-				return ctx.Err()
+				return nil
 			}
 		}
 		if p.Passes != 0 && passNum >= p.Passes {
@@ -64,7 +63,7 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		}
 		ammoFile.Seek(0, 0)
 	}
-	log.Println("Ran out of ammo")
+	zap.L().Debug("Ran out of ammo")
 	return nil
 }
 

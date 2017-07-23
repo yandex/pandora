@@ -72,7 +72,7 @@ var _ = Describe("Instance", func() {
 			}
 		})
 		It("start ok", func() {
-			err := ins.Start(ctx)
+			err := ins.Run(ctx)
 			Expect(err).To(BeNil())
 			testutil.AssertExpectations(gun, provider)
 		}, 2)
@@ -89,7 +89,7 @@ var _ = Describe("Instance", func() {
 			provider.On("Acquire").Return(struct{}{}, true)
 		})
 		It("start fail", func() {
-			err := ins.Start(ctx)
+			err := ins.Run(ctx)
 			Expect(err).To(Equal(context.DeadlineExceeded))
 			testutil.AssertExpectations(gun, provider)
 		}, 2)
@@ -101,7 +101,7 @@ var _ = Describe("Instance", func() {
 			newScheduleErr = errors.New("test err")
 		})
 		It("start fail", func() {
-			err := ins.Start(ctx)
+			err := ins.Run(ctx)
 			Expect(err).ToNot(BeNil())
 			Expect(err.Error()).To(ContainSubstring(newScheduleErr.Error()))
 		})
@@ -113,7 +113,7 @@ var _ = Describe("Instance", func() {
 			newGunErr = errors.New("test err")
 		})
 		It("start fail", func() {
-			err := ins.Start(ctx)
+			err := ins.Run(ctx)
 			Expect(err).ToNot(BeNil())
 			Expect(err.Error()).To(ContainSubstring(newGunErr.Error()))
 		})
