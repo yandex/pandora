@@ -12,6 +12,13 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+func ReplaceGlobalLogger() *zap.Logger {
+	log := NewLogger()
+	zap.ReplaceGlobals(log)
+	zap.RedirectStdLog(log)
+	return log
+}
+
 func NewLogger() *zap.Logger {
 	conf := zap.NewDevelopmentConfig()
 	enc := zapcore.NewConsoleEncoder(conf.EncoderConfig)

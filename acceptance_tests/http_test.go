@@ -39,7 +39,7 @@ var _ = Describe("http", func() {
 			requetsCount atomic.Int64
 		)
 		const (
-			Requests  = 2
+			Requests  = 4
 			Instances = 2
 			OutFile   = "out.log"
 		)
@@ -64,13 +64,12 @@ var _ = Describe("http", func() {
 				"type":        "phout",
 				"destination": OutFile,
 			}
-			conf.Pool[0].RPSSchedule = map[string]interface{}{
-				"type":  "once",
-				"times": Requests,
+			conf.Pool[0].RPSSchedule = []map[string]interface{}{
+				{"type": "once", "times": Requests / 2},
+				{"type": "const", "ops": Requests, "duration": "0.5s"},
 			}
-			conf.Pool[0].StartupSchedule = map[string]interface{}{
-				"type":  "once",
-				"times": Instances,
+			conf.Pool[0].StartupSchedule = []map[string]interface{}{
+				{"type": "once", "times": Instances},
 			}
 		})
 		It("", func() {

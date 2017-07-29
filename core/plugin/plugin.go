@@ -96,6 +96,21 @@ func PtrType(ptr interface{}) reflect.Type {
 	return t.Elem()
 }
 
+func IsFactoryType(t reflect.Type) bool {
+	return t.Kind() == reflect.Func &&
+		t.NumIn() == 0 &&
+		t.NumOut() == 2 &&
+		t.Out(0).Kind() == reflect.Interface &&
+		t.Out(1) == errorType
+}
+
+func FactoryPluginType(factory reflect.Type) (plugin reflect.Type, ok bool) {
+	if IsFactoryType(factory) {
+		return factory.Out(0), true
+	}
+	return
+}
+
 type nameRegistryEntry struct {
 	// newPluginImpl type is func([config <configType>]) (<pluginImpl> [, error]),
 	// where configType kind is struct or struct pointer.
@@ -139,14 +154,6 @@ func (r typeRegistry) Lookup(pluginType reflect.Type) bool {
 
 func (r typeRegistry) LookupFactory(factoryType reflect.Type) bool {
 	return IsFactoryType(factoryType) && r.Lookup(factoryType.Out(0))
-}
-
-func IsFactoryType(t reflect.Type) bool {
-	return t.Kind() == reflect.Func &&
-		t.NumIn() == 0 &&
-		t.NumOut() == 2 &&
-		t.Out(0).Kind() == reflect.Interface &&
-		t.Out(1) == errorType
 }
 
 func (r typeRegistry) New(pluginType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {

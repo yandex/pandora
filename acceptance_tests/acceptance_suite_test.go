@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/onsi/gomega/format"
+	"github.com/yandex/pandora/lib/tag"
 	"github.com/yandex/pandora/lib/testutil"
 )
 
@@ -26,11 +27,18 @@ func TestAcceptanceTests(t *testing.T) {
 	RegisterFailHandler(Fail)
 	format.UseStringerRepresentation = true
 
-	log := testutil.NewLogger()
-	zap.ReplaceGlobals(log)
-	zap.RedirectStdLog(log)
+	testutil.ReplaceGlobalLogger()
+	var args []string
+	if tag.Race {
+		zap.L().Debug("Building with race detector")
+		args = append(args, "-race")
+	}
+	if tag.Debug {
+		zap.L().Debug("Building with debug tag")
+		args = append(args, "-tags", "debug")
+	}
 	var err error
-	pandoraBin, err = gexec.Build("github.com/yandex/pandora")
+	pandoraBin, err = gexec.Build("github.com/yandex/pandora", args...)
 	Expect(err).ToNot(HaveOccurred())
 	defer gexec.CleanupBuildArtifacts()
 	RunSpecs(t, "AcceptanceTests Suite")
@@ -83,8 +91,8 @@ type InstancePoolConfig struct {
 	Aggregator      map[string]interface{} `json:"result"`
 	Gun             map[string]interface{} `json:"gun"`
 	RPSPerInstance  bool                   `json:"rps-per-instance"`
-	RPSSchedule     map[string]interface{} `json:"rps"`
-	StartupSchedule map[string]interface{} `json:"startup"`
+	RPSSchedule     interface{}            `json:"rps"`
+	StartupSchedule interface{}            `json:"startup"`
 }
 
 type PandoraTester struct {

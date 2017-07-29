@@ -11,19 +11,15 @@ import (
 	"net"
 	"net/url"
 	"reflect"
-	"strings"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/c2h5oh/datasize"
 	"github.com/facebookgo/stack"
 	"github.com/facebookgo/stackerr"
 
-	"github.com/yandex/pandora/core/plugin"
 	"github.com/yandex/pandora/lib/tag"
 	"go.uber.org/zap"
 )
-
-const PluginNameKey = "type"
 
 var InvalidURLError = errors.New("string is not valid URL")
 
@@ -87,28 +83,6 @@ func StringToDataSizeHook(f reflect.Type, t reflect.Type, data interface{}) (int
 	return size, err
 }
 
-func PluginHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{}, err error) {
-	if !plugin.Lookup(t) {
-		return data, nil
-	}
-	name, fillConf, err := parseConf(t, data)
-	if err != nil {
-		return
-	}
-	return plugin.New(t, name, fillConf)
-}
-
-func PluginFactoryHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{}, err error) {
-	if !plugin.LookupFactory(t) {
-		return data, nil
-	}
-	name, fillConf, err := parseConf(t, data)
-	if err != nil {
-		return
-	}
-	return plugin.NewFactory(t, name, fillConf)
-}
-
 // DebugHook used to debug config decode.
 func DebugHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{}, err error) {
 	p, err = data, nil
@@ -128,78 +102,5 @@ func DebugHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{},
 		zap.Stringer("from", f),
 		zap.String("data", fmt.Sprint(data)),
 	)
-	return
-}
-
-func parseConf(t reflect.Type, data interface{}) (name string, fillConf func(conf interface{}) error, err error) {
-	if tag.Debug {
-		zap.L().Debug("Parsing plugin config",
-			zap.Stringer("plugin", t),
-			zap.Reflect("conf", data),
-		)
-	}
-	confData, err := toStringKeyMap(data)
-	if err != nil {
-		return
-	}
-	var names []string
-	for key, val := range confData {
-		if PluginNameKey == strings.ToLower(key) {
-			strVal, ok := val.(string)
-			if !ok {
-				err = stackerr.Newf("%s has non-string value %s", PluginNameKey, val)
-				return
-			}
-			names = append(names, strVal)
-			delete(confData, key)
-		}
-	}
-	if len(names) == 0 {
-		err = stackerr.Newf("plugin %s expected", PluginNameKey)
-		return
-	}
-	if len(names) > 1 {
-		err = stackerr.Newf("too many %s keys", PluginNameKey)
-		return
-	}
-	name = names[0]
-	fillConf = func(conf interface{}) error {
-		if tag.Debug {
-			zap.L().Debug("Decoding plugin",
-				zap.String("name", name),
-				zap.Stringer("type", t),
-				zap.Stringer("config type", reflect.TypeOf(conf).Elem()),
-				zap.String("config data", fmt.Sprint(confData)),
-			)
-		}
-		err := DecodeAndValidate(confData, conf)
-		if err != nil {
-			err = fmt.Errorf("%s %s plugin\n"+
-				"%s from %v %s",
-				t, name, reflect.TypeOf(conf).Elem(), confData, err)
-		}
-		return err
-	}
-	return
-}
-
-func toStringKeyMap(data interface{}) (out map[string]interface{}, err error) {
-	out, ok := data.(map[string]interface{})
-	if ok {
-		return
-	}
-	untypedKeyData, ok := data.(map[interface{}]interface{})
-	if !ok {
-		err = stackerr.Newf("unexpected config type %T: should be map[string or interface{}]interface{}", data)
-		return
-	}
-	out = make(map[string]interface{}, len(untypedKeyData))
-	for key, val := range untypedKeyData {
-		strKey, ok := key.(string)
-		if !ok {
-			err = stackerr.Newf("unexpected key type %T: %v", key, key)
-		}
-		out[strKey] = val
-	}
 	return
 }
