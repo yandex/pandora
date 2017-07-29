@@ -83,8 +83,8 @@ var _ = Describe("Instance", func() {
 			ctx, _ = context.WithTimeout(ctx, 5*time.Millisecond)
 			sched.(*coremock.Schedule).On("Next").
 				Return(func() (time.Time, bool) {
-				return time.Now().Add(5 * time.Second), true
-			})
+					return time.Now().Add(5 * time.Second), true
+				})
 			gun.On("Bind", aggregator)
 			provider.On("Acquire").Return(struct{}{}, true)
 		})

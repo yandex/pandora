@@ -85,9 +85,9 @@ var _ = Describe("instance pool", func() {
 			prov := &coremock.Provider{}
 			prov.On("Start", mock.Anything).
 				Return(func(startCtx context.Context) error {
-				<-startCtx.Done()
-				return nil
-			})
+					<-startCtx.Done()
+					return nil
+				})
 			prov.On("Acquire").Return(func() (core.Ammo, bool) {
 				cancel()
 				blockShoot.Wait()
@@ -107,21 +107,24 @@ var _ = Describe("instance pool", func() {
 
 	Context("provider failed", func() {
 		var (
-			failErr    = errors.New("test err")
-			blockShoot sync.WaitGroup
+			failErr         = errors.New("test err")
+			blockAggregator sync.WaitGroup
 		)
 		BeforeEach(func() {
-			blockShoot.Add(1)
+			blockAggregator.Add(1)
 			prov := &coremock.Provider{}
 			prov.On("Start", mock.Anything).
-				Return(func(startCtx context.Context) error {
-				return failErr
-			})
-			prov.On("Acquire").Return(func() (core.Ammo, bool) {
-				blockShoot.Wait()
-				return nil, false
-			})
+				Return(func(context.Context) error {
+					return failErr
+				})
 			conf.Provider = prov
+			aggr := &coremock.Aggregator{}
+			aggr.On("Start", mock.Anything).
+				Return(func(context.Context) error {
+					blockAggregator.Wait()
+					return nil
+				})
+			conf.Aggregator = aggr
 		})
 		It("", func() {
 			err := p.Run(ctx)
@@ -129,7 +132,7 @@ var _ = Describe("instance pool", func() {
 			Expect(err.Error()).To(ContainSubstring(failErr.Error()))
 			testutil.AssertNotCalled(gun, "Shoot")
 			Consistently(waitDoneCalled.Load, 0.1).Should(BeFalse())
-			blockShoot.Done()
+			blockAggregator.Done()
 			Eventually(waitDoneCalled.Load).Should(BeTrue())
 		})
 	})
@@ -207,10 +210,10 @@ var _ = Describe("engine", func() {
 				prov := &coremock.Provider{}
 				prov.On("Start", mock.Anything).
 					Return(func(startCtx context.Context) error {
-					<-startCtx.Done()
-					blockPools.Wait()
-					return nil
-				})
+						<-startCtx.Done()
+						blockPools.Wait()
+						return nil
+					})
 				prov.On("Acquire").Return(func() (core.Ammo, bool) {
 					cancel()
 					blockPools.Wait()
