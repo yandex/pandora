@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/coretest"
 )
 
 func TestSchedule(t *testing.T) {
@@ -39,16 +40,7 @@ var _ = Describe("unlimited", func() {
 var _ = Describe("once", func() {
 	It("started", func() {
 		testee := NewOnce(1)
-		start := time.Now()
-		testee.Start(start)
-
-		x, ok := testee.Next()
-		Expect(ok).To(BeTrue())
-		Expect(x).To(Equal(start))
-
-		x, ok = testee.Next()
-		Expect(ok).To(BeFalse())
-		Expect(x).To(Equal(start))
+		coretest.ExpectScheduleNexts(testee, 0, 0)
 	})
 
 	It("unstarted", func() {
@@ -72,14 +64,11 @@ var _ = Describe("const", func() {
 		conf       ConstConfig
 		testee     core.Schedule
 		underlying *doAtSchedule
-		start      time.Time
 	)
 
 	JustBeforeEach(func() {
 		testee = NewConstConf(conf)
 		underlying = testee.(*doAtSchedule)
-		start = time.Now()
-		testee.Start(start)
 	})
 
 	Context("non-zero ops", func() {
@@ -91,17 +80,7 @@ var _ = Describe("const", func() {
 		})
 		It("", func() {
 			Expect(underlying.n).To(BeEquivalentTo(2))
-			x, ok := testee.Next()
-			Expect(ok).To(BeTrue())
-			Expect(start.Add(time.Second), x)
-
-			x, ok = testee.Next()
-			Expect(ok).To(BeTrue())
-			Expect(start.Add(2*time.Second), x)
-
-			x, ok = testee.Next()
-			Expect(ok).To(BeFalse())
-			Expect(start.Add(2*time.Second), x)
+			coretest.ExpectScheduleNexts(testee, time.Second, 2*time.Second, 2*time.Second)
 		})
 	})
 
@@ -114,9 +93,7 @@ var _ = Describe("const", func() {
 		})
 		It("", func() {
 			Expect(underlying.n).To(BeEquivalentTo(0))
-			x, ok := testee.Next()
-			Expect(ok).To(BeFalse())
-			Expect(start.Add(2*time.Second), x)
+			coretest.ExpectScheduleNexts(testee, 2*time.Second)
 		})
 	})
 })
@@ -126,14 +103,11 @@ var _ = Describe("line", func() {
 		conf       LineConfig
 		testee     core.Schedule
 		underlying *doAtSchedule
-		start      time.Time
 	)
 
 	JustBeforeEach(func() {
 		testee = NewLineConf(conf)
 		underlying = testee.(*doAtSchedule)
-		start = time.Now()
-		testee.Start(start)
 	})
 
 	Context("too small ops", func() {
@@ -147,10 +121,7 @@ var _ = Describe("line", func() {
 		It("", func() {
 			// Too small ops, so should not do anything.
 			Expect(underlying.n).To(BeEquivalentTo(0))
-
-			x, ok := testee.Next()
-			Expect(ok).To(BeFalse())
-			Expect(start.Add(time.Second), x)
+			coretest.ExpectScheduleNexts(testee, time.Second)
 		})
 	})
 
@@ -165,17 +136,7 @@ var _ = Describe("line", func() {
 
 		It("", func() {
 			Expect(underlying.n).To(BeEquivalentTo(2))
-			x, ok := testee.Next()
-			Expect(ok).To(BeTrue())
-			Expect(start.Add(time.Second), x)
-
-			x, ok = testee.Next()
-			Expect(ok).To(BeTrue())
-			Expect(start.Add(2*time.Second), x)
-
-			x, ok = testee.Next()
-			Expect(ok).To(BeFalse())
-			Expect(start.Add(2*time.Second), x)
+			coretest.ExpectScheduleNexts(testee, time.Second, 2*time.Second, 2*time.Second)
 		})
 	})
 
@@ -190,14 +151,7 @@ var _ = Describe("line", func() {
 
 		It("", func() {
 			Expect(underlying.n).To(BeEquivalentTo(1))
-
-			x, ok := testee.Next()
-			Expect(ok).To(BeTrue())
-			Expect(start.Add(2*time.Second), x)
-
-			x, ok = testee.Next()
-			Expect(ok).To(BeFalse())
-			Expect(start.Add(2*time.Second), x)
+			coretest.ExpectScheduleNexts(testee, 2*time.Second, 2*time.Second)
 		})
 	})
 
@@ -212,6 +166,8 @@ var _ = Describe("line", func() {
 
 		It("", func() {
 			Expect(underlying.n).To(BeEquivalentTo(10))
+			start := time.Now()
+			testee.Start(start)
 
 			var (
 				i  int
@@ -233,3 +189,13 @@ var _ = Describe("line", func() {
 	})
 
 })
+
+func BenchmarkLineSchedule(b *testing.B) {
+	doAt := NewLine(0, float64(b.N), 2*time.Second)
+	doAt.Start(time.Now())
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		doAt.Next()
+	}
+}

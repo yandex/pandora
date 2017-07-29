@@ -10,6 +10,8 @@ import (
 
 	"go.uber.org/atomic"
 
+	"sync"
+
 	"github.com/yandex/pandora/core"
 )
 
@@ -26,24 +28,33 @@ func NewDoAtSchedule(duration time.Duration, n int64, doAt DoAt) core.Schedule {
 }
 
 type doAtSchedule struct {
-	start    time.Time
-	duration time.Duration
-	i        atomic.Int64
-	n        int64
-	doAt     func(i int64) time.Duration
+	started   atomic.Bool
+	start     time.Time
+	startSync sync.Once
+	duration  time.Duration
+	i         atomic.Int64
+	n         int64
+	doAt      func(i int64) time.Duration
 }
 
 func (s *doAtSchedule) Start(startAt time.Time) {
-	if !s.start.IsZero() {
+	if s.started.Swap(true) {
 		panic("schedule is already started")
 	}
-	s.start = startAt
+	s.startSync.Do(func() {
+		s.start = startAt
+	})
+}
+
+func (s *doAtSchedule) startOnce(startAt time.Time) {
 }
 
 func (s *doAtSchedule) Next() (tx time.Time, ok bool) {
-	if s.start.IsZero() {
-		s.Start(time.Now())
-	}
+	s.startSync.Do(func() {
+		// No allocations here due to benchmark.
+		s.started.Store(true)
+		s.start = time.Now()
+	})
 	i := s.i.Inc()
 	if i > s.n {
 		return s.start.Add(s.duration), false

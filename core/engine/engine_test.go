@@ -107,21 +107,25 @@ var _ = Describe("instance pool", func() {
 
 	Context("provider failed", func() {
 		var (
-			failErr         = errors.New("test err")
-			blockAggregator sync.WaitGroup
+			failErr           = errors.New("test err")
+			blockShootAndAggr sync.WaitGroup
 		)
 		BeforeEach(func() {
-			blockAggregator.Add(1)
+			blockShootAndAggr.Add(1)
 			prov := &coremock.Provider{}
 			prov.On("Start", mock.Anything).
 				Return(func(context.Context) error {
 					return failErr
 				})
+			prov.On("Acquire").Return(func() (core.Ammo, bool) {
+				blockShootAndAggr.Wait()
+				return nil, false
+			})
 			conf.Provider = prov
 			aggr := &coremock.Aggregator{}
 			aggr.On("Start", mock.Anything).
 				Return(func(context.Context) error {
-					blockAggregator.Wait()
+					blockShootAndAggr.Wait()
 					return nil
 				})
 			conf.Aggregator = aggr
@@ -132,7 +136,7 @@ var _ = Describe("instance pool", func() {
 			Expect(err.Error()).To(ContainSubstring(failErr.Error()))
 			testutil.AssertNotCalled(gun, "Shoot")
 			Consistently(waitDoneCalled.Load, 0.1).Should(BeFalse())
-			blockAggregator.Done()
+			blockShootAndAggr.Done()
 			Eventually(waitDoneCalled.Load).Should(BeTrue())
 		})
 	})

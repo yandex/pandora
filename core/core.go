@@ -36,6 +36,7 @@ type Provider interface {
 	// soon as possible. That means ammo format parsing done in provider background routine,
 	// and acquire just takes ammo from ready pool.
 	// Ok false means that shooting should be stopped: ammo finished or shooting is canceled.
+	// Acquire may be called before start, but may block until start is called.
 	Acquire() (a Ammo, ok bool)
 	// Release notifies that ammo usage is finished, and it can be reused.
 	// Instance should not retain references to released ammo.
@@ -59,6 +60,7 @@ type Aggregator interface {
 	// Report reports sample to aggregator. Should be lightweight, so instance can shoot as soon as possible.
 	// That means, that sample encode and reporting IO done in aggregator provider routine.
 	// Reported sample can be reused for efficiency.
+	// Report may be called before start, but may block until start is called.
 	Report(Sample)
 }
 
@@ -67,7 +69,7 @@ type Aggregator interface {
 // Schedule represents operation schedule. Schedule must be goroutine safe.
 type Schedule interface {
 	// Start starts schedule at passed time.
-	// Start may be called once, before any Next call.
+	// Start may be called once, before any Next call. (Before, means not concurrently too.)
 	// If start is not called, schedule started at first Next call.
 	Start(startAt time.Time)
 	// Next withdraw one operation token and returns next operation time and

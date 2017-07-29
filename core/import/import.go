@@ -27,5 +27,6 @@ func Import(fs afero.Fs) {
 	register.Limiter("const", schedule.NewConstConf)
 	register.Limiter("once", schedule.NewOnceConf)
 	register.Limiter("unlimited", schedule.NewUnlimitedConf)
+	register.Limiter("composite", schedule.NewCompositeConf)
 
 }
