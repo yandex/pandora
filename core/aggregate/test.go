@@ -23,7 +23,7 @@ type Test struct {
 
 var _ core.Aggregator = (*Test)(nil)
 
-func (t *Test) Start(ctx context.Context) error {
+func (t *Test) Run(ctx context.Context) error {
 	<-ctx.Done()
 	return nil
 }

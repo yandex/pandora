@@ -63,6 +63,8 @@ type Provider struct {
 	pool sync.Pool
 }
 
+var _ core.Provider = &Provider{}
+
 func (p *Provider) Acquire() (ammo core.Ammo, ok bool) {
 	ammo, ok = <-p.sink
 	return
@@ -72,7 +74,7 @@ func (p *Provider) Release(ammo core.Ammo) {
 	p.pool.Put(ammo)
 }
 
-func (p *Provider) Start(ctx context.Context) error {
+func (p *Provider) Run(ctx context.Context) error {
 	defer close(p.sink)
 	for i := 0; i < p.AmmoLimit; i++ {
 		select {

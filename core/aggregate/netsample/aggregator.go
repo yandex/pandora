@@ -7,7 +7,7 @@ import (
 )
 
 type Aggregator interface {
-	Start(context.Context) error
+	Run(context.Context) error
 	Report(*Sample)
 }
 

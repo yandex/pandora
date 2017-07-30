@@ -12,7 +12,7 @@ import (
 )
 
 // NewNum returns dummy provider, that provides 0, 1 .. n int sequence as ammo.
-// May be useful for test, or in when Gun don't need ammo.
+// May be useful for test or in when Gun don't need ammo.
 func NewNum(limit int) core.Provider {
 	return &num{
 		limit: limit,
@@ -34,7 +34,7 @@ type num struct {
 	sink  chan core.Ammo
 }
 
-func (n *num) Start(ctx context.Context) error {
+func (n *num) Run(ctx context.Context) error {
 	defer close(n.sink)
 	for ; n.limit <= 0 || n.i < n.limit; n.i++ {
 		select {

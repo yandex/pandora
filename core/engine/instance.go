@@ -59,7 +59,7 @@ func (i *instance) Run(ctx context.Context) error {
 	gun.Bind(i.aggregator)
 	nextShoot := coreutil.NewWaiter(shed, ctx)
 
-	i.log.Debug("Instance init done. Start shooting")
+	i.log.Debug("Instance init done. Run shooting")
 	return i.shoot(ctx, gun, nextShoot)
 }
 

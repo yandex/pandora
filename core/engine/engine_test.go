@@ -83,7 +83,7 @@ var _ = Describe("instance pool", func() {
 		BeforeEach(func() {
 			blockShoot.Add(1)
 			prov := &coremock.Provider{}
-			prov.On("Start", mock.Anything).
+			prov.On("Run", mock.Anything).
 				Return(func(startCtx context.Context) error {
 					<-startCtx.Done()
 					return nil
@@ -113,7 +113,7 @@ var _ = Describe("instance pool", func() {
 		BeforeEach(func() {
 			blockShootAndAggr.Add(1)
 			prov := &coremock.Provider{}
-			prov.On("Start", mock.Anything).
+			prov.On("Run", mock.Anything).
 				Return(func(context.Context) error {
 					return failErr
 				})
@@ -123,7 +123,7 @@ var _ = Describe("instance pool", func() {
 			})
 			conf.Provider = prov
 			aggr := &coremock.Aggregator{}
-			aggr.On("Start", mock.Anything).
+			aggr.On("Run", mock.Anything).
 				Return(func(context.Context) error {
 					blockShootAndAggr.Wait()
 					return nil
@@ -145,7 +145,7 @@ var _ = Describe("instance pool", func() {
 		failErr := errors.New("test err")
 		BeforeEach(func() {
 			aggr := &coremock.Aggregator{}
-			aggr.On("Start", mock.Anything).Return(failErr)
+			aggr.On("Run", mock.Anything).Return(failErr)
 			conf.Aggregator = aggr
 		})
 		It("", func() {
@@ -212,7 +212,7 @@ var _ = Describe("engine", func() {
 			blockPools.Add(1)
 			for i := range confs {
 				prov := &coremock.Provider{}
-				prov.On("Start", mock.Anything).
+				prov.On("Run", mock.Anything).
 					Return(func(startCtx context.Context) error {
 						<-startCtx.Done()
 						blockPools.Wait()
@@ -248,7 +248,7 @@ var _ = Describe("engine", func() {
 		)
 		BeforeEach(func() {
 			aggr := &coremock.Aggregator{}
-			aggr.On("Start", mock.Anything).Return(failErr)
+			aggr.On("Run", mock.Anything).Return(failErr)
 			confs[0].Aggregator = aggr
 		})
 

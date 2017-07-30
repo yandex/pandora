@@ -41,7 +41,7 @@ func (p *Provider) Release(a core.Ammo) {
 	p.Pool.Put(a)
 }
 
-func (p *Provider) Start(ctx context.Context) error {
+func (p *Provider) Run(ctx context.Context) error {
 	defer close(p.Sink)
 	file, err := p.fs.Open(p.fileName)
 	if err != nil {

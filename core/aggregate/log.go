@@ -24,7 +24,7 @@ func (l *logging) Report(sample core.Sample) {
 	l.sink <- sample
 }
 
-func (l *logging) Start(ctx context.Context) error {
+func (l *logging) Run(ctx context.Context) error {
 loop:
 	for {
 		select {

@@ -31,7 +31,7 @@ var _ Aggregator = (*phoutAggregator)(nil)
 
 func (a *phoutAggregator) Report(s *Sample) { a.sink <- s }
 
-func (a *phoutAggregator) Start(ctx context.Context) error {
+func (a *phoutAggregator) Run(ctx context.Context) error {
 	shouldFlush := time.NewTicker(1 * time.Second)
 	defer func() {
 		a.writer.Flush()

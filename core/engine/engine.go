@@ -145,10 +145,10 @@ func (p *instancePool) Run(ctx context.Context) error {
 		startRes      = make(chan startResult, 1)
 	)
 	go func() {
-		providerErr <- p.Provider.Start(ctx)
+		providerErr <- p.Provider.Run(ctx)
 	}()
 	go func() {
-		aggregatorErr <- p.Aggregator.Start(ctx)
+		aggregatorErr <- p.Aggregator.Run(ctx)
 	}()
 	go func() {
 		// Running in separate goroutine, so we can cancel instance creation in case of error.

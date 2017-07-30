@@ -11,7 +11,7 @@ type TestAggregator struct {
 	Samples []*Sample
 }
 
-func (t *TestAggregator) Start(ctx context.Context) error {
+func (t *TestAggregator) Run(ctx context.Context) error {
 	<-ctx.Done()
 	return nil
 }

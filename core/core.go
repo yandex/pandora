@@ -14,7 +14,7 @@ import (
 )
 
 // TODO(skipor): pass some dependencies from engine to core extpoints.
-// Extra argument to Start, or through context values, maybe.
+// Extra argument to Run, or through context values, maybe.
 
 // Ammo is data required for one shot. Usually it contains something that differs
 // from one shot to another.
@@ -27,11 +27,11 @@ type Ammo interface{}
 // Provider is routine that generates ammo for instance shoots.
 // A Provider must goroutine safe.
 type Provider interface {
-	// Start starts provider routine. Blocks until ammo finish, error or context cancel.
-	// Start must be called once before any Acquire or Release calls.
+	// Run starts provider routine. Blocks until ammo finish, error or context cancel.
+	// Run must be called once before any Acquire or Release calls.
 	// In case of context cancel, return nil (recommended), ctx.Err(), or error caused ctx.Err()
 	// in terms of github.com/pkg/errors.Cause.
-	Start(context.Context) error
+	Run(context.Context) error
 	// Acquire acquires ammo for shoot. Should be lightweight, so instance can shoot as
 	// soon as possible. That means ammo format parsing done in provider background routine,
 	// and acquire just takes ammo from ready pool.
@@ -53,10 +53,10 @@ type Sample interface{}
 // to file in machine readable format for future analysis.
 // An Aggregator must goroutine safe.
 type Aggregator interface {
-	// Start starts aggregator routine. Blocks until error or context cancel.
+	// Run starts aggregator routine. Blocks until error or context cancel.
 	// In case of context cancel, return nil, ctx.Err(), or error caused ctx.Err()
 	// in terms of github.com/pkg/errors.Cause.
-	Start(context.Context) error
+	Run(context.Context) error
 	// Report reports sample to aggregator. Should be lightweight, so instance can shoot as soon as possible.
 	// That means, that sample encode and reporting IO done in aggregator provider routine.
 	// Reported sample can be reused for efficiency.
@@ -68,8 +68,8 @@ type Aggregator interface {
 
 // Schedule represents operation schedule. Schedule must be goroutine safe.
 type Schedule interface {
-	// Start starts schedule at passed time.
-	// Start may be called once, before any Next call. (Before, means not concurrently too.)
+	// Run starts schedule at passed time.
+	// Run may be called once, before any Next call. (Before, means not concurrently too.)
 	// If start is not called, schedule started at first Next call.
 	Start(startAt time.Time)
 	// Next withdraw one operation token and returns next operation time and
