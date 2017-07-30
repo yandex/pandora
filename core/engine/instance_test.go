@@ -25,7 +25,8 @@ var _ = Describe("Instance", func() {
 		ctx            context.Context
 		metrics        Metrics
 
-		ins *instance
+		deps instanceDeps
+		ins  *instance
 	)
 	const instanceId = "id"
 
@@ -41,7 +42,7 @@ var _ = Describe("Instance", func() {
 
 	JustBeforeEach(func() {
 		metrics = newTestMetrics()
-		deps := instanceDeps{
+		deps = instanceDeps{
 			provider,
 			aggregator,
 			func() (core.Schedule, error) { return sched, newScheduleErr },
@@ -73,9 +74,22 @@ var _ = Describe("Instance", func() {
 		})
 		It("start ok", func() {
 			err := ins.Run(ctx)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			testutil.AssertExpectations(gun, provider)
 		}, 2)
+
+		It("gun implements io.Closer", func() {
+			closeGun := &mockGunCloser{*gun}
+			closeGun.On("Close").Return(nil)
+			deps.newGun = func() (core.Gun, error) {
+				return closeGun, nil
+			}
+			ins = newInstance(testutil.NewLogger(), instanceId, deps)
+			err := ins.Run(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			testutil.AssertExpectations(closeGun, provider)
+		})
+
 	})
 
 	Context("context canceled", func() {
@@ -120,3 +134,19 @@ var _ = Describe("Instance", func() {
 	})
 
 })
+
+type mockGunCloser struct {
+	coremock.Gun
+}
+
+func (_m *mockGunCloser) Close() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}

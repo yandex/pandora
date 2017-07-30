@@ -84,6 +84,9 @@ type Schedule interface {
 // Gun represents logic of making shoots sequentially.
 // A Gun is owned by only instance, that use it for shooting in cycle: acquire ammo from provider ->
 // wait for next shoot schedule event -> shoot with gun.
+// Guns that also implements io.Closer will be closed after instance finish.
+// Actually, Guns that creates resources that should be closed after instance finish,
+// SHOULD also implement io.Closer
 type Gun interface {
 	// TODO(skipor): shoot context is same for now. Maybe pass it to Bind instead?
 
@@ -96,4 +99,6 @@ type Gun interface {
 	// or unexpected behaviour for example) Shoot should panic with error value.
 	// http.Request fail is not error for panic, but error for reporting to aggregator.
 	Shoot(context.Context, Ammo)
+
+	// io.Closer // Optional. See Gun doc for details.
 }

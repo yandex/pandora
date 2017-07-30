@@ -8,6 +8,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/facebookgo/stackerr"
 	"go.uber.org/zap"
@@ -54,6 +55,16 @@ func (i *instance) Run(ctx context.Context) error {
 	gun, err := i.newGun()
 	if err != nil {
 		return fmt.Errorf("gun create failed: %s", err)
+	}
+
+	if gun, ok := gun.(io.Closer); ok {
+		defer func() {
+			err := gun.Close()
+			if err != nil {
+				i.log.Warn("Gun close fail", zap.Error(err))
+			}
+			i.log.Debug("Gun closed")
+		}()
 	}
 
 	gun.Bind(i.aggregator)
