@@ -176,8 +176,9 @@ func (p *instancePool) Run(ctx context.Context) error {
 				p.onWaitDone()
 			}
 		}()
+		const subroutines = 4 // Provider, Aggregator, instance start, instance run.
 		var (
-			toWait           = 4
+			toWait           = subroutines
 			startedInstances = -1
 			awaitedInstances = 0
 		)

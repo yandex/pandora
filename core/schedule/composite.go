@@ -28,7 +28,7 @@ func NewComposite(scheds ...core.Schedule) core.Schedule {
 }
 
 type compositeSchedule struct {
-	// Under read lock, goroutine can read shcheds and call Next,
+	// Under read lock, goroutine can read schedules and call Next,
 	// under write lock, goroutine can start next schedule using previous finish time.
 	rwMu   sync.RWMutex
 	scheds []core.Schedule // At least once schedule.

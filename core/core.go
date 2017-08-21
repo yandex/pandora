@@ -25,7 +25,7 @@ type Ammo interface{}
 //go:generate mockery -name=Provider -case=underscore -outpkg=coremock
 
 // Provider is routine that generates ammo for instance shoots.
-// A Provider must goroutine safe.
+// A Provider must be goroutine safe.
 type Provider interface {
 	// Run starts provider routine. Blocks until ammo finish, error or context cancel.
 	// Run must be called once before any Acquire or Release calls.
@@ -51,16 +51,21 @@ type Sample interface{}
 // Aggregator is routine that aggregates samples from all instances.
 // Usually aggregator is shooting result reporter, that writes released samples
 // to file in machine readable format for future analysis.
-// An Aggregator must goroutine safe.
+// An Aggregator must be goroutine safe.
 type Aggregator interface {
 	// Run starts aggregator routine. Blocks until error or context cancel.
 	// In case of context cancel, return nil, ctx.Err(), or error caused ctx.Err()
-	// in terms of github.com/pkg/errors.Cause.
+	// in terms of github.com/pkg/errors.Cause in case of successful run, or other error
+	// if failed.
 	Run(context.Context) error
-	// Report reports sample to aggregator. Should be lightweight, so instance can shoot as soon as possible.
+	// Report reports sample to aggregator. Should be lightweight and not blocking,
+	// so instance can shoot as soon as possible.
 	// That means, that sample encode and reporting IO done in aggregator provider routine.
+	// If Aggregator can't process reported sample without blocking, it should just throw it away.
+	// If any reported samples were thrown away, Run should return error describing how many samples
+	// were thrown away.
 	// Reported sample can be reused for efficiency.
-	// Report may be called before start, but may block until start is called.
+	// Report may be called before Aggregator Run.
 	Report(Sample)
 }
 
@@ -70,7 +75,7 @@ type Aggregator interface {
 type Schedule interface {
 	// Run starts schedule at passed time.
 	// Run may be called once, before any Next call. (Before, means not concurrently too.)
-	// If start is not called, schedule started at first Next call.
+	// If start was not called, schedule is started at first Next call.
 	Start(startAt time.Time)
 	// Next withdraw one operation token and returns next operation time and
 	// ok equal true, when schedule is not finished.
@@ -82,10 +87,10 @@ type Schedule interface {
 //go:generate mockery -name=Gun -case=underscore -outpkg=coremock
 
 // Gun represents logic of making shoots sequentially.
-// A Gun is owned by only instance, that use it for shooting in cycle: acquire ammo from provider ->
+// A Gun is owned by only instance that uses it for shooting in cycle: acquire ammo from provider ->
 // wait for next shoot schedule event -> shoot with gun.
 // Guns that also implements io.Closer will be closed after instance finish.
-// Actually, Guns that creates resources that should be closed after instance finish,
+// Actually, Guns that create resources which should be closed after instance finish,
 // SHOULD also implement io.Closer
 type Gun interface {
 	// TODO(skipor): shoot context is same for now. Maybe pass it to Bind instead?
@@ -93,7 +98,7 @@ type Gun interface {
 	// Bind passes dependencies required for shooting. Called once before shooting start.
 	Bind(Aggregator)
 	// Shoot makes one shoot. Shoot means some abstract load operation: web service or database request, for example.
-	// During shoot Gun acquires one or more samples and report them to bind Aggregator.
+	// During shoot Gun acquires one or more samples and report them to bound Aggregator.
 	// Shoot error should be reported to Aggregator in sample, and logged maybe.
 	// In case of error, that should cancel shooting for all instances (configuration problem
 	// or unexpected behaviour for example) Shoot should panic with error value.
