@@ -17,7 +17,7 @@ import (
 )
 
 func Import(fs afero.Fs) {
-	register.Provider("jsonline", func(conf jsonline.Config) core.Provider {
+	register.Provider("http/json", func(conf jsonline.Config) core.Provider {
 		return jsonline.NewProvider(fs, conf)
 	})
 
@@ -36,8 +36,4 @@ func Import(fs afero.Fs) {
 	register.Gun("connect", func(conf ConnectGunConfig) core.Gun {
 		return WrapGun(NewConnectGun(conf))
 	}, NewDefaultConnectGunConfig)
-
-	register.Gun("spdy", func(conf SPDYGunConfig) core.Gun {
-		return WrapGun(NewSPDYGun(conf))
-	})
 }

@@ -102,17 +102,18 @@ var _ = Describe("provider start", func() {
 		p := newTestProvider(Config{File: testFile})
 		ctx, cancel := context.WithCancel(context.Background())
 		errch := make(chan error)
-		go func() { errch <- p.Start(ctx) }()
+		go func() { errch <- p.Run(ctx) }()
 		Expect(errch).NotTo(Receive())
 		cancel()
 		var err error
 		Eventually(errch).Should(Receive(&err))
-		Expect(err).To(Equal(ctx.Err()))
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("fail", func() {
 		p := newTestProvider(Config{File: "no_such_file"})
-		Expect(p.Start(context.Background())).NotTo(BeNil())
+		err := p.Run(context.Background())
+		Expect(err).To(HaveOccurred())
 	})
 })
 
@@ -142,7 +143,7 @@ var _ = Describe("provider decode", func() {
 		errch = make(chan error)
 		var ctx context.Context
 		ctx, cancel = context.WithCancel(context.Background())
-		go func() { errch <- provider.Start(ctx) }()
+		go func() { errch <- provider.Run(ctx) }()
 		Expect(errch).NotTo(Receive())
 
 		for i := 0; i < successReceives; i++ {
@@ -180,7 +181,7 @@ var _ = Describe("provider decode", func() {
 		})
 		It("ok", func() {
 			cancel()
-			expectedStartErr = context.Canceled
+			expectedStartErr = nil
 			Eventually(provider.Sink, time.Second, time.Millisecond).Should(BeClosed())
 		})
 	})

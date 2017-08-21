@@ -8,12 +8,11 @@ pools:
     result:
       type: log
     rps:
-      type: periodic
-      batch: 2
-      max: 3
-      period: 1s
+      type: line
+      from: 1
+      to: 5
+      duration: 2s
     startup:
-      type: periodic
-      batch: 1
-      max: 5
-      period: 0.5s
+      type: once
+      times: 5
+

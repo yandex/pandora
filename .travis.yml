@@ -1,7 +1,6 @@
 language: go
 go: 
-  - 1.7.3
-  - 1.8
+  - 1.8.3
   - tip
 
 go_import_path: github.com/yandex/pandora
@@ -13,6 +12,6 @@ before_install:
 
 install:
   - make tools
-  - go get -t `glide novendor` # Required to make vendoring in different PRs.
+  - go get -t `glide novendor`
 
 script: make travis

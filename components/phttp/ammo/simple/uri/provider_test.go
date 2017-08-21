@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
 
+	"github.com/pkg/errors"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
 
@@ -70,17 +71,17 @@ var _ = Describe("provider start", func() {
 		p := newTestProvider(Config{File: testFile})
 		ctx, cancel := context.WithCancel(context.Background())
 		errch := make(chan error)
-		go func() { errch <- p.Start(ctx) }()
+		go func() { errch <- p.Run(ctx) }()
 		Expect(errch).NotTo(Receive())
 		cancel()
 		var err error
 		Eventually(errch).Should(Receive(&err))
-		Expect(err).To(Equal(ctx.Err()))
+		Expect(errors.Cause(err)).To(Equal(ctx.Err()))
 	})
 
 	It("fail", func() {
 		p := newTestProvider(Config{File: "no_such_file"})
-		Expect(p.Start(context.Background())).NotTo(BeNil())
+		Expect(p.Run(context.Background())).NotTo(BeNil())
 	})
 })
 var _ = Describe("provider decode", func() {
@@ -109,7 +110,7 @@ var _ = Describe("provider decode", func() {
 		errch = make(chan error)
 		var ctx context.Context
 		ctx, cancel = context.WithCancel(context.Background())
-		go func() { errch <- provider.Start(ctx) }()
+		go func() { errch <- provider.Run(ctx) }()
 		Expect(errch).NotTo(Receive())
 
 		for i := 0; i < successReceives; i++ {
@@ -127,9 +128,9 @@ var _ = Describe("provider decode", func() {
 		var err error
 		Eventually(errch).Should(Receive(&err))
 		if expectedStartErr == nil {
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 		} else {
-			Expect(err).To(Equal(expectedStartErr))
+			Expect(errors.Cause(err)).To(Equal(expectedStartErr))
 		}
 		for i := 0; i < len(ammos); i++ {
 			expectedData := testData[i%len(testData)]

@@ -38,8 +38,8 @@ func WrapGun(g Gun) core.Gun {
 
 type gunWrapper struct{ Gun }
 
-func (g *gunWrapper) Shoot(ctx context.Context, ammo core.Ammo) error {
-	return g.Gun.Shoot(ctx, ammo.(Ammo))
+func (g *gunWrapper) Shoot(ctx context.Context, ammo core.Ammo) {
+	g.Gun.Shoot(ctx, ammo.(Ammo))
 }
 
 func (g *gunWrapper) Bind(a core.Aggregator) {

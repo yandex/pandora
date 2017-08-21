@@ -12,7 +12,7 @@ import (
 	"github.com/yandex/pandora/core"
 )
 
-func NewLog() *logging {
+func NewLog() core.Aggregator {
 	return &logging{make(chan core.Sample, 128)}
 }
 
@@ -20,13 +20,11 @@ type logging struct {
 	sink chan core.Sample
 }
 
-var _ core.Aggregator = (*logging)(nil)
-
-func (l *logging) Release(sample core.Sample) {
+func (l *logging) Report(sample core.Sample) {
 	l.sink <- sample
 }
 
-func (l *logging) Start(ctx context.Context) error {
+func (l *logging) Run(ctx context.Context) error {
 loop:
 	for {
 		select {

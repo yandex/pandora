@@ -27,17 +27,18 @@ type Gun struct {
 	aggregator core.Aggregator
 }
 
-func (l *Gun) Bind(results core.Aggregator) {
-	l.aggregator = results
+var _ core.Gun = &Gun{}
+
+func (l *Gun) Bind(aggregator core.Aggregator) {
+	l.aggregator = aggregator
 }
 
-func (l *Gun) Shoot(ctx context.Context, a core.Ammo) error {
+func (l *Gun) Shoot(ctx context.Context, a core.Ammo) {
 	sample := netsample.Acquire("REQUEST")
 	// Do work here.
 	log.Println("example Gun mesage: ", a.(*Ammo).Message)
 	sample.SetProtoCode(200)
-	l.aggregator.Release(sample)
-	return nil
+	l.aggregator.Report(sample)
 }
 
 type ProviderConfig struct {
@@ -62,6 +63,8 @@ type Provider struct {
 	pool sync.Pool
 }
 
+var _ core.Provider = &Provider{}
+
 func (p *Provider) Acquire() (ammo core.Ammo, ok bool) {
 	ammo, ok = <-p.sink
 	return
@@ -71,7 +74,7 @@ func (p *Provider) Release(ammo core.Ammo) {
 	p.pool.Put(ammo)
 }
 
-func (p *Provider) Start(ctx context.Context) error {
+func (p *Provider) Run(ctx context.Context) error {
 	defer close(p.sink)
 	for i := 0; i < p.AmmoLimit; i++ {
 		select {

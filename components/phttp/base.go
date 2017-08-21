@@ -54,7 +54,7 @@ func (b *Base) Shoot(ctx context.Context, ammo Ammo) (err error) {
 		if err != nil {
 			sample.SetErr(err)
 		}
-		b.Aggregator.Release(sample)
+		b.Aggregator.Report(sample)
 		err = stackerr.WrapSkip(err, 1)
 	}()
 	var res *http.Response

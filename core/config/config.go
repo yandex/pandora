@@ -91,10 +91,6 @@ var hooks = []mapstructure.DecodeHookFunc{
 	StringToDataSizeHook,
 }
 
-// Usual add causes "init loop" error.
-var _ = AddTypeHook(PluginHook)
-var _ = AddTypeHook(PluginFactoryHook)
-
 var compiledHook mapstructure.DecodeHookFunc
 var compileHookOnce = sync.Once{}
 
