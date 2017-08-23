@@ -10,9 +10,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestPhttp(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Phttp Suite")
+	testutil.ReplaceGlobalLogger()
+	RunSpecs(t, "HTTP Suite")
 }

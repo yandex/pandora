@@ -19,11 +19,26 @@ type HTTPGunConfig struct {
 	Client ClientConfig    `config:",squash"`
 }
 
+type HTTP2GunConfig struct {
+	Target string       `validate:"endpoint,required"`
+	Client ClientConfig `config:",squash"`
+}
+
 func NewHTTPGun(conf HTTPGunConfig) *HTTPGun {
-	transport := NewTransport(conf.Client.Transport)
-	transport.DialContext = NewDialer(conf.Client.Dialer).DialContext
-	client := &http.Client{Transport: transport}
+	transport := NewTransport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext)
+	client := newClient(transport, conf.Client.Redirect)
 	return NewClientGun(client, conf.Gun)
+}
+
+// NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
+func NewHTTP2Gun(conf HTTP2GunConfig) *HTTPGun {
+	transport := NewHTTP2Transport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext)
+	client := newClient(transport, conf.Client.Redirect)
+	// Will panic and cancel shooting whet target doesn't support HTTP/2.
+	client = &panicOnHTTP1Client{client}
+	// NOTE: HTTP/2 gun not support HTTP/2 over TCP for now.
+	// Open issue on github if you need this feature.
+	return NewClientGun(client, ClientGunConfig{Target: conf.Target, SSL: true})
 }
 
 func NewClientGun(client Client, conf ClientGunConfig) *HTTPGun {
@@ -33,7 +48,13 @@ func NewClientGun(client Client, conf ClientGunConfig) *HTTPGun {
 	}
 	var g HTTPGun
 	g = HTTPGun{
-		Base:   Base{Do: g.Do},
+		Base: Base{
+			Do: g.Do,
+			OnClose: func() error {
+				client.CloseIdleConnections()
+				return nil
+			},
+		},
 		scheme: scheme,
 		target: conf.Target,
 		client: client,
@@ -60,6 +81,12 @@ func (g *HTTPGun) Do(req *http.Request) (*http.Response, error) {
 func NewDefaultHTTPGunConfig() HTTPGunConfig {
 	return HTTPGunConfig{
 		Gun:    NewDefaultClientGunConfig(),
+		Client: NewDefaultClientConfig(),
+	}
+}
+
+func NewDefaultHTTP2GunConfig() HTTP2GunConfig {
+	return HTTP2GunConfig{
 		Client: NewDefaultClientConfig(),
 	}
 }

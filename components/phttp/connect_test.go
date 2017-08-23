@@ -86,18 +86,15 @@ var _ = Describe("connect", func() {
 		proxy := httptest.NewServer(tunnelHandler(origin.URL))
 		defer proxy.Close()
 
-		req, err := http.NewRequest("GET", origin.URL, nil)
-		Expect(err).To(BeNil())
-
 		conf := NewDefaultConnectGunConfig()
-		conf.Target = strings.TrimPrefix(proxy.URL, "http://")
+		conf.Target = proxy.Listener.Addr().String()
 		connectGun := NewConnectGun(conf)
 
 		results := &netsample.TestAggregator{}
 		connectGun.Bind(results)
 
-		err = connectGun.Shoot(context.Background(), newTestAmmo(req))
-		Expect(err).To(BeNil())
+		connectGun.Shoot(context.Background(), newAmmoURL(origin.URL))
+		Expect(results.Samples[0].Err()).To(BeNil())
 
 		Expect(results.Samples).To(HaveLen(1))
 		Expect(results.Samples[0].ProtoCode()).To(Equal(http.StatusOK))

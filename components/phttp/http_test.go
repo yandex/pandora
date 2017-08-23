@@ -7,6 +7,7 @@ package phttp
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,6 +15,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"golang.org/x/net/http2"
 
 	"github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core/aggregate/netsample"
@@ -48,9 +52,9 @@ var _ = Describe("Base", func() {
 		httpGun := NewHTTPGun(conf)
 		httpGun.Bind(results)
 
-		am := newTestAmmo(expectedReq)
-		err = httpGun.Shoot(context.Background(), am)
-		Expect(err).To(BeNil())
+		am := newAmmoReq(expectedReq)
+		httpGun.Shoot(context.Background(), am)
+		Expect(results.Samples[0].Err()).To(BeNil())
 
 		Expect(*actualReq).To(MatchFields(IgnoreExtras, Fields{
 			"Method": Equal("GET"),
@@ -62,10 +66,161 @@ var _ = Describe("Base", func() {
 			})),
 		}))
 	})
+
 })
 
-func newTestAmmo(req *http.Request) Ammo {
+func newAmmoURL(url string) Ammo {
+	req, err := http.NewRequest("GET", url, nil)
+	Expect(err).NotTo(HaveOccurred())
+	return newAmmoReq(req)
+}
+
+func newAmmoReq(req *http.Request) Ammo {
 	ammo := &ammomock.Ammo{}
 	ammo.On("Request").Return(req, netsample.Acquire("REQUEST"))
 	return ammo
+}
+
+var _ = Describe("HTTP", func() {
+	itOk := func(https bool) {
+		var isServed atomic.Bool
+		server := httptest.NewUnstartedServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			Expect(req.Header.Get("Accept-Encoding")).To(BeEmpty())
+			rw.WriteHeader(http.StatusOK)
+			isServed.Store(true)
+		}))
+		if https {
+			server.StartTLS()
+		} else {
+			server.Start()
+		}
+		defer server.Close()
+		conf := NewDefaultHTTPGunConfig()
+		conf.Gun.Target = server.Listener.Addr().String()
+		conf.Gun.SSL = https
+		gun := NewHTTPGun(conf)
+		var aggr netsample.TestAggregator
+		gun.Bind(&aggr)
+		gun.Shoot(context.Background(), newAmmoURL("/"))
+
+		Expect(aggr.Samples).To(HaveLen(1))
+		Expect(aggr.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
+		Expect(isServed.Load()).To(BeTrue())
+	}
+	It("http ok", func() { itOk(false) })
+	It("https ok", func() { itOk(true) })
+
+	itRedirect := func(redirect bool) {
+		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			if req.URL.Path == "/redirect" {
+				rw.Header().Add("Location", "/")
+				rw.WriteHeader(http.StatusMovedPermanently)
+			} else {
+				rw.WriteHeader(http.StatusOK)
+			}
+		}))
+		defer server.Close()
+		conf := NewDefaultHTTPGunConfig()
+		conf.Gun.Target = server.Listener.Addr().String()
+		conf.Client.Redirect = redirect
+		gun := NewHTTPGun(conf)
+		var aggr netsample.TestAggregator
+		gun.Bind(&aggr)
+		gun.Shoot(context.Background(), newAmmoURL("/redirect"))
+
+		Expect(aggr.Samples).To(HaveLen(1))
+		expectedCode := http.StatusMovedPermanently
+		if redirect {
+			expectedCode = http.StatusOK
+		}
+		Expect(aggr.Samples[0].ProtoCode()).To(Equal(expectedCode))
+	}
+	It("not follow redirects by default", func() { itRedirect(false) })
+	It("follow redirects if option set ", func() { itRedirect(true) })
+
+	It("not support HTTP2", func() {
+		server := newHTTP2TestServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			if isHTTP2Request(req) {
+				rw.WriteHeader(http.StatusForbidden)
+			} else {
+				rw.WriteHeader(http.StatusOK)
+			}
+		}))
+		defer server.Close()
+
+		// Test, that configured server serves HTTP2 well.
+		http2OnlyClient := http.Client{
+			Transport: &http2.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			}}
+		res, err := http2OnlyClient.Get(server.URL)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res.StatusCode).To(Equal(http.StatusForbidden))
+
+		conf := NewDefaultHTTPGunConfig()
+		conf.Gun.Target = server.Listener.Addr().String()
+		conf.Gun.SSL = true
+		gun := NewHTTPGun(conf)
+		var results netsample.TestAggregator
+		gun.Bind(&results)
+		gun.Shoot(context.Background(), newAmmoURL("/"))
+
+		Expect(results.Samples).To(HaveLen(1))
+		Expect(results.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
+	})
+
+})
+
+var _ = Describe("HTTP/2", func() {
+	It("HTTP/2 ok", func() {
+		server := newHTTP2TestServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			if isHTTP2Request(req) {
+				rw.WriteHeader(http.StatusOK)
+			} else {
+				rw.WriteHeader(http.StatusForbidden)
+			}
+		}))
+		defer server.Close()
+		conf := NewDefaultHTTP2GunConfig()
+		conf.Target = server.Listener.Addr().String()
+		gun := NewHTTP2Gun(conf)
+		var results netsample.TestAggregator
+		gun.Bind(&results)
+		gun.Shoot(context.Background(), newAmmoURL("/"))
+		Expect(results.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
+	})
+
+	It("HTTP/1.1 panic", func() {
+		server := httptest.NewTLSServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			zap.S().Info("Served")
+		}))
+		defer server.Close()
+		conf := NewDefaultHTTP2GunConfig()
+		conf.Target = server.Listener.Addr().String()
+		gun := NewHTTP2Gun(conf)
+		var results netsample.TestAggregator
+		gun.Bind(&results)
+		var r interface{}
+		func() {
+			defer func() {
+				r = recover()
+			}()
+			gun.Shoot(context.Background(), newAmmoURL("/"))
+		}()
+		Expect(r).NotTo(BeNil())
+		Expect(r).To(ContainSubstring(notHTTP2PanicMsg))
+	})
+
+})
+
+func isHTTP2Request(req *http.Request) bool {
+	return checkHTTP2(req.TLS) == nil
+}
+
+func newHTTP2TestServer(handler http.Handler) *httptest.Server {
+	server := httptest.NewUnstartedServer(handler)
+	http2.ConfigureServer(server.Config, nil)
+	server.TLS = server.Config.TLSConfig // StartTLS takes TLS configuration from that field.
+	server.StartTLS()
+	return server
 }

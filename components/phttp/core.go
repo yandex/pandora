@@ -25,7 +25,7 @@ type Ammo interface {
 }
 
 type Gun interface {
-	Shoot(context.Context, Ammo) error
+	Shoot(context.Context, Ammo)
 	Bind(netsample.Aggregator)
 }
 
