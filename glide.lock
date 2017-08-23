@@ -1,5 +1,5 @@
 hash: a8b2fdb8271a2c1bd63bd71b95e59c4016ff29336a21dd6fbabc3c4c5ca9f069
-updated: 2017-06-28T17:00:37.572449106+03:00
+updated: 2017-08-23T14:20:45.659155574+03:00
 imports:
 - name: github.com/amahi/spdy
   version: 31da8b754faf6833fa95192c69bdb10518e9fb7b
@@ -34,10 +34,51 @@ imports:
   version: b3b15ef068fd0b17ddf408a23669f20811d194d2
 - name: github.com/mitchellh/mapstructure
   version: ed105d635dfa9ea7133f7c79f1eb36203fc3a156
+- name: github.com/onsi/ginkgo
+  version: f24729c07644086231e82a4bc3a1cc2feff06e71
+  subpackages:
+  - config
+  - extensions/table
+  - internal/codelocation
+  - internal/containernode
+  - internal/failer
+  - internal/leafnodes
+  - internal/remote
+  - internal/spec
+  - internal/spec_iterator
+  - internal/specrunner
+  - internal/suite
+  - internal/testingtproxy
+  - internal/writer
+  - reporters
+  - reporters/stenographer
+  - reporters/stenographer/support/go-colorable
+  - reporters/stenographer/support/go-isatty
+  - types
+- name: github.com/onsi/gomega
+  version: f9b2e15b86f3d6dd556700ffbaa4feee86745028
+  subpackages:
+  - format
+  - gbytes
+  - gexec
+  - gstruct
+  - gstruct/errors
+  - internal/assertion
+  - internal/asyncassertion
+  - internal/oraclematcher
+  - internal/testingtsupport
+  - matchers
+  - matchers/support/goraph/bipartitegraph
+  - matchers/support/goraph/edge
+  - matchers/support/goraph/node
+  - matchers/support/goraph/util
+  - types
 - name: github.com/pelletier/go-buffruneio
   version: df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d
 - name: github.com/pelletier/go-toml
   version: a1f048ba24490f9b0674a67e1ce995d685cddf4a
+- name: github.com/pkg/errors
+  version: c605e284fe17294bda444b34710735b29d1a9d90
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
@@ -69,6 +110,28 @@ imports:
   - require
 - name: github.com/uber-go/atomic
   version: 0506d69f5564c56e25797bf7183c28921d4c6360
+- name: go.uber.org/atomic
+  version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
+- name: go.uber.org/multierr
+  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+- name: go.uber.org/zap
+  version: 416e66ad83ebde35df0e09f02e65ac149e193b0e
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - zapcore
+- name: golang.org/x/net
+  version: 30f03014b4f11f9f238fdeca8cca734746a24fbb
+  subpackages:
+  - html
+  - html/atom
+  - html/charset
+  - http2
+  - http2/hpack
+  - idna
+  - lex/httplex
 - name: golang.org/x/sys
   version: d75a52659825e75fff6158388dddc6a5b04f9ba5
   subpackages:
@@ -90,61 +153,16 @@ imports:
   - internal/utf8internal
   - language
   - runes
+  - secure/bidirule
   - transform
+  - unicode/bidi
   - unicode/norm
 - name: gopkg.in/go-playground/validator.v8
   version: 5f57d2222ad794d0dffb07e664ea05e2ee07d60c
 - name: gopkg.in/yaml.v2
   version: a5b47d31c556af34a302ce5d659e6fea44d90de0
 testImports:
-- name: github.com/onsi/ginkgo
-  version: f24729c07644086231e82a4bc3a1cc2feff06e71
-  subpackages:
-  - config
-  - extensions/table
-  - internal/codelocation
-  - internal/containernode
-  - internal/failer
-  - internal/leafnodes
-  - internal/remote
-  - internal/spec
-  - internal/spec_iterator
-  - internal/specrunner
-  - internal/suite
-  - internal/testingtproxy
-  - internal/writer
-  - reporters
-  - reporters/stenographer
-  - reporters/stenographer/support/go-colorable
-  - reporters/stenographer/support/go-isatty
-  - types
-- name: github.com/onsi/gomega
-  version: f9b2e15b86f3d6dd556700ffbaa4feee86745028
-  subpackages:
-  - format
-  - gstruct
-  - gstruct/errors
-  - internal/assertion
-  - internal/asyncassertion
-  - internal/oraclematcher
-  - internal/testingtsupport
-  - matchers
-  - matchers/support/goraph/bipartitegraph
-  - matchers/support/goraph/edge
-  - matchers/support/goraph/node
-  - matchers/support/goraph/util
-  - types
+- name: github.com/ghodss/yaml
+  version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/SlyMarbo/spdy
   version: b5edf18e002bfc31aeef414fd7b023f214121070
-  subpackages:
-  - common
-  - spdy2
-  - spdy2/frames
-  - spdy3
-  - spdy3/frames
-- name: golang.org/x/net
-  version: 30f03014b4f11f9f238fdeca8cca734746a24fbb
-  subpackages:
-  - html
-  - html/atom
-  - html/charset
