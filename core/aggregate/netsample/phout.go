@@ -13,20 +13,22 @@ import (
 )
 
 type PhoutConfig struct {
-	Destination string
+	Destination string // Destination file name
+	Id          bool   // Print ammo ids if true.
 }
 
 func NewPhout(fs afero.Fs, conf PhoutConfig) (a Aggregator, err error) {
 	filename := conf.Destination
 	var file afero.File = os.Stdout
 	if filename != "" {
-		file, err = fs.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0666)
+		file, err = fs.Create(conf.Destination)
 	}
 	if err != nil {
 		err = errors.Wrap(err, "phout output file open failed")
 		return
 	}
 	a = &phoutAggregator{
+		config: conf,
 		sink:   make(chan *Sample, 32*1024),
 		writer: bufio.NewWriterSize(file, 512*1024),
 		buf:    make([]byte, 0, 1024),
@@ -36,6 +38,7 @@ func NewPhout(fs afero.Fs, conf PhoutConfig) (a Aggregator, err error) {
 }
 
 type phoutAggregator struct {
+	config PhoutConfig
 	sink   chan *Sample
 	writer *bufio.Writer
 	buf    []byte
@@ -83,7 +86,7 @@ loop:
 }
 
 func (a *phoutAggregator) handle(s *Sample) error {
-	a.buf = appendPhout(s, a.buf)
+	a.buf = appendPhout(s, a.buf, a.config.Id)
 	a.buf = append(a.buf, '\n')
 	_, err := a.writer.Write(a.buf)
 	a.buf = a.buf[:0]
@@ -93,10 +96,14 @@ func (a *phoutAggregator) handle(s *Sample) error {
 
 const phoutDelimiter = '\t'
 
-func appendPhout(s *Sample, dst []byte) []byte {
+func appendPhout(s *Sample, dst []byte, id bool) []byte {
 	dst = appendTimestamp(s.timeStamp, dst)
 	dst = append(dst, phoutDelimiter)
 	dst = append(dst, s.tags...)
+	if id {
+		dst = append(dst, '#')
+		dst = strconv.AppendInt(dst, int64(s.Id()), 10)
+	}
 	for _, v := range s.fields {
 		dst = append(dst, phoutDelimiter)
 		dst = strconv.AppendInt(dst, int64(v), 10)

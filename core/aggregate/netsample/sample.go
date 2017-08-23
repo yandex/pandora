@@ -16,6 +16,10 @@ import (
 )
 
 const (
+	ProtoCodeError = 999
+)
+
+const (
 	keyRTTMicro     = iota
 	keyConnectMicro // TODO (skipor): set all for HTTP using httptrace and helper structs
 	keySendMicro
@@ -45,6 +49,7 @@ var samplePool = &sync.Pool{New: func() interface{} { return &Sample{} }}
 type Sample struct {
 	timeStamp time.Time
 	tags      string
+	id        int
 	fields    [fieldsNum]int
 	err       error
 }
@@ -57,6 +62,9 @@ func (s *Sample) AddTag(tag string) {
 	}
 	s.tags += "|" + tag
 }
+
+func (s *Sample) Id() int      { return s.id }
+func (s *Sample) SetId(id int) { s.id = id }
 
 func (s *Sample) ProtoCode() int { return s.get(keyProtoCode) }
 func (s *Sample) SetProtoCode(code int) {
@@ -81,7 +89,7 @@ func (s *Sample) setRTT() {
 }
 
 func (s *Sample) String() string {
-	return string(appendPhout(s, nil))
+	return string(appendPhout(s, nil, true))
 }
 
 func getErrno(err error) int {
@@ -107,7 +115,7 @@ func getErrno(err error) int {
 			return int(typed)
 		default:
 			// Legacy default.
-			return 999
+			return ProtoCodeError
 		}
 	}
 }

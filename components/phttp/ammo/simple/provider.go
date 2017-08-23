@@ -11,6 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"go.uber.org/atomic"
 
 	"github.com/yandex/pandora/core"
 )
@@ -26,16 +27,20 @@ func NewProvider(fs afero.Fs, fileName string, start func(ctx context.Context, f
 }
 
 type Provider struct {
-	fs       afero.Fs
-	fileName string
-	start    func(ctx context.Context, file afero.File) error
-	Sink     chan *Ammo
-	Pool     sync.Pool
+	fs        afero.Fs
+	fileName  string
+	start     func(ctx context.Context, file afero.File) error
+	Sink      chan *Ammo
+	Pool      sync.Pool
+	idCounter atomic.Int64
 }
 
-func (p *Provider) Acquire() (ammo core.Ammo, ok bool) {
-	ammo, ok = <-p.Sink
-	return
+func (p *Provider) Acquire() (core.Ammo, bool) {
+	ammo, ok := <-p.Sink
+	if ok {
+		ammo.SetId(int(p.idCounter.Inc() - 1))
+	}
+	return ammo, ok
 }
 
 func (p *Provider) Release(a core.Ammo) {
@@ -46,7 +51,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	defer close(p.Sink)
 	file, err := p.fs.Open(p.fileName)
 	if err != nil {
-		return errors.Wrap(err, "failed to open ammo Sink")
+		return errors.Wrap(err, "failed to open ammo file")
 	}
 	defer file.Close()
 	return p.start(ctx, file)

@@ -17,19 +17,25 @@ type Ammo struct {
 	// Need to research is it possible. http.Transport can hold reference to http.Request.
 	req *http.Request
 	tag string
-}
-
-func NewAmmo(req *http.Request, tag string) *Ammo {
-	return &Ammo{req, tag}
+	id  int
 }
 
 func (a *Ammo) Request() (*http.Request, *netsample.Sample) {
 	sample := netsample.Acquire(a.tag)
+	sample.SetId(a.id)
 	return a.req, sample
 }
 
 func (a *Ammo) Reset(req *http.Request, tag string) {
-	*a = Ammo{req, tag}
+	*a = Ammo{req, tag, -1}
+}
+
+func (a *Ammo) SetId(id int) {
+	a.id = id
+}
+
+func (a *Ammo) Id() int {
+	return a.id
 }
 
 var _ phttp.Ammo = (*Ammo)(nil)
