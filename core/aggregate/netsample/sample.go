@@ -11,6 +11,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -94,6 +96,7 @@ func getErrno(err error) int {
 		}
 		err = typed.Underlying()
 	}
+	err = errors.Cause(err)
 	for {
 		switch typed := err.(type) {
 		case *net.OpError:

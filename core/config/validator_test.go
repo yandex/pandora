@@ -8,7 +8,6 @@ package config
 import (
 	"testing"
 
-	"github.com/facebookgo/stackerr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -47,7 +46,6 @@ func TestValidateOK(t *testing.T) {
 func TestValidateError(t *testing.T) {
 	err := Validate(&Multi{0, 2})
 	require.Error(t, err)
-	assert.IsType(t, &stackerr.Error{}, err)
 
 	err = Validate(&Multi{0, 0})
 	require.Error(t, err)

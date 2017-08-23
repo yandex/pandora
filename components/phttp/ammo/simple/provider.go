@@ -9,8 +9,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+
 	"github.com/yandex/pandora/core"
 )
 
@@ -45,8 +46,7 @@ func (p *Provider) Run(ctx context.Context) error {
 	defer close(p.Sink)
 	file, err := p.fs.Open(p.fileName)
 	if err != nil {
-		// TODO(skipor): instead of passing stacktrace log error here.
-		return stackerr.Newf("failed to open ammo Sink: %v", err)
+		return errors.Wrap(err, "failed to open ammo Sink")
 	}
 	defer file.Close()
 	return p.start(ctx, file)

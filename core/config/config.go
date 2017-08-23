@@ -8,9 +8,9 @@ package config
 import (
 	"sync"
 
-	"github.com/facebookgo/stackerr"
 	"github.com/fatih/structs"
 	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 )
 
 const TagName = "config"
@@ -19,9 +19,9 @@ const TagName = "config"
 func Decode(conf interface{}, result interface{}) error {
 	decoder, err := mapstructure.NewDecoder(newDecoderConfig(result))
 	if err != nil {
-		return stackerr.Wrap(err)
+		return errors.WithStack(err)
 	}
-	return stackerr.Wrap(decoder.Decode(conf))
+	return errors.WithStack(decoder.Decode(conf))
 }
 
 func DecodeAndValidate(conf interface{}, result interface{}) error {

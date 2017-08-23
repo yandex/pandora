@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,6 +53,7 @@ func TestGetErrno(t *testing.T) {
 	var err error = syscall.EINVAL
 	err = &os.SyscallError{Err: err}
 	err = &net.OpError{Err: err}
+	err = errors.WithStack(err)
 	err = stackerr.Wrap(err)
 	assert.NotZero(t, getErrno(err))
 	assert.Equal(t, int(syscall.EINVAL), getErrno(err))

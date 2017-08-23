@@ -6,14 +6,14 @@
 package plugin
 
 import (
-	"errors"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"reflect"
 	"testing"
 
-	"github.com/facebookgo/stackerr"
 	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -110,19 +110,18 @@ func TestNew(t *testing.T) {
 			assert.Equal(t, testNewOk(), testInitValue)
 		}},
 		{"non-nil error", func(t *testing.T) {
-			expectedErr := errors.New("fill conf err")
+			expectedErr := stderrors.New("fill conf err")
 			r.testRegister(func() (TestPlugin, error) {
 				return nil, expectedErr
 			})
 			_, err := testNew(r)
 			require.Error(t, err)
-			errs := stackerr.Underlying(err)
-			err = errs[len(errs)-1]
+			err = errors.Cause(err)
 			assert.Equal(t, expectedErr, err)
 		}},
 		{"no conf, fill conf error", func(t *testing.T) {
 			r.testRegister(newPlugin)
-			expectedErr := errors.New("fill conf err")
+			expectedErr := stderrors.New("fill conf err")
 			_, err := testNew(r, func(_ interface{}) error { return expectedErr })
 			assert.Equal(t, expectedErr, err)
 		}},

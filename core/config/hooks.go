@@ -6,7 +6,7 @@
 package config
 
 import (
-	"errors"
+	stderrors "errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -15,10 +15,10 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/c2h5oh/datasize"
 	"github.com/facebookgo/stack"
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/lib/tag"
-	"go.uber.org/zap"
 )
 
 var InvalidURLError = errors.New("string is not valid URL")
@@ -39,11 +39,11 @@ func StringToURLHook(f reflect.Type, t reflect.Type, data interface{}) (interfac
 	str := data.(string)
 
 	if !govalidator.IsURL(str) { // checks more than url.Parse
-		return nil, stackerr.Wrap(InvalidURLError)
+		return nil, errors.WithStack(InvalidURLError)
 	}
 	urlPtr, err := url.Parse(str)
 	if err != nil {
-		return nil, stackerr.Wrap(err)
+		return nil, errors.WithStack(err)
 	}
 
 	if t == urlType {
@@ -52,7 +52,7 @@ func StringToURLHook(f reflect.Type, t reflect.Type, data interface{}) (interfac
 	return urlPtr, nil
 }
 
-var InvalidIPError = errors.New("string is not valid IP")
+var InvalidIPError = stderrors.New("string is not valid IP")
 
 // StringToIPHook converts string to net.IP
 func StringToIPHook(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
@@ -65,7 +65,7 @@ func StringToIPHook(f reflect.Type, t reflect.Type, data interface{}) (interface
 	str := data.(string)
 	ip := net.ParseIP(str)
 	if ip == nil {
-		return nil, stackerr.Wrap(InvalidIPError)
+		return nil, errors.WithStack(InvalidIPError)
 	}
 	return ip, nil
 }
@@ -90,6 +90,7 @@ func DebugHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{},
 		return
 	}
 	callers := stack.Callers(2)
+
 	var decodeCallers int
 	for _, caller := range callers {
 		if caller.Name == "(*Decoder).decode" {

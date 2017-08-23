@@ -11,7 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core/aggregate/netsample"
@@ -58,7 +58,7 @@ func (b *Base) Shoot(ctx context.Context, ammo Ammo) {
 			sample.SetErr(err)
 		}
 		b.Aggregator.Report(sample)
-		err = stackerr.WrapSkip(err, 1)
+		err = errors.WithStack(err)
 	}()
 	var res *http.Response
 	res, err = b.Do(req)

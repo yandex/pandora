@@ -10,7 +10,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"go.uber.org/zap"
 
@@ -49,7 +49,7 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			data := scanner.Bytes()
 			a, err := decodeAmmo(data, p.Pool.Get().(*simple.Ammo))
 			if err != nil {
-				return stackerr.Newf("failed to decode ammo at line: %v; data: %q; error: %s", line, data, err)
+				return errors.Wrapf(err, "failed to decode ammo at line: %v; data: %q", line, data)
 			}
 			ammoNum++
 			select {
@@ -71,7 +71,7 @@ func decodeAmmo(jsonDoc []byte, am *simple.Ammo) (*simple.Ammo, error) {
 	var data data
 	err := data.UnmarshalJSON(jsonDoc)
 	if err != nil {
-		return nil, stackerr.Wrap(err)
+		return nil, errors.WithStack(err)
 	}
 	req, err := data.ToRequest()
 	if err != nil {
@@ -85,7 +85,7 @@ func (d *data) ToRequest() (req *http.Request, err error) {
 	uri := "http://" + d.Host + d.Uri
 	req, err = http.NewRequest(d.Method, uri, nil)
 	if err != nil {
-		return nil, stackerr.Wrap(err)
+		return nil, errors.WithStack(err)
 	}
 	for k, v := range d.Headers {
 		req.Header.Set(k, v)

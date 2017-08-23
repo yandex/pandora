@@ -13,11 +13,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
+
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/plugin"
 	"github.com/yandex/pandora/lib/tag"
-	"go.uber.org/zap"
 )
 
 func AddHooks() {
@@ -65,7 +66,7 @@ func parseConf(t reflect.Type, data interface{}) (name string, fillConf func(con
 		if PluginNameKey == strings.ToLower(key) {
 			strVal, ok := val.(string)
 			if !ok {
-				err = stackerr.Newf("%s has non-string value %s", PluginNameKey, val)
+				err = errors.Errorf("%s has non-string value %s", PluginNameKey, val)
 				return
 			}
 			names = append(names, strVal)
@@ -73,11 +74,11 @@ func parseConf(t reflect.Type, data interface{}) (name string, fillConf func(con
 		}
 	}
 	if len(names) == 0 {
-		err = stackerr.Newf("plugin %s expected", PluginNameKey)
+		err = errors.Errorf("plugin %s expected", PluginNameKey)
 		return
 	}
 	if len(names) > 1 {
-		err = stackerr.Newf("too many %s keys", PluginNameKey)
+		err = errors.Errorf("too many %s keys", PluginNameKey)
 		return
 	}
 	name = names[0]
@@ -108,14 +109,14 @@ func toStringKeyMap(data interface{}) (out map[string]interface{}, err error) {
 	}
 	untypedKeyData, ok := data.(map[interface{}]interface{})
 	if !ok {
-		err = stackerr.Newf("unexpected config type %T: should be map[string or interface{}]interface{}", data)
+		err = errors.Errorf("unexpected config type %T: should be map[string or interface{}]interface{}", data)
 		return
 	}
 	out = make(map[string]interface{}, len(untypedKeyData))
 	for key, val := range untypedKeyData {
 		strKey, ok := key.(string)
 		if !ok {
-			err = stackerr.Newf("unexpected key type %T: %v", key, key)
+			err = errors.Errorf("unexpected key type %T: %v", key, key)
 		}
 		out[strKey] = val
 	}

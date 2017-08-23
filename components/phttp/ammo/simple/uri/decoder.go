@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
@@ -37,7 +37,7 @@ func newDecoder(ctx context.Context, sink chan<- *simple.Ammo, pool *sync.Pool) 
 
 func (d *decoder) Decode(line []byte) error {
 	if len(line) == 0 {
-		return stackerr.Newf("empty line")
+		return errors.New("empty line")
 	}
 	switch line[0] {
 	case '/':
@@ -45,7 +45,7 @@ func (d *decoder) Decode(line []byte) error {
 	case '[':
 		return d.decodeHeader(line)
 	}
-	return stackerr.Newf("every line should begin with '[' or '/'")
+	return errors.New("every line should begin with '[' or '/'")
 }
 
 func (d *decoder) decodeURI(line []byte) error {
@@ -60,7 +60,7 @@ func (d *decoder) decodeURI(line []byte) error {
 	}
 	req, err := http.NewRequest("GET", string(url), nil)
 	if err != nil {
-		return stackerr.Newf("uri decode error: ", err)
+		return errors.Wrap(err, "uri decode")
 	}
 	for k, v := range d.header {
 		// http.Request.Write sends Host header based on Host or URL.Host.
@@ -84,17 +84,17 @@ func (d *decoder) decodeURI(line []byte) error {
 
 func (d *decoder) decodeHeader(line []byte) error {
 	if len(line) < 3 || line[0] != '[' || line[len(line)-1] != ']' {
-		return stackerr.Newf("header line should be like '[key: value]")
+		return errors.New("header line should be like '[key: value]")
 	}
 	line = line[1 : len(line)-1]
 	colonIdx := bytes.IndexByte(line, ':')
 	if colonIdx < 0 {
-		return stackerr.Newf("missing colon")
+		return errors.New("missing colon")
 	}
 	key := string(bytes.TrimSpace(line[:colonIdx]))
 	val := string(bytes.TrimSpace(line[colonIdx+1:]))
 	if key == "" {
-		return stackerr.Newf("missing header key")
+		return errors.New("missing header key")
 	}
 	d.header.Set(key, val)
 	return nil

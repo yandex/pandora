@@ -8,7 +8,8 @@ package config
 import (
 	"reflect"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
+
 	"gopkg.in/go-playground/validator.v8"
 )
 
@@ -37,7 +38,7 @@ type validate struct {
 }
 
 func (v *validate) Validate(value interface{}) error {
-	return stackerr.Wrap(v.V.Struct(value))
+	return errors.WithStack(v.V.Struct(value))
 }
 
 func newValidator() *validate {
