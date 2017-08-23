@@ -153,6 +153,10 @@ func (pt *PandoraTester) ShouldSay(pattern string) {
 	EventuallyWithOffset(1, pt.Out, 3*time.Second).Should(gbytes.Say(pattern))
 }
 
+func (pt *PandoraTester) ExitCode() int {
+	return pt.Session.Wait(5).ExitCode()
+}
+
 func (pt *PandoraTester) Close() {
 	pt.Terminate()
 	os.RemoveAll(pt.TestDir)

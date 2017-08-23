@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/atomic"
+	"golang.org/x/net/http2"
 )
 
 var _ = Describe("http", func() {
@@ -24,6 +25,9 @@ var _ = Describe("http", func() {
 		tester = nil
 	})
 	JustBeforeEach(func() {
+		if server != nil {
+			Expect(server.URL).NotTo(BeEmpty(), "Please start server manually")
+		}
 		tester = NewTester(conf)
 	})
 	AfterEach(func() {
@@ -34,9 +38,10 @@ var _ = Describe("http", func() {
 		}
 	})
 
-	Context("jsonline", func() {
+	Context("uri ammo", func() {
 		var (
-			requetsCount atomic.Int64
+			requetsCount atomic.Int64           // Request served by test server.
+			gunConfig    map[string]interface{} // gunConfig config section.
 		)
 		const (
 			Requests  = 4
@@ -44,14 +49,15 @@ var _ = Describe("http", func() {
 			OutFile   = "out.log"
 		)
 		BeforeEach(func() {
-			server = httptest.NewServer(http.HandlerFunc(
+			requetsCount.Store(0)
+			server = httptest.NewUnstartedServer(http.HandlerFunc(
 				func(rw http.ResponseWriter, req *http.Request) {
 					requetsCount.Inc()
 					rw.WriteHeader(http.StatusOK)
 				}))
 
 			conf.Pool[0].Gun = map[string]interface{}{
-				"type":   "http",
+				// Set type in test.
 				"target": ServerEndpoint(),
 			}
 			const ammoFile = "ammo.uri"
@@ -71,12 +77,60 @@ var _ = Describe("http", func() {
 			conf.Pool[0].StartupSchedule = []map[string]interface{}{
 				{"type": "once", "times": Instances},
 			}
+			gunConfig = conf.Pool[0].Gun
 		})
-		It("", func() {
-			exitCode := tester.Session.Wait(5).ExitCode()
-			Expect(exitCode).To(BeZero())
-			Expect(requetsCount.Load()).To(BeEquivalentTo(Requests))
-		})
-	})
+		itOk := func() {
+			It("ok", func() {
+				exitCode := tester.ExitCode()
+				Expect(exitCode).To(BeZero(), "Pandora finish execution with non zero code")
+				Expect(requetsCount.Load()).To(BeEquivalentTo(Requests))
+				// TODO(skipor): parse and check phout output
+			})
+		}
 
+		Context("http", func() {
+			BeforeEach(func() {
+				server.Start()
+				gunConfig["type"] = "http"
+			})
+			itOk()
+		})
+
+		Context("https", func() {
+			BeforeEach(func() {
+				server.StartTLS()
+				gunConfig["type"] = "http"
+				gunConfig["ssl"] = true
+			})
+			itOk()
+		})
+
+		Context("http2", func() {
+			Context("target support HTTP/2", func() {
+				BeforeEach(func() {
+					startHTTP2(server)
+					gunConfig["type"] = "http2"
+				})
+				itOk()
+			})
+			Context("target DOESN'T support HTTP/2", func() {
+				BeforeEach(func() {
+					server.StartTLS()
+					gunConfig["type"] = "http2"
+				})
+				It("ok", func() {
+					exitCode := tester.ExitCode()
+					Expect(exitCode).NotTo(BeZero(), "Pandora should fail")
+				})
+
+			})
+		})
+
+	})
 })
+
+func startHTTP2(server *httptest.Server) {
+	http2.ConfigureServer(server.Config, nil)
+	server.TLS = server.Config.TLSConfig
+	server.StartTLS()
+}
