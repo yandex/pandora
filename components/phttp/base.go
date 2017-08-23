@@ -17,8 +17,8 @@ import (
 	"github.com/yandex/pandora/core/aggregate/netsample"
 )
 
-// TODO: inject logger
 type Base struct {
+	Log        *zap.Logger                                   // If nil, zap.L() will be used.
 	Do         func(r *http.Request) (*http.Response, error) // Required.
 	Connect    func(ctx context.Context) error               // Optional hook.
 	OnClose    func() error                                  // Optional. Called on Close().
@@ -28,12 +28,16 @@ type Base struct {
 var _ Gun = (*Base)(nil)
 var _ io.Closer = (*Base)(nil)
 
+// TODO(skipor): pass logger here in https://github.com/yandex/pandora/issues/57
 func (b *Base) Bind(aggregator netsample.Aggregator) {
+	if b.Log == nil {
+		b.Log = zap.L()
+	}
 	if b.Aggregator != nil {
-		zap.L().Panic("already binded")
+		b.Log.Panic("already binded")
 	}
 	if aggregator == nil {
-		zap.L().Panic("nil aggregator")
+		b.Log.Panic("nil aggregator")
 	}
 	b.Aggregator = aggregator
 }
@@ -46,7 +50,7 @@ func (b *Base) Shoot(ctx context.Context, ammo Ammo) {
 	if b.Connect != nil {
 		err := b.Connect(ctx)
 		if err != nil {
-			zap.L().Warn("Connect fail", zap.Error(err))
+			b.Log.Warn("Connect fail", zap.Error(err))
 			return
 		}
 	}
@@ -60,23 +64,27 @@ func (b *Base) Shoot(ctx context.Context, ammo Ammo) {
 		b.Aggregator.Report(sample)
 		err = errors.WithStack(err)
 	}()
+	if ent := b.Log.Check(zap.DebugLevel, "Shoot"); ent != nil {
+		ent.Write(zap.Stringer("url", req.URL))
+	}
 	var res *http.Response
 	res, err = b.Do(req)
 	if err != nil {
-		zap.L().Warn("Request fail", zap.Error(err))
+		b.Log.Warn("Request fail", zap.Error(err))
 		return
+	}
+	if ent := b.Log.Check(zap.DebugLevel, "Got response"); ent != nil {
+		ent.Write(zap.Int("status", res.StatusCode))
 	}
 	sample.SetProtoCode(res.StatusCode)
 	defer res.Body.Close()
 	// TODO: measure body read time
-	// TODO: buffer copy buffers.
-	_, err = io.Copy(ioutil.Discard, res.Body)
+	_, err = io.Copy(ioutil.Discard, res.Body) // Buffers are pooled for ioutil.Discard
 	if err != nil {
-		zap.L().Warn("Body read fail", zap.Error(err))
+		b.Log.Warn("Body read fail", zap.Error(err))
 		return
 	}
 	// TODO: verbose logging
-	return
 }
 
 func (b *Base) Close() error {

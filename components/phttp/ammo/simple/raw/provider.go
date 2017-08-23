@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"context"
 	"io"
-	"log"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"go.uber.org/zap"
 )
 
 /*
@@ -120,6 +120,6 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		}
 		ammoFile.Seek(0, 0)
 	}
-	log.Println("Ran out of ammo")
+	zap.L().Debug("Ran out of ammo")
 	return nil
 }
