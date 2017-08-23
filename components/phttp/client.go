@@ -7,38 +7,48 @@ package phttp
 
 import (
 	"context"
-	"log"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"time"
 
+	"go.uber.org/zap"
+	"golang.org/x/net/http2"
+
+	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core/config"
 )
 
 //go:generate mockery -name=Client -case=underscore -inpkg -testonly
 
 type Client interface {
-	Do(r *http.Request) (*http.Response, error)
+	Do(req *http.Request) (*http.Response, error)
+	CloseIdleConnections() // We should close idle conns after gun close.
 }
 
 type ClientConfig struct {
-	// TODO: squash after fix https://github.com/mitchellh/mapstructure/issues/70
-	Transport TransportConfig // `config:",squash"`
-	Dialer    DialerConfig    `config:"dial"`
+	// May not be squashed until fix https://github.com/mitchellh/mapstructure/issues/70
+	Transport TransportConfig
+	Dialer    DialerConfig `config:"dial"`
+	Redirect  bool         // When true, follow HTTP redirects.
 }
 
 func NewDefaultClientConfig() ClientConfig {
 	return ClientConfig{
-		NewDefaultTransportConfig(),
-		NewDefaultDialerConfig(),
+		Transport: NewDefaultTransportConfig(),
+		Dialer:    NewDefaultDialerConfig(),
+		Redirect:  false,
 	}
 }
 
 // DialerConfig can be mapped on net.Dialer.
 // Set net.Dialer for details.
 type DialerConfig struct {
-	Timeout       time.Duration `config:"timeout"`
-	DualStack     bool          `config:"dual-stack"`
+	Timeout   time.Duration `config:"timeout"`
+	DualStack bool          `config:"dual-stack"`
+
+	// IPv4/IPv6 settings should not matter really,
+	// because target should be dialed using pre-resolved addr.
 	FallbackDelay time.Duration `config:"fallback-delay"`
 	KeepAlive     time.Duration `config:"keep-alive"`
 }
@@ -60,17 +70,17 @@ func (f DialerFunc) DialContext(ctx context.Context, network, address string) (n
 	return f(ctx, network, address)
 }
 
-func NewDialer(conf DialerConfig) Dialer {
+func NewDialer(conf DialerConfig) *net.Dialer {
 	d := &net.Dialer{}
 	err := config.Map(d, conf)
 	if err != nil {
-		log.Panicf("Dialer config map error: %s", err)
+		zap.L().Panic("Dialer config map fail", zap.Error(err))
 	}
 	return d
 }
 
-// DialerConfig can be mapped on http.RoundTripper.
-// See http.RoundTripper for details.
+// TransportConfig can be mapped on http.Transport.
+// See http.Transport for details.
 type TransportConfig struct {
 	TLSHandshakeTimeout   time.Duration `config:"tls-handshake-timeout"`
 	DisableKeepAlives     bool          `config:"disable-keep-alives"`
@@ -88,14 +98,81 @@ func NewDefaultTransportConfig() TransportConfig {
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   1 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
+		DisableCompression:    true,
 	}
 }
 
-func NewTransport(conf TransportConfig) *http.Transport {
+func NewTransport(conf TransportConfig, dial DialerFunc) *http.Transport {
 	tr := &http.Transport{}
+	tr.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true,                 // We should not spend time for this stuff.
+		NextProtos:         []string{"http/1.1"}, // Disable HTTP/2. Use HTTP/2 transport explicitly, if needed.
+	}
 	err := config.Map(tr, conf)
 	if err != nil {
-		log.Panicf("Transport config map error: %s", err)
+		zap.L().Panic("Transport config map fail", zap.Error(err))
 	}
+	tr.DialContext = dial
 	return tr
+}
+
+func NewHTTP2Transport(conf TransportConfig, dial DialerFunc) *http.Transport {
+	tr := NewTransport(conf, dial)
+	err := http2.ConfigureTransport(tr)
+	if err != nil {
+		zap.L().Panic("HTTP/2 transport configure fail", zap.Error(err))
+	}
+	tr.TLSClientConfig.NextProtos = []string{"h2"}
+	return tr
+}
+
+func newClient(tr *http.Transport, redirect bool) Client {
+	if redirect {
+		return redirectClient{&http.Client{Transport: tr}}
+	}
+	return noRedirectClient{tr}
+}
+
+type redirectClient struct{ *http.Client }
+
+func (c redirectClient) CloseIdleConnections() {
+	c.Transport.(*http.Transport).CloseIdleConnections()
+}
+
+type noRedirectClient struct{ *http.Transport }
+
+func (c noRedirectClient) Do(req *http.Request) (*http.Response, error) {
+	return c.Transport.RoundTrip(req)
+}
+
+// Used to cancel shooting in HTTP/2 gun, when target doesn't support HTTP/2
+type panicOnHTTP1Client struct {
+	Client
+}
+
+const notHTTP2PanicMsg = "Non HTTP/2 connection established. Seems that target doesn't support HTTP/2."
+
+func (c *panicOnHTTP1Client) Do(req *http.Request) (*http.Response, error) {
+	res, err := c.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	err = checkHTTP2(res.TLS)
+	if err != nil {
+		zap.L().Panic(notHTTP2PanicMsg, zap.Error(err))
+	}
+	return res, nil
+}
+
+func checkHTTP2(state *tls.ConnectionState) error {
+	if state == nil {
+		return errors.New("http2: non TLS connection")
+	}
+	if p := state.NegotiatedProtocol; p != http2.NextProtoTLS {
+		return errors.Errorf("http2: unexpected ALPN protocol %q; want %q", p, http2.NextProtoTLS)
+	}
+	if !state.NegotiatedProtocolIsMutual {
+		return errors.New("http2: could not negotiate protocol mutually")
+	}
+	return nil
 }

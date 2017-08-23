@@ -29,11 +29,18 @@ func NewConnectGun(conf ConnectGunConfig) *ConnectGun {
 	if conf.SSL {
 		scheme = "https"
 	}
+	client := newConnectClient(conf)
 	var g ConnectGun
 	g = ConnectGun{
-		Base:   Base{Do: g.Do},
+		Base: Base{
+			Do: g.Do,
+			OnClose: func() error {
+				client.CloseIdleConnections()
+				return nil
+			},
+		},
 		scheme: scheme,
-		client: newConnectClient(conf),
+		client: client,
 	}
 	return &g
 }
@@ -60,17 +67,18 @@ func NewDefaultConnectGunConfig() ConnectGunConfig {
 }
 
 func newConnectClient(conf ConnectGunConfig) Client {
-	transport := NewTransport(conf.Client.Transport)
-	transport.DialContext = newConnectDialer(
-		conf.Target,
-		conf.ConnectSSL,
-		NewDialer(conf.Client.Dialer),
-	).DialContext
-	return &http.Client{Transport: transport}
+	transport := NewTransport(conf.Client.Transport,
+		newConnectDialFunc(
+			conf.Target,
+			conf.ConnectSSL,
+			NewDialer(conf.Client.Dialer),
+		))
+	return newClient(transport, conf.Client.Redirect)
 }
 
-func newConnectDialer(target string, connectSSL bool, dialer Dialer) Dialer {
-	return DialerFunc(func(ctx context.Context, network, address string) (conn net.Conn, err error) {
+func newConnectDialFunc(target string, connectSSL bool, dialer Dialer) DialerFunc {
+	return func(ctx context.Context, network, address string) (conn net.Conn, err error) {
+		// TODO(skipor): make connect sample.
 		// TODO(skipor): make httptrace callbacks called correctly.
 		if network != "tcp" {
 			panic("unsupported network " + network)
@@ -81,7 +89,6 @@ func newConnectDialer(target string, connectSSL bool, dialer Dialer) Dialer {
 				conn = nil
 			}
 		}()
-		// TODO(skipor): make connect sample?
 		conn, err = dialer.DialContext(ctx, "tcp", target)
 		if err != nil {
 			err = stackerr.Wrap(err)
@@ -134,5 +141,5 @@ func newConnectDialer(target string, connectSSL bool, dialer Dialer) Dialer {
 			return
 		}
 		return
-	})
+	}
 }

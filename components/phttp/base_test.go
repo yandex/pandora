@@ -90,7 +90,9 @@ var _ = Describe("Base", func() {
 				Body:       ioutil.NopCloser(body),
 				Request:    req,
 			}
-			shootErr = base.Shoot(ctx, am)
+			base.Shoot(ctx, am)
+			Expect(results.Samples).To(HaveLen(1))
+			shootErr = results.Samples[0].Err()
 		})
 
 		Context("Do ok", func() {
@@ -135,6 +137,10 @@ var _ = Describe("Base", func() {
 				connectErr := errors.New("connect error")
 				BeforeEach(func() {
 					base.Connect = func(ctx context.Context) error {
+						// Connect should report fail in sample itself.
+						s := netsample.Acquire("")
+						s.SetErr(connectErr)
+						results.Report(s)
 						return connectErr
 					}
 				})

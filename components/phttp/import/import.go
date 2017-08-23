@@ -33,6 +33,10 @@ func Import(fs afero.Fs) {
 		return WrapGun(NewHTTPGun(conf))
 	}, NewDefaultHTTPGunConfig)
 
+	register.Gun("http2", func(conf HTTP2GunConfig) core.Gun {
+		return WrapGun(NewHTTP2Gun(conf))
+	}, NewDefaultHTTP2GunConfig)
+
 	register.Gun("connect", func(conf ConnectGunConfig) core.Gun {
 		return WrapGun(NewConnectGun(conf))
 	}, NewDefaultConnectGunConfig)

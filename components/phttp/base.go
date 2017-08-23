@@ -9,10 +9,10 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"github.com/facebookgo/stackerr"
+	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core/aggregate/netsample"
 )
@@ -21,35 +21,38 @@ import (
 type Base struct {
 	Do         func(r *http.Request) (*http.Response, error) // Required.
 	Connect    func(ctx context.Context) error               // Optional hook.
+	OnClose    func() error                                  // Optional. Called on Close().
 	Aggregator netsample.Aggregator                          // Lazy set via BindResultTo.
 }
 
 var _ Gun = (*Base)(nil)
+var _ io.Closer = (*Base)(nil)
 
 func (b *Base) Bind(aggregator netsample.Aggregator) {
 	if b.Aggregator != nil {
-		log.Panic("already binded")
+		zap.L().Panic("already binded")
 	}
 	if aggregator == nil {
-		log.Panic("nil aggregator")
+		zap.L().Panic("nil aggregator")
 	}
 	b.Aggregator = aggregator
 }
 
 // Shoot is thread safe iff Do and Connect hooks are thread safe.
-func (b *Base) Shoot(ctx context.Context, ammo Ammo) (err error) {
+func (b *Base) Shoot(ctx context.Context, ammo Ammo) {
 	if b.Aggregator == nil {
-		log.Panic("must bind before shoot")
+		zap.L().Panic("must bind before shoot")
 	}
 	if b.Connect != nil {
-		err = b.Connect(ctx)
+		err := b.Connect(ctx)
 		if err != nil {
-			log.Printf("Connect error: %s\n", err)
+			zap.L().Warn("Connect fail", zap.Error(err))
 			return
 		}
 	}
 
 	req, sample := ammo.Request()
+	var err error
 	defer func() {
 		if err != nil {
 			sample.SetErr(err)
@@ -60,7 +63,7 @@ func (b *Base) Shoot(ctx context.Context, ammo Ammo) (err error) {
 	var res *http.Response
 	res, err = b.Do(req)
 	if err != nil {
-		log.Printf("Error performing a request: %s\n", err)
+		zap.L().Warn("Request fail", zap.Error(err))
 		return
 	}
 	sample.SetProtoCode(res.StatusCode)
@@ -69,9 +72,16 @@ func (b *Base) Shoot(ctx context.Context, ammo Ammo) (err error) {
 	// TODO: buffer copy buffers.
 	_, err = io.Copy(ioutil.Discard, res.Body)
 	if err != nil {
-		log.Printf("Error reading response body: %s\n", err)
+		zap.L().Warn("Body read fail", zap.Error(err))
 		return
 	}
 	// TODO: verbose logging
 	return
+}
+
+func (b *Base) Close() error {
+	if b.OnClose != nil {
+		return b.OnClose()
+	}
+	return nil
 }
