@@ -23,7 +23,7 @@ import (
 
 func Import(fs afero.Fs) {
 	register.Aggregator("phout", func(conf netsample.PhoutConfig) (core.Aggregator, error) {
-		a, err := netsample.GetPhout(fs, conf)
+		a, err := netsample.NewPhout(fs, conf)
 		return netsample.WrapAggregator(a), err
 	})
 

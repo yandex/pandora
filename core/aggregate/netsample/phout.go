@@ -6,18 +6,33 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
-func GetPhout(fs afero.Fs, conf PhoutConfig) (Aggregator, error) {
-	return defaultPhoutAggregator.get(fs, conf)
-}
-
 type PhoutConfig struct {
 	Destination string
+}
+
+func NewPhout(fs afero.Fs, conf PhoutConfig) (a Aggregator, err error) {
+	filename := conf.Destination
+	var file afero.File = os.Stdout
+	if filename != "" {
+		file, err = fs.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0666)
+	}
+	if err != nil {
+		err = errors.Wrap(err, "phout output file open failed")
+		return
+	}
+	a = &phoutAggregator{
+		sink:   make(chan *Sample, 32*1024),
+		writer: bufio.NewWriterSize(file, 512*1024),
+		buf:    make([]byte, 0, 1024),
+		file:   file,
+	}
+	return
 }
 
 type phoutAggregator struct {
@@ -26,8 +41,6 @@ type phoutAggregator struct {
 	buf    []byte
 	file   io.Closer
 }
-
-var _ Aggregator = (*phoutAggregator)(nil)
 
 func (a *phoutAggregator) Report(s *Sample) { a.sink <- s }
 
@@ -76,51 +89,6 @@ func (a *phoutAggregator) handle(s *Sample) error {
 	a.buf = a.buf[:0]
 	releaseSample(s)
 	return err
-}
-
-var defaultPhoutAggregator = newPhoutResultListeners()
-
-type phoutAggregators struct {
-	sync.Mutex
-	aggregators map[string]Aggregator
-}
-
-func newPhout(fs afero.Fs, conf PhoutConfig) (a *phoutAggregator, err error) {
-	filename := conf.Destination
-	var file afero.File = os.Stdout
-	if filename != "" {
-		file, err = fs.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0666)
-	}
-	if err != nil {
-		return
-	}
-	a = &phoutAggregator{
-		sink:   make(chan *Sample, 32*1024),
-		writer: bufio.NewWriterSize(file, 512*1024),
-		buf:    make([]byte, 0, 1024),
-		file:   file,
-	}
-	return
-}
-
-func newPhoutResultListeners() *phoutAggregators {
-	return &phoutAggregators{aggregators: make(map[string]Aggregator)}
-}
-
-func (l *phoutAggregators) get(fs afero.Fs, conf PhoutConfig) (Aggregator, error) {
-	dest := conf.Destination
-	l.Lock()
-	defer l.Unlock()
-	rl, ok := l.aggregators[dest]
-	if !ok {
-		rl, err := newPhout(fs, conf)
-		if err != nil {
-			return nil, err
-		}
-		l.aggregators[dest] = rl
-		return rl, nil
-	}
-	return rl, nil
 }
 
 const phoutDelimiter = '\t'
