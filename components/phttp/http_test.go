@@ -182,8 +182,8 @@ var _ = Describe("HTTP/2", func() {
 		}))
 		defer server.Close()
 		conf := NewDefaultHTTP2GunConfig()
-		conf.Target = server.Listener.Addr().String()
-		gun := NewHTTP2Gun(conf)
+		conf.Gun.Target = server.Listener.Addr().String()
+		gun, _ := NewHTTP2Gun(conf)
 		var results netsample.TestAggregator
 		gun.Bind(&results)
 		gun.Shoot(context.Background(), newAmmoURL("/"))
@@ -196,8 +196,8 @@ var _ = Describe("HTTP/2", func() {
 		}))
 		defer server.Close()
 		conf := NewDefaultHTTP2GunConfig()
-		conf.Target = server.Listener.Addr().String()
-		gun := NewHTTP2Gun(conf)
+		conf.Gun.Target = server.Listener.Addr().String()
+		gun, _ := NewHTTP2Gun(conf)
 		var results netsample.TestAggregator
 		gun.Bind(&results)
 		var r interface{}
@@ -209,6 +209,18 @@ var _ = Describe("HTTP/2", func() {
 		}()
 		Expect(r).NotTo(BeNil())
 		Expect(r).To(ContainSubstring(notHTTP2PanicMsg))
+	})
+
+	It("no SSL construction fails", func() {
+		server := httptest.NewTLSServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			zap.S().Info("Served")
+		}))
+		defer server.Close()
+		conf := NewDefaultHTTP2GunConfig()
+		conf.Gun.Target = server.Listener.Addr().String()
+		conf.Gun.SSL = false
+		_, err := NewHTTP2Gun(conf)
+		Expect(err).To(HaveOccurred())
 	})
 
 })

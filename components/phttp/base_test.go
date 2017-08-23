@@ -11,12 +11,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/onsi/ginkgo/extensions/table"
 	"github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core/aggregate/netsample"
 )
@@ -77,7 +79,7 @@ var _ = Describe("Base", func() {
 		BeforeEach(func() {
 			ctx = context.Background()
 			am = &ammomock.Ammo{}
-			req = httptest.NewRequest("GET", "/", nil)
+			req = httptest.NewRequest("GET", "/1/2/3/4", nil)
 			sample = netsample.Acquire("REQUEST")
 			am.On("Request").Return(req, sample)
 			results = &netsample.TestAggregator{}
@@ -107,12 +109,21 @@ var _ = Describe("Base", func() {
 			It("ammo sample sent to results", func() {
 				Expect(results.Samples).To(HaveLen(1))
 				Expect(results.Samples[0]).To(Equal(sample))
+				Expect(sample.Tags()).To(Equal("REQUEST"))
 				Expect(sample.ProtoCode()).To(Equal(res.StatusCode))
 			})
 			It("body read well", func() {
 				Expect(shootErr).To(BeNil())
 				_, err := body.Read([]byte{0})
 				Expect(err).To(Equal(io.EOF), "body should be read fully")
+			})
+			Context("autotag options is set", func() {
+				BeforeEach(func() {
+					base.Config.AutoTag = 2
+				})
+				It("autotagged", func() {
+					Expect(sample.Tags()).To(Equal("REQUEST|/1/2"))
+				})
 			})
 			Context("Connect set", func() {
 				var connectCalled, doCalled bool
@@ -151,4 +162,17 @@ var _ = Describe("Base", func() {
 			})
 		})
 	})
+
+	table.DescribeTable("autotag",
+		func(path string, depth int, tag string) {
+			URL := &url.URL{Path: path}
+			Expect(autotag(depth, URL)).To(Equal(tag))
+		},
+		table.Entry("empty", "", 2, ""),
+		table.Entry("root", "/", 2, "/"),
+		table.Entry("exact depth", "/1/2", 2, "/1/2"),
+		table.Entry("more depth", "/1/2", 3, "/1/2"),
+		table.Entry("less depth", "/1/2", 1, "/1"),
+	)
+
 })

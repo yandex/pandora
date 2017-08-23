@@ -22,6 +22,7 @@ type ConnectGunConfig struct {
 	ConnectSSL bool         `config:"connect-ssl"` // Defines if tunnel encrypted.
 	SSL        bool         // As in HTTP gun, defines scheme for http requests.
 	Client     ClientConfig `config:",squash"`
+	BaseConfig `config:",squash"`
 }
 
 func NewConnectGun(conf ConnectGunConfig) *ConnectGun {
@@ -33,7 +34,8 @@ func NewConnectGun(conf ConnectGunConfig) *ConnectGun {
 	var g ConnectGun
 	g = ConnectGun{
 		Base: Base{
-			Do: g.Do,
+			Config: conf.BaseConfig,
+			Do:     g.Do,
 			OnClose: func() error {
 				client.CloseIdleConnections()
 				return nil

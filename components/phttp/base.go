@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -17,8 +18,16 @@ import (
 	"github.com/yandex/pandora/core/aggregate/netsample"
 )
 
+type BaseConfig struct {
+	// AutoTag enables automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
+	// Example: /my/very/deep/page?id=23&param=33 -> _my_very
+	// 0 means no autotag.
+	AutoTag int
+}
+
 type Base struct {
-	Log        *zap.Logger                                   // If nil, zap.L() will be used.
+	Log        *zap.Logger // If nil, zap.L() will be used.
+	Config     BaseConfig
 	Do         func(r *http.Request) (*http.Response, error) // Required.
 	Connect    func(ctx context.Context) error               // Optional hook.
 	OnClose    func() error                                  // Optional. Called on Close().
@@ -56,6 +65,10 @@ func (b *Base) Shoot(ctx context.Context, ammo Ammo) {
 	}
 
 	req, sample := ammo.Request()
+	if b.Config.AutoTag > 0 {
+		sample.AddTag(autotag(b.Config.AutoTag, req.URL))
+	}
+
 	var err error
 	defer func() {
 		if err != nil {
@@ -92,4 +105,18 @@ func (b *Base) Close() error {
 		return b.OnClose()
 	}
 	return nil
+}
+
+func autotag(depth int, URL *url.URL) string {
+	path := URL.Path
+	var ind int
+	for ; ind < len(path); ind++ {
+		if path[ind] == '/' {
+			if depth == 0 {
+				break
+			}
+			depth--
+		}
+	}
+	return path[:ind]
 }

@@ -7,41 +7,48 @@ package phttp
 
 import (
 	"net/http"
+
+	"github.com/pkg/errors"
 )
 
 type ClientGunConfig struct {
 	Target string `validate:"endpoint,required"`
 	SSL    bool
+	// TODO(skipor): Squash BaseConfig here after fix https://github.com/mitchellh/mapstructure/issues/70
 }
 
 type HTTPGunConfig struct {
-	Gun    ClientGunConfig `config:",squash"`
-	Client ClientConfig    `config:",squash"`
+	Gun        ClientGunConfig `config:",squash"`
+	Client     ClientConfig    `config:",squash"`
+	BaseConfig `config:",squash"`
 }
 
 type HTTP2GunConfig struct {
-	Target string       `validate:"endpoint,required"`
-	Client ClientConfig `config:",squash"`
+	Gun        ClientGunConfig `config:",squash"`
+	Client     ClientConfig    `config:",squash"`
+	BaseConfig `config:",squash"`
 }
 
 func NewHTTPGun(conf HTTPGunConfig) *HTTPGun {
 	transport := NewTransport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext)
 	client := newClient(transport, conf.Client.Redirect)
-	return NewClientGun(client, conf.Gun)
+	return NewClientGun(client, conf.Gun, conf.BaseConfig)
 }
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
-func NewHTTP2Gun(conf HTTP2GunConfig) *HTTPGun {
+func NewHTTP2Gun(conf HTTP2GunConfig) (*HTTPGun, error) {
+	if !conf.Gun.SSL {
+		// Open issue on github if you need this feature.
+		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
+	}
 	transport := NewHTTP2Transport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext)
 	client := newClient(transport, conf.Client.Redirect)
 	// Will panic and cancel shooting whet target doesn't support HTTP/2.
 	client = &panicOnHTTP1Client{client}
-	// NOTE: HTTP/2 gun not support HTTP/2 over TCP for now.
-	// Open issue on github if you need this feature.
-	return NewClientGun(client, ClientGunConfig{Target: conf.Target, SSL: true})
+	return NewClientGun(client, conf.Gun, conf.BaseConfig), nil
 }
 
-func NewClientGun(client Client, conf ClientGunConfig) *HTTPGun {
+func NewClientGun(client Client, conf ClientGunConfig, base BaseConfig) *HTTPGun {
 	scheme := "http"
 	if conf.SSL {
 		scheme = "https"
@@ -49,7 +56,8 @@ func NewClientGun(client Client, conf ClientGunConfig) *HTTPGun {
 	var g HTTPGun
 	g = HTTPGun{
 		Base: Base{
-			Do: g.Do,
+			Config: base,
+			Do:     g.Do,
 			OnClose: func() error {
 				client.CloseIdleConnections()
 				return nil
@@ -88,6 +96,7 @@ func NewDefaultHTTPGunConfig() HTTPGunConfig {
 func NewDefaultHTTP2GunConfig() HTTP2GunConfig {
 	return HTTP2GunConfig{
 		Client: NewDefaultClientConfig(),
+		Gun:    ClientGunConfig{SSL: true},
 	}
 }
 
