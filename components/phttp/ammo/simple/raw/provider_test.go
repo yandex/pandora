@@ -21,8 +21,8 @@ const testFile = "./ammo.stpd"
 const testFileData = "../../../testdata/ammo.stpd"
 
 var testData = []ammoData{
-	{"GET", "www.ya.ru", "/", http.Header{"Connection": []string{"close"}}, "__EMPTY__", ""},
-	{"GET", "www.ya.ru", "/test", http.Header{"Connection": []string{"close"}}, "__EMPTY__", ""},
+	{"GET", "www.ya.ru", "/", http.Header{"Connection": []string{"close"}}, "", ""},
+	{"GET", "www.ya.ru", "/test", http.Header{"Connection": []string{"close"}}, "", ""},
 	{"GET", "www.ya.ru", "/test2", http.Header{"Connection": []string{"close"}}, "tag", ""},
 	{"POST", "www.ya.ru", "/test3", http.Header{"Connection": []string{"close"}, "Content-Length": []string{"5"}}, "tag", "hello"},
 }

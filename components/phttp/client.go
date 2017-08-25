@@ -27,10 +27,9 @@ type Client interface {
 }
 
 type ClientConfig struct {
-	// May not be squashed until fix https://github.com/mitchellh/mapstructure/issues/70
-	Transport TransportConfig
-	Dialer    DialerConfig `config:"dial"`
-	Redirect  bool         // When true, follow HTTP redirects.
+	Redirect  bool            // When true, follow HTTP redirects.
+	Dialer    DialerConfig    `config:"dial"`
+	Transport TransportConfig `config:",squash"`
 }
 
 func NewDefaultClientConfig() ClientConfig {

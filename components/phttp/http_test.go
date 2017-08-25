@@ -24,7 +24,7 @@ import (
 	"github.com/yandex/pandora/core/config"
 )
 
-var _ = Describe("Base", func() {
+var _ = Describe("BaseGun", func() {
 	It("GunClientConfig decode", func() {
 		conf := NewDefaultHTTPGunConfig()
 		data := map[interface{}]interface{}{

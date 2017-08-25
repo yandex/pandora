@@ -13,8 +13,6 @@ func decodeHeader(headerString []byte) (reqSize int, tag string, err error) {
 	reqSize, err = strconv.Atoi(parts[0])
 	if len(parts) > 1 {
 		tag = parts[1]
-	} else {
-		tag = "__EMPTY__"
 	}
 	return
 }

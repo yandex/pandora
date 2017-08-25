@@ -55,8 +55,6 @@ func (d *decoder) decodeURI(line []byte) error {
 	var tag string
 	if len(parts) > 1 {
 		tag = parts[1]
-	} else {
-		tag = "__EMPTY__"
 	}
 	req, err := http.NewRequest("GET", string(url), nil)
 	if err != nil {

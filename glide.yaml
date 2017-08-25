@@ -6,6 +6,7 @@ import:
 - package: github.com/facebookgo/stackerr
 - package: github.com/fatih/structs
 - package: github.com/mitchellh/mapstructure
+  repo: git@github.com:skipor/mapstructure # Need until fix https://github.com/mitchellh/mapstructure/issues/70
 - package: github.com/pquerna/ffjson
   subpackages:
   - fflib/v1

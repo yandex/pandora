@@ -213,8 +213,6 @@ func TestDeltaUpdate(t *testing.T) {
 }
 
 func TestNextSquash(t *testing.T) {
-	// TODO(skipor): fix mapstructure #70
-	t.Skip("Skipped until fix https://github.com/mitchellh/mapstructure/issues/70")
 	data := &struct {
 		Level1 struct {
 			Level2 struct {

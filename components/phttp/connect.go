@@ -18,11 +18,11 @@ import (
 )
 
 type ConnectGunConfig struct {
-	Target     string       `validate:"endpoint,required"`
-	ConnectSSL bool         `config:"connect-ssl"` // Defines if tunnel encrypted.
-	SSL        bool         // As in HTTP gun, defines scheme for http requests.
-	Client     ClientConfig `config:",squash"`
-	BaseConfig `config:",squash"`
+	Target        string       `validate:"endpoint,required"`
+	ConnectSSL    bool         `config:"connect-ssl"` // Defines if tunnel encrypted.
+	SSL           bool         // As in HTTP gun, defines scheme for http requests.
+	Client        ClientConfig `config:",squash"`
+	BaseGunConfig `config:",squash"`
 }
 
 func NewConnectGun(conf ConnectGunConfig) *ConnectGun {
@@ -33,8 +33,8 @@ func NewConnectGun(conf ConnectGunConfig) *ConnectGun {
 	client := newConnectClient(conf)
 	var g ConnectGun
 	g = ConnectGun{
-		Base: Base{
-			Config: conf.BaseConfig,
+		BaseGun: BaseGun{
+			Config: conf.BaseGunConfig,
 			Do:     g.Do,
 			OnClose: func() error {
 				client.CloseIdleConnections()
@@ -48,7 +48,7 @@ func NewConnectGun(conf ConnectGunConfig) *ConnectGun {
 }
 
 type ConnectGun struct {
-	Base
+	BaseGun
 	scheme string
 	client Client
 }

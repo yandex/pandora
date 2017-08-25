@@ -18,30 +18,54 @@ import (
 	"github.com/yandex/pandora/core/aggregate/netsample"
 )
 
-type BaseConfig struct {
-	// AutoTag enables automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
-	// Example: /my/very/deep/page?id=23&param=33 -> _my_very
-	// 0 means no autotag.
-	AutoTag int
+const (
+	EmptyTag = "__EMPTY__"
+)
+
+type BaseGunConfig struct {
+	AutoTag AutoTagConfig `config:"auto-tag"`
 }
 
-type Base struct {
+// AutoTagConfig configure automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
+// Example: /my/very/deep/page?id=23&param=33 -> _my_very
+type AutoTagConfig struct {
+	Enabled     bool `config:"enabled"`
+	URIElements int  `config:"uri-elements" validate:"min=1"` // URI elements used to autotagging
+	NoTagOnly   bool `config:"no-tag-only"`                   // When true, autotagged only ammo that has no tag before.
+}
+
+func NewDefaultBaseGunConfig() BaseGunConfig {
+	return BaseGunConfig{
+		AutoTagConfig{
+			Enabled:     false,
+			URIElements: 2,
+			NoTagOnly:   true,
+		}}
+}
+
+type BaseGun struct {
 	Log        *zap.Logger // If nil, zap.L() will be used.
-	Config     BaseConfig
+	DebugLog   bool        // Automaticaly set in Bind if Log accepts debug messages.
+	Config     BaseGunConfig
 	Do         func(r *http.Request) (*http.Response, error) // Required.
 	Connect    func(ctx context.Context) error               // Optional hook.
 	OnClose    func() error                                  // Optional. Called on Close().
 	Aggregator netsample.Aggregator                          // Lazy set via BindResultTo.
 }
 
-var _ Gun = (*Base)(nil)
-var _ io.Closer = (*Base)(nil)
+var _ Gun = (*BaseGun)(nil)
+var _ io.Closer = (*BaseGun)(nil)
 
 // TODO(skipor): pass logger here in https://github.com/yandex/pandora/issues/57
-func (b *Base) Bind(aggregator netsample.Aggregator) {
+func (b *BaseGun) Bind(aggregator netsample.Aggregator) {
 	if b.Log == nil {
 		b.Log = zap.L()
 	}
+	if ent := b.Log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
+		// Enable debug level logging during shooting. Creating log entries isn't free.
+		b.DebugLog = true
+	}
+
 	if b.Aggregator != nil {
 		b.Log.Panic("already binded")
 	}
@@ -52,7 +76,7 @@ func (b *Base) Bind(aggregator netsample.Aggregator) {
 }
 
 // Shoot is thread safe iff Do and Connect hooks are thread safe.
-func (b *Base) Shoot(ctx context.Context, ammo Ammo) {
+func (b *BaseGun) Shoot(ctx context.Context, ammo Ammo) {
 	if b.Aggregator == nil {
 		zap.L().Panic("must bind before shoot")
 	}
@@ -65,8 +89,15 @@ func (b *Base) Shoot(ctx context.Context, ammo Ammo) {
 	}
 
 	req, sample := ammo.Request()
-	if b.Config.AutoTag > 0 {
-		sample.AddTag(autotag(b.Config.AutoTag, req.URL))
+	if b.DebugLog {
+		b.Log.Debug("Shoot", zap.Stringer("url", req.URL))
+	}
+
+	if b.Config.AutoTag.Enabled && (!b.Config.AutoTag.NoTagOnly || sample.Tags() == "") {
+		sample.AddTag(autotag(b.Config.AutoTag.URIElements, req.URL))
+	}
+	if sample.Tags() == "" {
+		sample.AddTag(EmptyTag)
 	}
 
 	var err error
@@ -77,17 +108,15 @@ func (b *Base) Shoot(ctx context.Context, ammo Ammo) {
 		b.Aggregator.Report(sample)
 		err = errors.WithStack(err)
 	}()
-	if ent := b.Log.Check(zap.DebugLevel, "Shoot"); ent != nil {
-		ent.Write(zap.Stringer("url", req.URL))
-	}
+
 	var res *http.Response
 	res, err = b.Do(req)
 	if err != nil {
 		b.Log.Warn("Request fail", zap.Error(err))
 		return
 	}
-	if ent := b.Log.Check(zap.DebugLevel, "Got response"); ent != nil {
-		ent.Write(zap.Int("status", res.StatusCode))
+	if b.DebugLog {
+		b.Log.Debug("Got response", zap.Int("status", res.StatusCode))
 	}
 	sample.SetProtoCode(res.StatusCode)
 	defer res.Body.Close()
@@ -100,7 +129,7 @@ func (b *Base) Shoot(ctx context.Context, ammo Ammo) {
 	// TODO: verbose logging
 }
 
-func (b *Base) Close() error {
+func (b *BaseGun) Close() error {
 	if b.OnClose != nil {
 		return b.OnClose()
 	}

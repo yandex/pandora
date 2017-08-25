@@ -15,21 +15,23 @@ import (
 	"strings"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/onsi/ginkgo/extensions/table"
 	"github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core/aggregate/netsample"
+	"github.com/yandex/pandora/core/coretest"
 )
 
-var _ = Describe("Base", func() {
+var _ = Describe("BaseGun", func() {
+
 	var (
-		base Base
+		base BaseGun
 		ammo *ammomock.Ammo
 	)
 	BeforeEach(func() {
-		base = Base{}
+		base = BaseGun{Config: NewDefaultBaseGunConfig()}
 		ammo = &ammomock.Ammo{}
 	})
 
@@ -71,6 +73,7 @@ var _ = Describe("Base", func() {
 			ctx      context.Context
 			am       *ammomock.Ammo
 			req      *http.Request
+			tag      string
 			res      *http.Response
 			sample   *netsample.Sample
 			results  *netsample.TestAggregator
@@ -80,13 +83,14 @@ var _ = Describe("Base", func() {
 			ctx = context.Background()
 			am = &ammomock.Ammo{}
 			req = httptest.NewRequest("GET", "/1/2/3/4", nil)
-			sample = netsample.Acquire("REQUEST")
-			am.On("Request").Return(req, sample)
+			tag = ""
 			results = &netsample.TestAggregator{}
 			base.Bind(results)
 		})
 
 		JustBeforeEach(func() {
+			sample = netsample.Acquire(tag)
+			am.On("Request").Return(req, sample)
 			res = &http.Response{
 				StatusCode: http.StatusNotFound,
 				Body:       ioutil.NopCloser(body),
@@ -109,7 +113,7 @@ var _ = Describe("Base", func() {
 			It("ammo sample sent to results", func() {
 				Expect(results.Samples).To(HaveLen(1))
 				Expect(results.Samples[0]).To(Equal(sample))
-				Expect(sample.Tags()).To(Equal("REQUEST"))
+				Expect(sample.Tags()).To(Equal("__EMPTY__"))
 				Expect(sample.ProtoCode()).To(Equal(res.StatusCode))
 			})
 			It("body read well", func() {
@@ -117,14 +121,29 @@ var _ = Describe("Base", func() {
 				_, err := body.Read([]byte{0})
 				Expect(err).To(Equal(io.EOF), "body should be read fully")
 			})
+
 			Context("autotag options is set", func() {
-				BeforeEach(func() {
-					base.Config.AutoTag = 2
-				})
+				BeforeEach(func() { base.Config.AutoTag.Enabled = true })
 				It("autotagged", func() {
-					Expect(sample.Tags()).To(Equal("REQUEST|/1/2"))
+					Expect(sample.Tags()).To(Equal("/1/2"))
+				})
+
+				Context("tag is already set", func() {
+					const presetTag = "TAG"
+					BeforeEach(func() { tag = presetTag })
+					It("no tag added", func() {
+						Expect(sample.Tags()).To(Equal(presetTag))
+					})
+
+					Context("no-tag-only set to false", func() {
+						BeforeEach(func() { base.Config.AutoTag.NoTagOnly = false })
+						It("autotag added", func() {
+							Expect(sample.Tags()).To(Equal(presetTag + "|/1/2"))
+						})
+					})
 				})
 			})
+
 			Context("Connect set", func() {
 				var connectCalled, doCalled bool
 				BeforeEach(func() {
@@ -163,16 +182,25 @@ var _ = Describe("Base", func() {
 		})
 	})
 
-	table.DescribeTable("autotag",
+	DescribeTable("autotag",
 		func(path string, depth int, tag string) {
 			URL := &url.URL{Path: path}
 			Expect(autotag(depth, URL)).To(Equal(tag))
 		},
-		table.Entry("empty", "", 2, ""),
-		table.Entry("root", "/", 2, "/"),
-		table.Entry("exact depth", "/1/2", 2, "/1/2"),
-		table.Entry("more depth", "/1/2", 3, "/1/2"),
-		table.Entry("less depth", "/1/2", 1, "/1"),
+		Entry("empty", "", 2, ""),
+		Entry("root", "/", 2, "/"),
+		Entry("exact depth", "/1/2", 2, "/1/2"),
+		Entry("more depth", "/1/2", 3, "/1/2"),
+		Entry("less depth", "/1/2", 1, "/1"),
 	)
 
+	It("config decode", func() {
+		var conf BaseGunConfig
+		coretest.DecodeAndValidate(`
+auto-tag:
+  enabled: true
+  uri-elements: 3
+  no-tag-only: false
+`, &conf)
+	})
 })
