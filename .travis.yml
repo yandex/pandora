@@ -9,9 +9,13 @@ before_install:
   - sudo add-apt-repository ppa:masterminds/glide -y
   - sudo apt-get update -q
   - sudo apt-get install glide -y
+  # Build go tools in separate $GOPATH.
+  # That allows to keep main $GOPATH clean and be sure that only glide.lock deps used.
+  - mkdir $HOME/tools
+  - GOPATH=$HOME/tools make tools
+  - export PATH=$HOME/tools/bin:$PATH
 
 install:
-  - make tools
-  - go get -t `glide novendor`
+  - glide install
 
 script: make travis
