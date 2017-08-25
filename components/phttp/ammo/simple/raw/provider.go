@@ -4,13 +4,12 @@ import (
 	"bufio"
 	"context"
 	"io"
-	"log"
-	"os"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"go.uber.org/zap"
 )
 
 /*
@@ -44,7 +43,7 @@ User-Agent: xxx (shell 1)
 */
 
 func filePosition(file afero.File) (position int64) {
-	position, _ = file.Seek(0, os.SEEK_CUR)
+	position, _ = file.Seek(0, io.SeekCurrent)
 	return
 }
 
@@ -80,13 +79,13 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		for p.Limit == 0 || ammoNum < p.Limit {
 			data, isPrefix, err := reader.ReadLine()
 			if isPrefix {
-				return stackerr.Newf("Too long header in ammo at position %v", filePosition(ammoFile))
+				return errors.Errorf("too long header in ammo at position %v", filePosition(ammoFile))
 			}
 			if err == io.EOF {
 				break // start over from the beginning
 			}
 			if err != nil {
-				return stackerr.Newf("error reading ammo at position: %v; error: %s", filePosition(ammoFile), err)
+				return errors.Wrapf(err, "reading ammo failed at position: %v", filePosition(ammoFile))
 			}
 			if len(data) == 0 {
 				continue // skip empty lines
@@ -97,11 +96,11 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			}
 			buff := make([]byte, reqSize)
 			if n, err := io.ReadFull(reader, buff); err != nil {
-				return stackerr.Newf("failed to read ammo at position: %v; tried to read: %v; have read: %v; error: %s", filePosition(ammoFile), reqSize, n, err)
+				return errors.Wrapf(err, "failed to read ammo at position: %v; tried to read: %v; have read: %v", filePosition(ammoFile), reqSize, n)
 			}
 			req, err := decodeRequest(buff)
 			if err != nil {
-				return stackerr.Newf("failed to decode ammo at position: %v; data: %q; error: %s", filePosition(ammoFile), buff, err)
+				return errors.Wrapf(err, "failed to decode ammo at position: %v; data: %q", filePosition(ammoFile), buff)
 			}
 			sh := p.Pool.Get().(*simple.Ammo)
 			sh.Reset(req, tag)
@@ -114,13 +113,13 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			}
 		}
 		if ammoNum == 0 {
-			return stackerr.Newf("no ammo in file")
+			return errors.New("no ammo in file")
 		}
 		if p.Passes != 0 && passNum >= p.Passes {
 			break
 		}
 		ammoFile.Seek(0, 0)
 	}
-	log.Println("Ran out of ammo")
+	zap.L().Debug("Ran out of ammo")
 	return nil
 }

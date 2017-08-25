@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core"
@@ -78,7 +78,7 @@ func (i *instance) shoot(ctx context.Context, gun core.Gun, next *coreutil.Waite
 	defer func() {
 		r := recover()
 		if r != nil {
-			err = stackerr.Newf("shoot panic: %s", r)
+			err = errors.Errorf("shoot panic: %s", r)
 		}
 	}()
 	for {

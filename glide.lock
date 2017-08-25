@@ -1,12 +1,12 @@
-hash: a8b2fdb8271a2c1bd63bd71b95e59c4016ff29336a21dd6fbabc3c4c5ca9f069
-updated: 2017-08-23T14:20:45.659155574+03:00
+hash: b06d35c760b8a60202cc52695b1dd3d3ac96acdbbb9a8cd52c0cba9a05880733
+updated: 2017-08-25T10:25:48.281437192+03:00
 imports:
 - name: github.com/amahi/spdy
   version: 31da8b754faf6833fa95192c69bdb10518e9fb7b
 - name: github.com/asaskevich/govalidator
-  version: fdf19785fd3558d619ef81212f5edf1d6c2a5911
+  version: 15028e809df8c71964e8efa6c11e81d5c0262302
 - name: github.com/c2h5oh/datasize
-  version: ac35299842b215b2719d674ea369162c13ba4dc1
+  version: 54516c931ae99c3c74637b9ea2390cf9a6327f26
 - name: github.com/davecgh/go-spew
   version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
   subpackages:
@@ -16,11 +16,11 @@ imports:
 - name: github.com/facebookgo/stackerr
   version: c2fcf88613f4fc155efcb81619424db6cbb5bce0
 - name: github.com/fatih/structs
-  version: a720dfa8df582c51dee1b36feabb906bde1588bd
+  version: 7e5a8eef611ee84dd359503f3969f80df4c50723
 - name: github.com/fsnotify/fsnotify
-  version: fd9ec7deca8bf46ecd2a795baaacf2b3a9be1197
+  version: 4da3e2cfbabc9f751898f250b49f2439785783a1
 - name: github.com/hashicorp/hcl
-  version: eb6f65b2d77ed5078887f960ff570fbddbbeb49d
+  version: 392dba7d905ed5d04a5794ba89f558b27e2ba1ca
   subpackages:
   - hcl/ast
   - hcl/parser
@@ -31,11 +31,12 @@ imports:
   - json/scanner
   - json/token
 - name: github.com/magiconair/properties
-  version: b3b15ef068fd0b17ddf408a23669f20811d194d2
+  version: be5ece7dd465ab0765a9682137865547526d1dfb
 - name: github.com/mitchellh/mapstructure
-  version: ed105d635dfa9ea7133f7c79f1eb36203fc3a156
+  version: e88fb6b4946b282e0d5196ac35b09d256e09e9d2
+  repo: https://github.com/skipor/mapstructure
 - name: github.com/onsi/ginkgo
-  version: f24729c07644086231e82a4bc3a1cc2feff06e71
+  version: 8382b23d18dbaaff8e5f7e83784c53ebb8ec2f47
   subpackages:
   - config
   - extensions/table
@@ -56,7 +57,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: f9b2e15b86f3d6dd556700ffbaa4feee86745028
+  version: c893efa28eb45626cdaa76c9f653b62488858837
   subpackages:
   - format
   - gbytes
@@ -73,10 +74,8 @@ imports:
   - matchers/support/goraph/node
   - matchers/support/goraph/util
   - types
-- name: github.com/pelletier/go-buffruneio
-  version: df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d
 - name: github.com/pelletier/go-toml
-  version: a1f048ba24490f9b0674a67e1ce995d685cddf4a
+  version: 9c1b4e331f1e3d98e72600677699fbe212cd6d16
 - name: github.com/pkg/errors
   version: c605e284fe17294bda444b34710735b29d1a9d90
 - name: github.com/pmezard/go-difflib
@@ -84,34 +83,34 @@ imports:
   subpackages:
   - difflib
 - name: github.com/pquerna/ffjson
-  version: c24ab9baf274473906fbdba5fccb594aec4b9ff1
+  version: 9a5203b7a07166f217f5f8177d5b16177acad3b2
   subpackages:
   - fflib/v1
   - fflib/v1/internal
 - name: github.com/spf13/afero
-  version: 72b31426848c6ef12a7a8e216708cb0d1530f074
+  version: 9be650865eab0c12963d8753212f4f9c66cdcf12
   subpackages:
   - mem
 - name: github.com/spf13/cast
-  version: 56a7ecbeb18dde53c6db4bd96b541fd9741b8d44
+  version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
 - name: github.com/spf13/jwalterweatherman
-  version: fa7ca7e836cf3a8bb4ebf799f472c12d7e903d66
+  version: 0efa5202c04663c757d84f90f5219c1250baf94f
 - name: github.com/spf13/pflag
-  version: 51268031d79952516489a9f8aa34e9709b98d946
+  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/spf13/viper
-  version: 5ed0fc31f7f453625df314d8e66b9791e8d13003
+  version: 25b30aa063fc18e48662b86996252eabdcf2f0c7
 - name: github.com/stretchr/objx
   version: cbeaeb16a013161a98496fad62933b1d21786672
 - name: github.com/stretchr/testify
-  version: 2402e8e7a02fc811447d11f881aa9746cdc57983
+  version: 890a5c3458b43e6104ff5da8dfa139d013d77544
   subpackages:
   - assert
   - mock
   - require
 - name: github.com/uber-go/atomic
-  version: 0506d69f5564c56e25797bf7183c28921d4c6360
+  version: 70bd1261d36be490ebd22a62b385a3c5d23b6240
 - name: go.uber.org/atomic
-  version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
+  version: 70bd1261d36be490ebd22a62b385a3c5d23b6240
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/zap
@@ -123,7 +122,7 @@ imports:
   - internal/exit
   - zapcore
 - name: golang.org/x/net
-  version: 30f03014b4f11f9f238fdeca8cca734746a24fbb
+  version: 57efc9c3d9f91fb3277f8da1cff370539c4d3dc5
   subpackages:
   - html
   - html/atom
@@ -133,11 +132,11 @@ imports:
   - idna
   - lex/httplex
 - name: golang.org/x/sys
-  version: d75a52659825e75fff6158388dddc6a5b04f9ba5
+  version: 07c182904dbd53199946ba614a412c61d3c548f5
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 11dbc599981ccdf4fb18802a28392a8bcf7a9395
+  version: ac87088df8ef557f1e32cd00ed0b6fbc3f7ddafb
   subpackages:
   - encoding
   - encoding/charmap
@@ -158,9 +157,9 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: gopkg.in/go-playground/validator.v8
-  version: 5f57d2222ad794d0dffb07e664ea05e2ee07d60c
+  version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
 - name: gopkg.in/yaml.v2
-  version: a5b47d31c556af34a302ce5d659e6fea44d90de0
+  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7

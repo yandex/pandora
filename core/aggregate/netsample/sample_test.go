@@ -17,14 +17,17 @@ import (
 	"time"
 
 	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSampleBehaviour(t *testing.T) {
 	const tag = "test"
 	const tag2 = "test2"
+	const id = 42
 	sample := Acquire(tag)
 	sample.AddTag(tag2)
+	sample.SetId(id)
 	const sleep = time.Millisecond
 	time.Sleep(sleep)
 	sample.SetErr(syscall.EINVAL)
@@ -39,9 +42,9 @@ func TestSampleBehaviour(t *testing.T) {
 	// 1484660999.  2 -> 1484660999.002
 	expectedTimeStamp = strings.Replace(expectedTimeStamp, " ", "0", -1)
 
-	expected := fmt.Sprintf("%s\t%s|%s\t%v\t0\t0\t0\t0\t0\t0\t0\t%v\t%v",
+	expected := fmt.Sprintf("%s\t%s|%s#%v\t%v\t0\t0\t0\t0\t0\t0\t0\t%v\t%v",
 		expectedTimeStamp,
-		tag, tag2,
+		tag, tag2, id,
 		sample.get(keyRTTMicro),
 		int(syscall.EINVAL), http.StatusBadRequest,
 	)
@@ -52,6 +55,7 @@ func TestGetErrno(t *testing.T) {
 	var err error = syscall.EINVAL
 	err = &os.SyscallError{Err: err}
 	err = &net.OpError{Err: err}
+	err = errors.WithStack(err)
 	err = stackerr.Wrap(err)
 	assert.NotZero(t, getErrno(err))
 	assert.Equal(t, int(syscall.EINVAL), getErrno(err))

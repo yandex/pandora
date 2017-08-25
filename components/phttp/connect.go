@@ -14,14 +14,15 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 )
 
 type ConnectGunConfig struct {
-	Target     string       `validate:"endpoint,required"`
-	ConnectSSL bool         `config:"connect-ssl"` // Defines if tunnel encrypted.
-	SSL        bool         // As in HTTP gun, defines scheme for http requests.
-	Client     ClientConfig `config:",squash"`
+	Target        string       `validate:"endpoint,required"`
+	ConnectSSL    bool         `config:"connect-ssl"` // Defines if tunnel encrypted.
+	SSL           bool         // As in HTTP gun, defines scheme for http requests.
+	Client        ClientConfig `config:",squash"`
+	BaseGunConfig `config:",squash"`
 }
 
 func NewConnectGun(conf ConnectGunConfig) *ConnectGun {
@@ -32,8 +33,9 @@ func NewConnectGun(conf ConnectGunConfig) *ConnectGun {
 	client := newConnectClient(conf)
 	var g ConnectGun
 	g = ConnectGun{
-		Base: Base{
-			Do: g.Do,
+		BaseGun: BaseGun{
+			Config: conf.BaseGunConfig,
+			Do:     g.Do,
 			OnClose: func() error {
 				client.CloseIdleConnections()
 				return nil
@@ -46,7 +48,7 @@ func NewConnectGun(conf ConnectGunConfig) *ConnectGun {
 }
 
 type ConnectGun struct {
-	Base
+	BaseGun
 	scheme string
 	client Client
 }
@@ -91,7 +93,7 @@ func newConnectDialFunc(target string, connectSSL bool, dialer Dialer) DialerFun
 		}()
 		conn, err = dialer.DialContext(ctx, "tcp", target)
 		if err != nil {
-			err = stackerr.Wrap(err)
+			err = errors.WithStack(err)
 			return
 		}
 		if connectSSL {
@@ -110,7 +112,7 @@ func newConnectDialFunc(target string, connectSSL bool, dialer Dialer) DialerFun
 		// NOTE(skipor): any logic for CONNECT request can be easily added via hooks.
 		err = req.Write(conn)
 		if err != nil {
-			err = stackerr.Wrap(err)
+			err = errors.WithStack(err)
 			return
 		}
 		// NOTE(skipor): according to RFC 2817 we can send origin at that moment and not wait
@@ -118,7 +120,7 @@ func newConnectDialFunc(target string, connectSSL bool, dialer Dialer) DialerFun
 		r := bufio.NewReader(conn)
 		res, err := http.ReadResponse(r, req)
 		if err != nil {
-			err = stackerr.Wrap(err)
+			err = errors.WithStack(err)
 			return
 		}
 		// RFC 7230 3.3.3.2: Any 2xx (Successful) response to a CONNECT request implies that
@@ -128,7 +130,7 @@ func newConnectDialFunc(target string, connectSSL bool, dialer Dialer) DialerFun
 		// such a message.
 		if res.StatusCode != http.StatusOK {
 			dump, dumpErr := httputil.DumpResponse(res, false)
-			err = stackerr.Newf("Unexpected status code. Dumped response:\n%s\n Dump error: %s",
+			err = errors.Errorf("Unexpected status code. Dumped response:\n%s\n Dump error: %s",
 				dump, dumpErr)
 			return
 		}
@@ -137,7 +139,7 @@ func newConnectDialFunc(target string, connectSSL bool, dialer Dialer) DialerFun
 			// Already receive something non HTTP from proxy or dialed server.
 			// Anyway it is incorrect situation.
 			peek, _ := r.Peek(r.Buffered())
-			err = stackerr.Newf("Unexpected extra data after connect: %q", peek)
+			err = errors.Errorf("Unexpected extra data after connect: %q", peek)
 			return
 		}
 		return

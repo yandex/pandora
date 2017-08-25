@@ -79,7 +79,7 @@ var _ = Describe("Decoder", func() {
 		header.Set("Host", host)
 		Expect(decoder.header).To(Equal(header))
 		Expect(decoder.ammoNum).To(Equal(1))
-		Expect(sample.Tags()).To(Equal("__EMPTY__"))
+		Expect(sample.Tags()).To(Equal(""))
 	})
 	It("uri and tag", func() {
 		header := http.Header{"a": []string{"b"}, "c": []string{"d"}}

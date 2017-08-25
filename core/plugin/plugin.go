@@ -35,7 +35,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 )
 
 // Register registers plugin factory and optional default config factory,
@@ -302,12 +302,12 @@ func newNameRegistryEntry(pluginType reflect.Type, newPluginImpl interface{}, ne
 func (r typeRegistry) get(pluginType reflect.Type, name string) (factory nameRegistryEntry, err error) {
 	pluginReg, ok := r[pluginType]
 	if !ok {
-		err = stackerr.Newf("no plugins for type %s has been registered", pluginType)
+		err = errors.Errorf("no plugins for type %s has been registered", pluginType)
 		return
 	}
 	factory, ok = pluginReg[name]
 	if !ok {
-		err = stackerr.Newf("no plugins of type %s has been registered for name %s", pluginType, name)
+		err = errors.Errorf("no plugins of type %s has been registered for name %s", pluginType, name)
 	}
 	return
 }

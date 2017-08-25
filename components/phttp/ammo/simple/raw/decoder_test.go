@@ -23,7 +23,7 @@ var _ = Describe("Decoder", func() {
 		reqSize, tag, err := decodeHeader([]byte(raw))
 		Expect(err).To(BeNil())
 		Expect(reqSize).To(Equal(123))
-		Expect(tag).To(Equal("__EMPTY__"))
+		Expect(tag).To(Equal(""))
 	})
 	It("should parse GET request", func() {
 		raw := "GET /some/path HTTP/1.0\r\n" +

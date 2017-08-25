@@ -30,16 +30,16 @@ const testFileData = `/0
 `
 
 var testData = []ammoData{
-	{"", "/0", http.Header{}, "__EMPTY__"},
-	{"", "/1", http.Header{"A": []string{"b"}}, "__EMPTY__"},
+	{"", "/0", http.Header{}, ""},
+	{"", "/1", http.Header{"A": []string{"b"}}, ""},
 	{"example.com", "/2", http.Header{
 		"A": []string{"b"},
 		"C": []string{"d"},
-	}, "__EMPTY__"},
+	}, ""},
 	{"other.net", "/3", http.Header{
 		"A": []string{""},
 		"C": []string{"d"},
-	}, "__EMPTY__"},
+	}, ""},
 	{"other.net", "/4", http.Header{
 		"A": []string{""},
 		"C": []string{"d"},

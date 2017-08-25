@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -154,7 +153,7 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 	if conf.CPUProfile != "" {
 		f, err := os.Create(conf.MemProfile)
 		if err != nil {
-			log.Fatal(err)
+			zap.L().Fatal("Memory profile file create fail", zap.Error(err))
 		}
 		pprof.StartCPUProfile(f)
 		stops = append(stops, func() {
@@ -163,9 +162,9 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 		})
 	}
 	if conf.MemProfile != "" {
-		f, err := os.Create(conf.MemProfile)
+		f, err := os.Create(conf.CPUProfile)
 		if err != nil {
-			log.Fatal(err)
+			zap.L().Fatal("CPU profile file create fail", zap.Error(err))
 		}
 		stops = append(stops, func() {
 			pprof.WriteHeapProfile(f)

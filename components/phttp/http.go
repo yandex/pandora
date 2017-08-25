@@ -7,11 +7,14 @@ package phttp
 
 import (
 	"net/http"
+
+	"github.com/pkg/errors"
 )
 
 type ClientGunConfig struct {
 	Target string `validate:"endpoint,required"`
 	SSL    bool
+	Base   BaseGunConfig `config:",squash"`
 }
 
 type HTTPGunConfig struct {
@@ -20,8 +23,8 @@ type HTTPGunConfig struct {
 }
 
 type HTTP2GunConfig struct {
-	Target string       `validate:"endpoint,required"`
-	Client ClientConfig `config:",squash"`
+	Gun    ClientGunConfig `config:",squash"`
+	Client ClientConfig    `config:",squash"`
 }
 
 func NewHTTPGun(conf HTTPGunConfig) *HTTPGun {
@@ -31,14 +34,16 @@ func NewHTTPGun(conf HTTPGunConfig) *HTTPGun {
 }
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
-func NewHTTP2Gun(conf HTTP2GunConfig) *HTTPGun {
+func NewHTTP2Gun(conf HTTP2GunConfig) (*HTTPGun, error) {
+	if !conf.Gun.SSL {
+		// Open issue on github if you need this feature.
+		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
+	}
 	transport := NewHTTP2Transport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext)
 	client := newClient(transport, conf.Client.Redirect)
 	// Will panic and cancel shooting whet target doesn't support HTTP/2.
 	client = &panicOnHTTP1Client{client}
-	// NOTE: HTTP/2 gun not support HTTP/2 over TCP for now.
-	// Open issue on github if you need this feature.
-	return NewClientGun(client, ClientGunConfig{Target: conf.Target, SSL: true})
+	return NewClientGun(client, conf.Gun), nil
 }
 
 func NewClientGun(client Client, conf ClientGunConfig) *HTTPGun {
@@ -48,8 +53,9 @@ func NewClientGun(client Client, conf ClientGunConfig) *HTTPGun {
 	}
 	var g HTTPGun
 	g = HTTPGun{
-		Base: Base{
-			Do: g.Do,
+		BaseGun: BaseGun{
+			Config: conf.Base,
+			Do:     g.Do,
 			OnClose: func() error {
 				client.CloseIdleConnections()
 				return nil
@@ -63,7 +69,7 @@ func NewClientGun(client Client, conf ClientGunConfig) *HTTPGun {
 }
 
 type HTTPGun struct {
-	Base
+	BaseGun
 	scheme string
 	target string
 	client Client
@@ -86,13 +92,17 @@ func NewDefaultHTTPGunConfig() HTTPGunConfig {
 }
 
 func NewDefaultHTTP2GunConfig() HTTP2GunConfig {
-	return HTTP2GunConfig{
+	conf := HTTP2GunConfig{
 		Client: NewDefaultClientConfig(),
+		Gun:    NewDefaultClientGunConfig(),
 	}
+	conf.Gun.SSL = true
+	return conf
 }
 
 func NewDefaultClientGunConfig() ClientGunConfig {
 	return ClientGunConfig{
-		SSL: false,
+		SSL:  false,
+		Base: NewDefaultBaseGunConfig(),
 	}
 }

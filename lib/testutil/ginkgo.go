@@ -6,7 +6,11 @@
 package testutil
 
 import (
-	"github.com/onsi/ginkgo"
+	"strings"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -22,7 +26,7 @@ func ReplaceGlobalLogger() *zap.Logger {
 func NewLogger() *zap.Logger {
 	conf := zap.NewDevelopmentConfig()
 	enc := zapcore.NewConsoleEncoder(conf.EncoderConfig)
-	core := zapcore.NewCore(enc, zapcore.AddSync(ginkgo.GinkgoWriter), zap.DebugLevel)
+	core := zapcore.NewCore(enc, zapcore.AddSync(GinkgoWriter), zap.DebugLevel)
 	log := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.DPanicLevel))
 	return log
 }
@@ -34,10 +38,18 @@ type Mock interface {
 
 func AssertExpectations(mocks ...Mock) {
 	for _, m := range mocks {
-		m.AssertExpectations(ginkgo.GinkgoT(1))
+		m.AssertExpectations(GinkgoT(1))
 	}
 }
 
 func AssertNotCalled(mock Mock, methodName string) {
-	mock.AssertNotCalled(ginkgo.GinkgoT(1), methodName)
+	mock.AssertNotCalled(GinkgoT(1), methodName)
+}
+
+func ParseYAML(data string) map[string]interface{} {
+	v := viper.New()
+	v.SetConfigType("yaml")
+	err := v.ReadConfig(strings.NewReader(data))
+	Expect(err).NotTo(HaveOccurred())
+	return v.AllSettings()
 }

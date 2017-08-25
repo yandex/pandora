@@ -10,78 +10,142 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
-	"github.com/facebookgo/stackerr"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core/aggregate/netsample"
 )
 
-// TODO: inject logger
-type Base struct {
+const (
+	EmptyTag = "__EMPTY__"
+)
+
+type BaseGunConfig struct {
+	AutoTag AutoTagConfig `config:"auto-tag"`
+}
+
+// AutoTagConfig configure automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
+// Example: /my/very/deep/page?id=23&param=33 -> /my/very when uri-elements: 2.
+type AutoTagConfig struct {
+	Enabled     bool `config:"enabled"`
+	URIElements int  `config:"uri-elements" validate:"min=1"` // URI elements used to autotagging
+	NoTagOnly   bool `config:"no-tag-only"`                   // When true, autotagged only ammo that has no tag before.
+}
+
+func NewDefaultBaseGunConfig() BaseGunConfig {
+	return BaseGunConfig{
+		AutoTagConfig{
+			Enabled:     false,
+			URIElements: 2,
+			NoTagOnly:   true,
+		}}
+}
+
+type BaseGun struct {
+	Log        *zap.Logger // If nil, zap.L() will be used.
+	DebugLog   bool        // Automaticaly set in Bind if Log accepts debug messages.
+	Config     BaseGunConfig
 	Do         func(r *http.Request) (*http.Response, error) // Required.
 	Connect    func(ctx context.Context) error               // Optional hook.
 	OnClose    func() error                                  // Optional. Called on Close().
 	Aggregator netsample.Aggregator                          // Lazy set via BindResultTo.
 }
 
-var _ Gun = (*Base)(nil)
-var _ io.Closer = (*Base)(nil)
+var _ Gun = (*BaseGun)(nil)
+var _ io.Closer = (*BaseGun)(nil)
 
-func (b *Base) Bind(aggregator netsample.Aggregator) {
+// TODO(skipor): pass logger here in https://github.com/yandex/pandora/issues/57
+func (b *BaseGun) Bind(aggregator netsample.Aggregator) {
+	if b.Log == nil {
+		b.Log = zap.L()
+	}
+	if ent := b.Log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
+		// Enable debug level logging during shooting. Creating log entries isn't free.
+		b.DebugLog = true
+	}
+
 	if b.Aggregator != nil {
-		zap.L().Panic("already binded")
+		b.Log.Panic("already binded")
 	}
 	if aggregator == nil {
-		zap.L().Panic("nil aggregator")
+		b.Log.Panic("nil aggregator")
 	}
 	b.Aggregator = aggregator
 }
 
 // Shoot is thread safe iff Do and Connect hooks are thread safe.
-func (b *Base) Shoot(ctx context.Context, ammo Ammo) {
+func (b *BaseGun) Shoot(ctx context.Context, ammo Ammo) {
 	if b.Aggregator == nil {
 		zap.L().Panic("must bind before shoot")
 	}
 	if b.Connect != nil {
 		err := b.Connect(ctx)
 		if err != nil {
-			zap.L().Warn("Connect fail", zap.Error(err))
+			b.Log.Warn("Connect fail", zap.Error(err))
 			return
 		}
 	}
 
 	req, sample := ammo.Request()
+	if b.DebugLog {
+		b.Log.Debug("Shoot", zap.Stringer("url", req.URL))
+	}
+
+	if b.Config.AutoTag.Enabled && (!b.Config.AutoTag.NoTagOnly || sample.Tags() == "") {
+		sample.AddTag(autotag(b.Config.AutoTag.URIElements, req.URL))
+	}
+	if sample.Tags() == "" {
+		sample.AddTag(EmptyTag)
+	}
+
 	var err error
 	defer func() {
 		if err != nil {
 			sample.SetErr(err)
 		}
 		b.Aggregator.Report(sample)
-		err = stackerr.WrapSkip(err, 1)
+		err = errors.WithStack(err)
 	}()
+
 	var res *http.Response
 	res, err = b.Do(req)
 	if err != nil {
-		zap.L().Warn("Request fail", zap.Error(err))
+		b.Log.Warn("Request fail", zap.Error(err))
 		return
+	}
+	if b.DebugLog {
+		b.Log.Debug("Got response", zap.Int("status", res.StatusCode))
 	}
 	sample.SetProtoCode(res.StatusCode)
 	defer res.Body.Close()
 	// TODO: measure body read time
-	// TODO: buffer copy buffers.
-	_, err = io.Copy(ioutil.Discard, res.Body)
+	_, err = io.Copy(ioutil.Discard, res.Body) // Buffers are pooled for ioutil.Discard
 	if err != nil {
-		zap.L().Warn("Body read fail", zap.Error(err))
+		b.Log.Warn("Body read fail", zap.Error(err))
 		return
 	}
 	// TODO: verbose logging
-	return
 }
 
-func (b *Base) Close() error {
+func (b *BaseGun) Close() error {
 	if b.OnClose != nil {
 		return b.OnClose()
 	}
 	return nil
+}
+
+func autotag(depth int, URL *url.URL) string {
+	path := URL.Path
+	var ind int
+	for ; ind < len(path); ind++ {
+		if path[ind] == '/' {
+			if depth == 0 {
+				break
+			}
+			depth--
+		}
+	}
+	return path[:ind]
 }
