@@ -27,7 +27,7 @@ type BaseGunConfig struct {
 }
 
 // AutoTagConfig configure automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
-// Example: /my/very/deep/page?id=23&param=33 -> _my_very
+// Example: /my/very/deep/page?id=23&param=33 -> /my/very when uri-elements: 2.
 type AutoTagConfig struct {
 	Enabled     bool `config:"enabled"`
 	URIElements int  `config:"uri-elements" validate:"min=1"` // URI elements used to autotagging
