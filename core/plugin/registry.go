@@ -12,12 +12,48 @@ import (
 	"github.com/pkg/errors"
 )
 
+type newDefaultConfigContainer struct {
+	// value type is func() <configType>. !IsValid() if newPluginImpl accepts no arguments.
+	value reflect.Value
+}
+
+// In reflect pkg []Value used to call functions. It's easier to return it, that convert from pointer when needed.
+func (e newDefaultConfigContainer) Get() (maybeConf []reflect.Value, fillAddr interface{}) {
+	configRequired := e.value.IsValid()
+	if !configRequired {
+		var emptyStruct struct{}
+		fillAddr = &emptyStruct // No fields to fill.
+		return
+	}
+	conf := e.value.Call(nil)[0]
+	switch conf.Kind() {
+	case reflect.Struct:
+		// Config can be filled only by pointer.
+		if !conf.CanAddr() {
+			// Can't address to pass pointer into decoder. Let's make New addressable!
+			newArg := reflect.New(conf.Type()).Elem()
+			newArg.Set(conf)
+			conf = newArg
+		}
+		fillAddr = conf.Addr().Interface()
+	case reflect.Ptr:
+		if conf.IsNil() {
+			// Can't fill nil config. Init with zero.
+			conf = reflect.New(conf.Type().Elem())
+		}
+		fillAddr = conf.Interface()
+	default:
+		panic("unexpected type " + conf.String())
+	}
+	maybeConf = []reflect.Value{conf}
+	return
+}
+
 type nameRegistryEntry struct {
 	// newPluginImpl type is func([config <configType>]) (<pluginImpl> [, error]),
 	// where configType kind is struct or struct pointer.
 	newPluginImpl reflect.Value
-	// newDefaultConfig type is func() <configType>. Zero if newPluginImpl accepts no arguments.
-	newDefaultConfig reflect.Value
+	defaultConfig newDefaultConfigContainer
 }
 
 type nameRegistry map[string]nameRegistryEntry
@@ -63,14 +99,14 @@ func (r typeRegistry) New(pluginType reflect.Type, name string, fillConfOptional
 	if err != nil {
 		return
 	}
-	confOptional, fillAddr := registered.NewDefaultConfig()
+	conf, fillAddr := registered.defaultConfig.Get()
 	if fillConf != nil {
 		err = fillConf(fillAddr)
 		if err != nil {
 			return
 		}
 	}
-	return registered.NewPlugin(confOptional)
+	return registered.NewPlugin(conf)
 }
 
 func (r typeRegistry) NewFactory(factoryType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (factory interface{}, err error) {
@@ -83,7 +119,7 @@ func (r typeRegistry) NewFactory(factoryType reflect.Type, name string, fillConf
 		return
 	}
 	factory = reflect.MakeFunc(factoryType, func(in []reflect.Value) (out []reflect.Value) {
-		conf, fillAddr := registered.NewDefaultConfig()
+		conf, fillAddr := registered.defaultConfig.Get()
 		if fillConf != nil {
 			// Check that config is correct.
 			err := fillConf(fillAddr)
@@ -114,36 +150,6 @@ func getFillConf(fillConfOptional []func(conf interface{}) error) func(interface
 		return nil
 	}
 	return fillConfOptional[0]
-}
-
-func (e nameRegistryEntry) NewDefaultConfig() (confOptional []reflect.Value, fillAddr interface{}) {
-	if e.newPluginImpl.Type().NumIn() == 0 {
-		var emptyStruct struct{}
-		fillAddr = &emptyStruct // No fields to fill.
-		return
-	}
-	conf := e.newDefaultConfig.Call(nil)[0]
-	switch conf.Kind() {
-	case reflect.Struct:
-		// Config can be filled only by pointer.
-		if !conf.CanAddr() {
-			// Can't address to pass pointer into decoder. Let's make New addressable!
-			newArg := reflect.New(conf.Type()).Elem()
-			newArg.Set(conf)
-			conf = newArg
-		}
-		fillAddr = conf.Addr().Interface()
-	case reflect.Ptr:
-		if conf.IsNil() {
-			// Can't fill nil config. Init with zero.
-			conf = reflect.New(conf.Type().Elem())
-		}
-		fillAddr = conf.Interface()
-	default:
-		panic("unexpected type " + conf.String())
-	}
-	confOptional = []reflect.Value{conf}
-	return
 }
 
 func (e nameRegistryEntry) NewPlugin(confOptional []reflect.Value) (plugin interface{}, err error) {
@@ -193,8 +199,8 @@ func newNameRegistryEntry(pluginType reflect.Type, newPluginImpl interface{}, ne
 			}).Interface()
 	}
 	return nameRegistryEntry{
-		newPluginImpl:    reflect.ValueOf(newPluginImpl),
-		newDefaultConfig: reflect.ValueOf(newDefaultConfig),
+		newPluginImpl: reflect.ValueOf(newPluginImpl),
+		defaultConfig: newDefaultConfigContainer{reflect.ValueOf(newDefaultConfig)},
 	}
 }
 
