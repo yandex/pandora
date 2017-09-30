@@ -12,24 +12,24 @@ import (
 
 var _ = Describe("Default registry", func() {
 	BeforeEach(func() {
-		Register(testPluginType(), testPluginName, newTestPluginImpl)
+		Register(ptestType(), ptestPluginName, ptestNewImpl)
 	})
 	AfterEach(func() {
 		defaultRegistry = NewRegistry()
 	})
 	It("lookup", func() {
-		Expect(Lookup(testPluginType())).To(BeTrue())
+		Expect(Lookup(ptestType())).To(BeTrue())
 	})
 	It("lookup factory", func() {
-		Expect(LookupFactory(testPluginFactoryType())).To(BeTrue())
+		Expect(LookupFactory(ptestFactoryType())).To(BeTrue())
 	})
 	It("new", func() {
-		plugin, err := New(testPluginType(), testPluginName)
+		plugin, err := New(ptestType(), ptestPluginName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(plugin).NotTo(BeNil())
 	})
 	It("new factory", func() {
-		pluginFactory, err := NewFactory(testPluginFactoryType(), testPluginName)
+		pluginFactory, err := NewFactory(ptestFactoryType(), ptestPluginName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(pluginFactory).NotTo(BeNil())
 	})
@@ -37,12 +37,12 @@ var _ = Describe("Default registry", func() {
 
 var _ = Describe("type helpers", func() {
 	It("ptr type", func() {
-		var plugin testPlugin
-		Expect(PtrType(&plugin)).To(Equal(testPluginType()))
+		var plugin ptestPlugin
+		Expect(PtrType(&plugin)).To(Equal(ptestType()))
 	})
 	It("factory plugin type ok", func() {
-		factoryPlugin, ok := FactoryPluginType(testPluginFactoryType())
+		factoryPlugin, ok := FactoryPluginType(ptestFactoryType())
 		Expect(ok).To(BeTrue())
-		Expect(factoryPlugin).To(Equal(testPluginType()))
+		Expect(factoryPlugin).To(Equal(ptestType()))
 	})
 })
