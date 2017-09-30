@@ -16,6 +16,53 @@ import (
 	"github.com/pkg/errors"
 )
 
+var _ = Describe("new default config container", func() {
+	DescribeTable("expectation fail",
+		func(constructor interface{}, newDefaultConfigOptional ...interface{}) {
+			newDefaultConfig := getNewDefaultConfig(newDefaultConfigOptional)
+			defer recoverExpectationFail()
+			newDefaultConfigContainer(reflect.TypeOf(constructor), newDefaultConfig)
+		},
+		Entry("invalid type",
+			func(int) testPlugin { return nil }),
+		Entry("invalid ptr type",
+			func(*int) testPlugin { return nil }),
+		Entry("to many args",
+			func(_, _ testPluginConfig) testPlugin { return nil }),
+		Entry("default without config",
+			func() testPlugin { return nil }, func() *testPluginConfig { return nil }),
+		Entry("invalid default config",
+			func(testPluginConfig) testPlugin { return nil }, func() *testPluginConfig { return nil }),
+		Entry("default config accepts args",
+			func(*testPluginConfig) testPlugin { return nil }, func(int) *testPluginConfig { return nil }),
+	)
+
+	DescribeTable("expectation ok",
+		func(constructor interface{}, newDefaultConfigOptional ...interface{}) {
+			newDefaultConfig := getNewDefaultConfig(newDefaultConfigOptional)
+			container := newDefaultConfigContainer(reflect.TypeOf(constructor), newDefaultConfig)
+			conf, err := container.Get(fillTestPluginConf)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(conf).To(HaveLen(1))
+			expectConfigValue(conf[0].Interface(), testFilledValue)
+		},
+		Entry("no default config",
+			newTestPluginImplConf),
+		Entry("no default ptr config",
+			newTestPluginImplPtrConf),
+		Entry("default config",
+			newTestPluginImplConf, newTestPluginDefaultConf),
+		Entry("default ptr config",
+			newTestPluginImplPtrConf, newTestPluginDefaultPtrConf),
+	)
+
+	It("fill no config failed", func() {
+		container := newDefaultConfigContainer(testPluginFactoryType(), nil)
+		_, err := container.Get(fillTestPluginConf)
+		Expect(err).To(HaveOccurred())
+	})
+})
+
 var _ = DescribeTable("register valid",
 	func(
 		newPluginImpl interface{},
@@ -28,21 +75,21 @@ var _ = DescribeTable("register valid",
 	Entry("return impl",
 		func() *testPluginImpl { return nil }),
 	Entry("return interface",
-		func() testPluginInterface { return nil }),
+		func() testPlugin { return nil }),
 	Entry("super interface",
 		func() interface {
 			io.Writer
-			testPluginInterface
+			testPlugin
 		} {
 			return nil
 		}),
 	Entry("struct config",
-		func(testPluginImplConfig) testPluginInterface { return nil }),
+		func(testPluginConfig) testPlugin { return nil }),
 	Entry("struct ptr config",
-		func(*testPluginImplConfig) testPluginInterface { return nil }),
+		func(*testPluginConfig) testPlugin { return nil }),
 	Entry("default config",
-		func(*testPluginImplConfig) testPluginInterface { return nil },
-		func() *testPluginImplConfig { return nil }),
+		func(*testPluginConfig) testPlugin { return nil },
+		func() *testPluginConfig { return nil }),
 )
 
 var _ = DescribeTable("register invalid",
@@ -58,31 +105,31 @@ var _ = DescribeTable("register invalid",
 	Entry("return not impl",
 		func() testPluginImpl { panic("") }),
 	Entry("invalid config type",
-		func(int) testPluginInterface { return nil }),
+		func(int) testPlugin { return nil }),
 	Entry("invalid config ptr type",
-		func(*int) testPluginInterface { return nil }),
+		func(*int) testPlugin { return nil }),
 	Entry("to many args",
-		func(_, _ testPluginImplConfig) testPluginInterface { return nil }),
+		func(_, _ testPluginConfig) testPlugin { return nil }),
 	Entry("default without config",
-		func() testPluginInterface { return nil }, func() *testPluginImplConfig { return nil }),
-	Entry("extra deafult config",
-		func(*testPluginImplConfig) testPluginInterface { return nil }, func() *testPluginImplConfig { return nil }, 0),
+		func() testPlugin { return nil }, func() *testPluginConfig { return nil }),
+	Entry("extra default config",
+		func(*testPluginConfig) testPlugin { return nil }, func() *testPluginConfig { return nil }, 0),
 	Entry("invalid default config",
-		func(testPluginImplConfig) testPluginInterface { return nil }, func() *testPluginImplConfig { return nil }),
+		func(testPluginConfig) testPlugin { return nil }, func() *testPluginConfig { return nil }),
 	Entry("default config accepts args",
-		func(*testPluginImplConfig) testPluginInterface { return nil }, func(int) *testPluginImplConfig { return nil }),
+		func(*testPluginConfig) testPlugin { return nil }, func(int) *testPluginConfig { return nil }),
 )
 
 var _ = Describe("registry", func() {
 	It("register name collision panics", func() {
 		r := newTypeRegistry()
-		r.testRegister(newTestPlugin)
+		r.testRegister(newTestPluginImpl)
 		defer recoverExpectationFail()
-		r.testRegister(newTestPlugin)
+		r.testRegister(newTestPluginImpl)
 	})
 	It("lookup", func() {
 		r := newTypeRegistry()
-		r.testRegister(newTestPlugin)
+		r.testRegister(newTestPluginImpl)
 		Expect(r.Lookup(testPluginType())).To(BeTrue())
 		Expect(r.Lookup(reflect.TypeOf(0))).To(BeFalse())
 		Expect(r.Lookup(reflect.TypeOf(&testPluginImpl{}))).To(BeFalse())
@@ -105,18 +152,18 @@ var _ = Describe("new", func() {
 	BeforeEach(func() { r = newTypeRegistry() })
 	runTestCases := func() {
 		It("no conf", func() {
-			r.testRegister(newTestPlugin)
+			r.testRegister(newTestPluginImpl)
 			Expect(testNewOk()).To(Equal(testInitValue))
 		})
 		It("nil error", func() {
-			r.testRegister(func() (testPluginInterface, error) {
-				return newTestPlugin(), nil
+			r.testRegister(func() (testPlugin, error) {
+				return newTestPluginImpl(), nil
 			})
 			Expect(testNewOk()).To(Equal(testInitValue))
 		})
 		It("non-nil error", func() {
 			expectedErr := errors.New("fill conf err")
-			r.testRegister(func() (testPluginInterface, error) {
+			r.testRegister(func() (testPlugin, error) {
 				return nil, expectedErr
 			})
 			_, err := testNew(r)
@@ -125,45 +172,45 @@ var _ = Describe("new", func() {
 			Expect(expectedErr).To(Equal(err))
 		})
 		It("no conf, fill conf error", func() {
-			r.testRegister(newTestPlugin)
+			r.testRegister(newTestPluginImpl)
 			expectedErr := errors.New("fill conf err")
 			_, err := testNew(r, func(_ interface{}) error { return expectedErr })
 			Expect(expectedErr).To(Equal(err))
 		})
 		It("no default", func() {
-			r.testRegister(func(c testPluginImplConfig) *testPluginImpl { return &testPluginImpl{c.Value} })
+			r.testRegister(func(c testPluginConfig) *testPluginImpl { return &testPluginImpl{c.Value} })
 			Expect(testNewOk()).To(Equal(""))
 		})
 		It("default", func() {
-			r.testRegister(newTestPluginConf, newTestPluginDefaultConf)
+			r.testRegister(newTestPluginImplConf, newTestPluginDefaultConf)
 			Expect(testNewOk()).To(Equal(testDefaultValue))
 		})
 		It("fill conf default", func() {
-			r.testRegister(newTestPluginConf, newTestPluginDefaultConf)
+			r.testRegister(newTestPluginImplConf, newTestPluginDefaultConf)
 			Expect("conf").To(Equal(testNewOk(fillTestPluginConf)))
 		})
 		It("fill conf no default", func() {
-			r.testRegister(newTestPluginConf)
+			r.testRegister(newTestPluginImplConf)
 			Expect("conf").To(Equal(testNewOk(fillTestPluginConf)))
 		})
 		It("fill ptr conf no default", func() {
-			r.testRegister(newTestPluginPtrConf)
+			r.testRegister(newTestPluginImplPtrConf)
 			Expect("conf").To(Equal(testNewOk(fillTestPluginConf)))
 		})
 		It("no default ptr conf not nil", func() {
-			r.testRegister(newTestPluginPtrConf)
+			r.testRegister(newTestPluginImplPtrConf)
 			Expect("").To(Equal(testNewOk()))
 		})
 		It("nil default, conf not nil", func() {
-			r.testRegister(newTestPluginPtrConf, func() *testPluginImplConfig { return nil })
+			r.testRegister(newTestPluginImplPtrConf, func() *testPluginConfig { return nil })
 			Expect("").To(Equal(testNewOk()))
 		})
 		It("fill nil default", func() {
-			r.testRegister(newTestPluginPtrConf, func() *testPluginImplConfig { return nil })
+			r.testRegister(newTestPluginImplPtrConf, func() *testPluginConfig { return nil })
 			Expect("conf").To(Equal(testNewOk(fillTestPluginConf)))
 		})
 		It("more than one fill conf panics", func() {
-			r.testRegister(newTestPluginPtrConf)
+			r.testRegister(newTestPluginImplPtrConf)
 			defer recoverExpectationFail()
 			testNew(r, fillTestPluginConf, fillTestPluginConf)
 		})
@@ -213,21 +260,21 @@ var _ = Describe("decode", func() {
 				})
 			})
 
-		r.Register(testPluginType(), "my-plugin", newTestPluginConf, newTestPluginDefaultConf)
+		r.Register(testPluginType(), "my-plugin", newTestPluginImplConf, newTestPluginDefaultConf)
 		input := map[string]interface{}{
 			"plugin": map[string]interface{}{
 				nameKey: "my-plugin",
-				"value": testConfValue,
+				"value": testFilledValue,
 			},
 		}
 		type Config struct {
-			Plugin testPluginInterface
+			Plugin testPlugin
 		}
 		var conf Config
 		err := decode(input, &conf)
 		Expect(err).NotTo(HaveOccurred())
 		actualValue := conf.Plugin.(*testPluginImpl).Value
-		Expect(actualValue).To(Equal(testConfValue))
+		Expect(actualValue).To(Equal(testFilledValue))
 	})
 
 })

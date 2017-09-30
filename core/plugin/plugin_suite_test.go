@@ -4,10 +4,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mitchellh/mapstructure"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/lib/testutil"
 )
 
@@ -19,9 +19,9 @@ func TestPlugin(t *testing.T) {
 
 const (
 	testPluginName   = "test_name"
-	testConfValue    = "conf"
 	testDefaultValue = "default"
 	testInitValue    = "init"
+	testFilledValue  = "conf"
 )
 
 func (r typeRegistry) testRegister(newPluginImpl interface{}, newDefaultConfigOptional ...interface{}) {
@@ -37,34 +37,58 @@ func (r typeRegistry) testNewFactory(fillConfOptional ...func(conf interface{}) 
 	if err != nil {
 		return
 	}
-	typedFactory := factory.(func() (testPluginInterface, error))
+	typedFactory := factory.(func() (testPlugin, error))
 	return typedFactory()
 }
 
-type testPluginInterface interface {
+type testPlugin interface {
 	DoSomething()
 }
 
-func testPluginType() reflect.Type { return reflect.TypeOf((*testPluginInterface)(nil)).Elem() }
+func testPluginType() reflect.Type     { return reflect.TypeOf((*testPlugin)(nil)).Elem() }
+func testPluginImplType() reflect.Type { return reflect.TypeOf((*testPluginImpl)(nil)).Elem() }
 func testPluginFactoryType() reflect.Type {
-	return reflect.TypeOf(func() (testPluginInterface, error) { panic("") })
+	return reflect.TypeOf(func() (testPlugin, error) { panic("") })
 }
-func newTestPlugin() *testPluginImpl { return &testPluginImpl{Value: testInitValue} }
+func testPluginImplFactoryType() reflect.Type {
+	return reflect.TypeOf(func() (*testPluginImpl, error) { panic("") })
+}
+func testPluginNoErrFactoryType() reflect.Type {
+	return reflect.TypeOf(func() testPlugin { panic("") })
+}
 
 type testPluginImpl struct{ Value string }
 
 func (p *testPluginImpl) DoSomething() {}
 
-var _ testPluginInterface = (*testPluginImpl)(nil)
+var _ testPlugin = (*testPluginImpl)(nil)
 
-type testPluginImplConfig struct{ Value string }
+type testPluginConfig struct{ Value string }
 
-func newTestPluginConf(c testPluginImplConfig) *testPluginImpl { return &testPluginImpl{c.Value} }
-func newTestPluginDefaultConf() testPluginImplConfig           { return testPluginImplConfig{testDefaultValue} }
-func newTestPluginPtrConf(c *testPluginImplConfig) *testPluginImpl {
+func newTestPlugin() testPlugin                                { return newTestPluginImpl() }
+func newTestPluginImpl() *testPluginImpl                       { return &testPluginImpl{Value: testInitValue} }
+func newTestPluginImplConf(c testPluginConfig) *testPluginImpl { return &testPluginImpl{c.Value} }
+func newTestPluginImplPtrConf(c *testPluginConfig) *testPluginImpl {
 	return &testPluginImpl{c.Value}
 }
 
+func newTestPluginDefaultConf() testPluginConfig     { return testPluginConfig{testDefaultValue} }
+func newTestPluginDefaultPtrConf() *testPluginConfig { return &testPluginConfig{testDefaultValue} }
+
 func fillTestPluginConf(conf interface{}) error {
-	return mapstructure.Decode(map[string]interface{}{"Value": "conf"}, conf)
+	return config.Decode(map[string]interface{}{"Value": testFilledValue}, conf)
 }
+
+func expectConfigValue(conf interface{}, val string) {
+	conf.(confChecker).expectValue(val)
+}
+
+type confChecker interface {
+	expectValue(string)
+}
+
+var _ confChecker = testPluginConfig{}
+var _ confChecker = &testPluginImpl{}
+
+func (c testPluginConfig) expectValue(val string) { Expect(c.Value).To(Equal(val)) }
+func (p *testPluginImpl) expectValue(val string)  { Expect(p.Value).To(Equal(val)) }

@@ -6,6 +6,7 @@
 package plugin
 
 import (
+	"fmt"
 	"reflect"
 )
 
@@ -96,3 +97,11 @@ func isFactoryType(t reflect.Type) bool {
 }
 
 var defaultRegistry = newTypeRegistry()
+
+var errorType = reflect.TypeOf((*error)(nil)).Elem()
+
+func expect(b bool, msg string, args ...interface{}) {
+	if !b {
+		panic(fmt.Sprintf("expectation failed: "+msg, args...))
+	}
+}

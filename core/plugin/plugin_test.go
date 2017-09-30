@@ -7,7 +7,7 @@ import (
 
 var _ = Describe("Default registry", func() {
 	BeforeEach(func() {
-		Register(testPluginType(), testPluginName, newTestPlugin)
+		Register(testPluginType(), testPluginName, newTestPluginImpl)
 	})
 	AfterEach(func() {
 		defaultRegistry = newTypeRegistry()
@@ -32,7 +32,7 @@ var _ = Describe("Default registry", func() {
 
 var _ = Describe("type helpers", func() {
 	It("ptr type", func() {
-		var plugin testPluginInterface
+		var plugin testPlugin
 		Expect(PtrType(&plugin)).To(Equal(testPluginType()))
 	})
 	It("factory plugin type ok", func() {
