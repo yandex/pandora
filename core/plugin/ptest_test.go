@@ -27,13 +27,11 @@ const (
 func (r *Registry) ptestRegister(newPluginImpl interface{}, newDefaultConfigOptional ...interface{}) {
 	r.Register(ptestType(), ptestPluginName, newPluginImpl, newDefaultConfigOptional...)
 }
-
 func (r *Registry) ptestNew(fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
 	return r.New(ptestType(), ptestPluginName, fillConfOptional...)
 }
-
 func (r *Registry) ptestNewFactory(fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
-	factory, err := r.NewFactory(ptestFactoryType(), ptestPluginName, fillConfOptional...)
+	factory, err := r.NewFactory(ptestNewErrType(), ptestPluginName, fillConfOptional...)
 	if err != nil {
 		return
 	}
@@ -41,51 +39,49 @@ func (r *Registry) ptestNewFactory(fillConfOptional ...func(conf interface{}) er
 	return typedFactory()
 }
 
+var (
+	ptestCreateFailedErr        = errors.New("test plugin create failed")
+	ptestConfigurationFailedErr = errors.New("test plugin configuration failed")
+)
+
 type ptestPlugin interface {
 	DoSomething()
 }
-
-func ptestType() reflect.Type     { return reflect.TypeOf((*ptestPlugin)(nil)).Elem() }
-func ptestImplType() reflect.Type { return reflect.TypeOf((*ptestImpl)(nil)).Elem() }
-
-func ptestFactoryType() reflect.Type {
-	return reflect.TypeOf(func() (ptestPlugin, error) { panic("") })
-}
-func ptestFactoryNoErrType() reflect.Type {
-	return reflect.TypeOf(func() ptestPlugin { panic("") })
-}
-func ptestFactoryConfigType() reflect.Type {
-	return reflect.TypeOf(func(ptestConfig) (ptestPlugin, error) { panic("") })
-}
-
 type ptestImpl struct{ Value string }
+type ptestConfig struct{ Value string }
 
 func (p *ptestImpl) DoSomething() {}
 
-var _ ptestPlugin = (*ptestImpl)(nil)
+func ptestNew() ptestPlugin                      { return ptestNewImpl() }
+func ptestNewImpl() *ptestImpl                   { return &ptestImpl{Value: ptestInitValue} }
+func ptestNewConf(c ptestConfig) ptestPlugin     { return &ptestImpl{c.Value} }
+func ptestNewPtrConf(c *ptestConfig) ptestPlugin { return &ptestImpl{c.Value} }
+func ptestNewErr() (ptestPlugin, error)          { return &ptestImpl{Value: ptestInitValue}, nil }
+func ptestNewErrFailing() (ptestPlugin, error)   { return nil, ptestCreateFailedErr }
 
-type ptestConfig struct{ Value string }
-
-func ptestNew() ptestPlugin                     { return ptestNewImpl() }
-func ptestNewImpl() *ptestImpl                  { return &ptestImpl{Value: ptestInitValue} }
-func ptestNewImplConf(c ptestConfig) *ptestImpl { return &ptestImpl{c.Value} }
-func ptestNewImplPtrConf(c *ptestConfig) *ptestImpl {
-	return &ptestImpl{c.Value}
+func ptestNewFactory() func() ptestPlugin    { return ptestNew }
+func ptestNewFactoryImpl() func() *ptestImpl { return ptestNewImpl }
+func ptestNewFactoryConf() func(ptestConfig) ptestPlugin {
+	return func(c ptestConfig) ptestPlugin {
+		return ptestNewConf(c)
+	}
 }
-
-func ptestNewImplErr() (*ptestImpl, error) {
-	return &ptestImpl{Value: ptestInitValue}, nil
+func ptestNewFactoryPtrConf() func(*ptestConfig) ptestPlugin {
+	return func(c *ptestConfig) ptestPlugin {
+		return ptestNewPtrConf(c)
+	}
 }
-
-var ptestCreateFailedErr = errors.New("test plugin create failed")
-var ptestConfigurationFailedErr = errors.New("test plugin configuration failed")
-
-func ptestNewImplErrFailed() (*ptestImpl, error) {
-	return nil, ptestCreateFailedErr
-}
+func ptestNewFactoryErr() (func() ptestPlugin, error)               { return ptestNew, nil }
+func ptestNewFactoryErrFailing() (func() ptestPlugin, error)        { return nil, ptestCreateFailedErr }
+func ptestNewFactoryFactoryErr() func() (ptestPlugin, error)        { return ptestNewErr }
+func ptestNewFactoryFactoryErrFailing() func() (ptestPlugin, error) { return ptestNewErrFailing }
 
 func ptestDefaultConf() ptestConfig        { return ptestConfig{ptestDefaultValue} }
 func ptestNewDefaultPtrConf() *ptestConfig { return &ptestConfig{ptestDefaultValue} }
+
+func ptestType() reflect.Type       { return PtrType((*ptestPlugin)(nil)) }
+func ptestNewErrType() reflect.Type { return reflect.TypeOf(ptestNewErr) }
+func ptestNewType() reflect.Type    { return reflect.TypeOf(ptestNew) }
 
 func ptestFillConf(conf interface{}) error {
 	return config.Decode(map[string]interface{}{"Value": ptestFilledValue}, conf)

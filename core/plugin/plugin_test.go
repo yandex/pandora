@@ -21,7 +21,7 @@ var _ = Describe("Default registry", func() {
 		Expect(Lookup(ptestType())).To(BeTrue())
 	})
 	It("lookup factory", func() {
-		Expect(LookupFactory(ptestFactoryType())).To(BeTrue())
+		Expect(LookupFactory(ptestNewErrType())).To(BeTrue())
 	})
 	It("new", func() {
 		plugin, err := New(ptestType(), ptestPluginName)
@@ -29,7 +29,7 @@ var _ = Describe("Default registry", func() {
 		Expect(plugin).NotTo(BeNil())
 	})
 	It("new factory", func() {
-		pluginFactory, err := NewFactory(ptestFactoryType(), ptestPluginName)
+		pluginFactory, err := NewFactory(ptestNewErrType(), ptestPluginName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(pluginFactory).NotTo(BeNil())
 	})
@@ -41,7 +41,7 @@ var _ = Describe("type helpers", func() {
 		Expect(PtrType(&plugin)).To(Equal(ptestType()))
 	})
 	It("factory plugin type ok", func() {
-		factoryPlugin, ok := FactoryPluginType(ptestFactoryType())
+		factoryPlugin, ok := FactoryPluginType(ptestNewErrType())
 		Expect(ok).To(BeTrue())
 		Expect(factoryPlugin).To(Equal(ptestType()))
 	})

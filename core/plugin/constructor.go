@@ -25,18 +25,8 @@ type constructor interface {
 }
 
 func newPluginConstructor(pluginType reflect.Type, newPlugin interface{}) *pluginConstructor {
-	newPluginType := reflect.TypeOf(newPlugin)
-	expect(newPluginType.Kind() == reflect.Func, "plugin constructor should be func")
-	expect(newPluginType.NumIn() <= 1, "plugin constructor should accept config or nothing")
-	expect(1 <= newPluginType.NumOut() && newPluginType.NumOut() <= 2,
-		"plugin constructor should return plugin implementation, and optionally error")
-	pluginImplType := newPluginType.Out(0)
-	expect(pluginImplType.Implements(pluginType), "plugin constructor should implement plugin interface")
-	if newPluginType.NumOut() == 2 {
-		expect(newPluginType.Out(1) == errorType, "plugin constructor should have no second return value, or it should be error")
-	}
-	newPluginVal := reflect.ValueOf(newPlugin)
-	return &pluginConstructor{pluginType, newPluginVal}
+	expectPluginConstructor(pluginType, reflect.TypeOf(newPlugin), true)
+	return &pluginConstructor{pluginType, reflect.ValueOf(newPlugin)}
 }
 
 // pluginConstructor is abstract constructor of some pluginType interface implementations
@@ -88,9 +78,23 @@ func (c *pluginConstructor) NewFactory(factoryType reflect.Type, getMaybeConf fu
 // factory functions, using some func newFactory func.
 type factoryConstructor struct {
 	pluginType reflect.Type
-	// newFactory type is func([config <configType>]) (func() (<pluginImpl> [, error])),
-	// where configType kind is struct or struct pointer.
+	// newFactory type is func([config <configType>]) (func() (<pluginImpl>[, error])[, error),
 	newFactory reflect.Value
+}
+
+func newFactoryConstructor(pluginType reflect.Type, newFactory interface{}) *factoryConstructor {
+	newFactoryType := reflect.TypeOf(newFactory)
+	expect(newFactoryType.Kind() == reflect.Func, "factory constructor should be func")
+	expect(newFactoryType.NumIn() <= 1, "factory constructor should accept config or nothing")
+
+	expect(1 <= newFactoryType.NumOut() && newFactoryType.NumOut() <= 2,
+		"factory constructor should return factory, and optionally error")
+	if newFactoryType.NumOut() == 2 {
+		expect(newFactoryType.Out(1) == errorType, "factory constructor should have no second return value, or it should be error")
+	}
+	factoryType := newFactoryType.Out(0)
+	expectPluginConstructor(pluginType, factoryType, false)
+	return &factoryConstructor{pluginType, reflect.ValueOf(newFactory)}
 }
 
 func (c *factoryConstructor) NewPlugin(maybeConf []reflect.Value) (plugin interface{}, err error) {
@@ -134,6 +138,23 @@ func (c *factoryConstructor) callNewFactory(maybeConf []reflect.Value) (factory 
 		err, _ = factoryAndMaybeErr[1].Interface().(error)
 	}
 	return factoryAndMaybeErr[0], err
+}
+
+// expectPluginConstructor checks type expectations common for newPlugin, and factory, returned from newFactory.
+func expectPluginConstructor(pluginType, factoryType reflect.Type, configAllowed bool) {
+	expect(factoryType.Kind() == reflect.Func, "plugin constructor should be func")
+	if configAllowed {
+		expect(factoryType.NumIn() <= 1, "plugin constructor should accept config or nothing")
+	} else {
+		expect(factoryType.NumIn() == 0, "plugin constructor returned from newFactory, shouldn't accept any arguments")
+	}
+	expect(1 <= factoryType.NumOut() && factoryType.NumOut() <= 2,
+		"plugin constructor should return plugin implementation, and optionally error")
+	pluginImplType := factoryType.Out(0)
+	expect(pluginImplType.Implements(pluginType), "plugin constructor should implement plugin interface")
+	if factoryType.NumOut() == 2 {
+		expect(factoryType.Out(1) == errorType, "plugin constructor should have no second return value, or it should be error")
+	}
 }
 
 // convertFactoryOutParam converts output params of some factory (newFactory) call, to required.

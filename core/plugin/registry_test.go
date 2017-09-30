@@ -47,17 +47,17 @@ var _ = Describe("new default config container", func() {
 			ptestExpectConfigValue(conf[0].Interface(), ptestFilledValue)
 		},
 		Entry("no default config",
-			ptestNewImplConf),
+			ptestNewConf),
 		Entry("no default ptr config",
-			ptestNewImplPtrConf),
+			ptestNewPtrConf),
 		Entry("default config",
-			ptestNewImplConf, ptestDefaultConf),
+			ptestNewConf, ptestDefaultConf),
 		Entry("default ptr config",
-			ptestNewImplPtrConf, ptestNewDefaultPtrConf),
+			ptestNewPtrConf, ptestNewDefaultPtrConf),
 	)
 
 	It("fill no config failed", func() {
-		container := newDefaultConfigContainer(ptestFactoryType(), nil)
+		container := newDefaultConfigContainer(ptestNewErrType(), nil)
 		_, err := container.Get(ptestFillConf)
 		Expect(err).To(HaveOccurred())
 	})
@@ -182,35 +182,35 @@ var _ = Describe("new", func() {
 			Expect(testNewOk()).To(Equal(""))
 		})
 		It("default", func() {
-			r.ptestRegister(ptestNewImplConf, ptestDefaultConf)
+			r.ptestRegister(ptestNewConf, ptestDefaultConf)
 			Expect(testNewOk()).To(Equal(ptestDefaultValue))
 		})
 		It("fill conf default", func() {
-			r.ptestRegister(ptestNewImplConf, ptestDefaultConf)
+			r.ptestRegister(ptestNewConf, ptestDefaultConf)
 			Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
 		})
 		It("fill conf no default", func() {
-			r.ptestRegister(ptestNewImplConf)
+			r.ptestRegister(ptestNewConf)
 			Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
 		})
 		It("fill ptr conf no default", func() {
-			r.ptestRegister(ptestNewImplPtrConf)
+			r.ptestRegister(ptestNewPtrConf)
 			Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
 		})
 		It("no default ptr conf not nil", func() {
-			r.ptestRegister(ptestNewImplPtrConf)
+			r.ptestRegister(ptestNewPtrConf)
 			Expect("").To(Equal(testNewOk()))
 		})
 		It("nil default, conf not nil", func() {
-			r.ptestRegister(ptestNewImplPtrConf, func() *ptestConfig { return nil })
+			r.ptestRegister(ptestNewPtrConf, func() *ptestConfig { return nil })
 			Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
 		})
 		It("fill nil default", func() {
-			r.ptestRegister(ptestNewImplPtrConf, func() *ptestConfig { return nil })
+			r.ptestRegister(ptestNewPtrConf, func() *ptestConfig { return nil })
 			Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
 		})
 		It("more than one fill conf panics", func() {
-			r.ptestRegister(ptestNewImplPtrConf)
+			r.ptestRegister(ptestNewPtrConf)
 			defer recoverExpectationFail()
 			testNew(r, ptestFillConf, ptestFillConf)
 		})
@@ -260,7 +260,7 @@ var _ = Describe("decode", func() {
 				})
 			})
 
-		r.Register(ptestType(), "my-plugin", ptestNewImplConf, ptestDefaultConf)
+		r.Register(ptestType(), "my-plugin", ptestNewConf, ptestDefaultConf)
 		input := map[string]interface{}{
 			"plugin": map[string]interface{}{
 				nameKey: "my-plugin",
