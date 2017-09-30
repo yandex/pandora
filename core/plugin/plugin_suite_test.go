@@ -24,15 +24,15 @@ const (
 	testFilledValue  = "conf"
 )
 
-func (r typeRegistry) testRegister(newPluginImpl interface{}, newDefaultConfigOptional ...interface{}) {
+func (r *Registry) testRegister(newPluginImpl interface{}, newDefaultConfigOptional ...interface{}) {
 	r.Register(testPluginType(), testPluginName, newPluginImpl, newDefaultConfigOptional...)
 }
 
-func (r typeRegistry) testNew(fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
+func (r *Registry) testNew(fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
 	return r.New(testPluginType(), testPluginName, fillConfOptional...)
 }
 
-func (r typeRegistry) testNewFactory(fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
+func (r *Registry) testNewFactory(fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
 	factory, err := r.NewFactory(testPluginFactoryType(), testPluginName, fillConfOptional...)
 	if err != nil {
 		return

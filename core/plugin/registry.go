@@ -11,11 +11,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// FIXME: make public.
-func newTypeRegistry() typeRegistry { return make(typeRegistry) }
+func NewRegistry() *Registry {
+	return &Registry{make(map[reflect.Type]nameRegistry)}
+}
 
-// FIXME: encapsucate to struct and make public
-type typeRegistry map[reflect.Type]nameRegistry
+type Registry struct {
+	typeToNameReg map[reflect.Type]nameRegistry
+}
 
 func newNameRegistry() nameRegistry { return make(nameRegistry) }
 
@@ -26,7 +28,7 @@ type nameRegistryEntry struct {
 	defaultConfig defaultConfigContainer
 }
 
-func (r typeRegistry) Register(
+func (r *Registry) Register(
 	pluginType reflect.Type, // plugin interface type
 	name string,
 	newPluginImpl interface{},
@@ -34,27 +36,27 @@ func (r typeRegistry) Register(
 ) {
 	expect(pluginType.Kind() == reflect.Interface, "plugin type should be interface, but have: %T", pluginType)
 	expect(name != "", "empty name")
-	pluginReg := r[pluginType]
-	if pluginReg == nil {
-		pluginReg = newNameRegistry()
-		r[pluginType] = pluginReg
+	nameReg := r.typeToNameReg[pluginType]
+	if nameReg == nil {
+		nameReg = newNameRegistry()
+		r.typeToNameReg[pluginType] = nameReg
 	}
-	_, ok := pluginReg[name]
+	_, ok := nameReg[name]
 	expect(!ok, "plugin %s with name %q had been already registered", pluginType, name)
 	newDefaultConfig := getNewDefaultConfig(newDefaultConfigOptional)
-	pluginReg[name] = newNameRegistryEntry(pluginType, newPluginImpl, newDefaultConfig)
+	nameReg[name] = newNameRegistryEntry(pluginType, newPluginImpl, newDefaultConfig)
 }
 
-func (r typeRegistry) Lookup(pluginType reflect.Type) bool {
-	_, ok := r[pluginType]
+func (r *Registry) Lookup(pluginType reflect.Type) bool {
+	_, ok := r.typeToNameReg[pluginType]
 	return ok
 }
 
-func (r typeRegistry) LookupFactory(factoryType reflect.Type) bool {
+func (r *Registry) LookupFactory(factoryType reflect.Type) bool {
 	return isFactoryType(factoryType) && r.Lookup(factoryType.Out(0))
 }
 
-func (r typeRegistry) New(pluginType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
+func (r *Registry) New(pluginType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
 	expect(pluginType.Kind() == reflect.Interface, "plugin type should be interface, but have: %T", pluginType)
 	expect(name != "", "empty name")
 	fillConf := getFillConf(fillConfOptional)
@@ -69,7 +71,7 @@ func (r typeRegistry) New(pluginType reflect.Type, name string, fillConfOptional
 	return registered.constructor.NewPlugin(conf)
 }
 
-func (r typeRegistry) NewFactory(factoryType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (factory interface{}, err error) {
+func (r *Registry) NewFactory(factoryType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (factory interface{}, err error) {
 	expect(isFactoryType(factoryType), "plugin factory type should be like `func() (PluginInterface, error)`, but have: %T", factoryType)
 	expect(name != "", "empty name")
 	fillConf := getFillConf(fillConfOptional)
@@ -91,8 +93,8 @@ func newNameRegistryEntry(pluginType reflect.Type, newPluginImpl interface{}, ne
 	return nameRegistryEntry{constructor, defaultConfig}
 }
 
-func (r typeRegistry) get(pluginType reflect.Type, name string) (factory nameRegistryEntry, err error) {
-	pluginReg, ok := r[pluginType]
+func (r *Registry) get(pluginType reflect.Type, name string) (factory nameRegistryEntry, err error) {
+	pluginReg, ok := r.typeToNameReg[pluginType]
 	if !ok {
 		err = errors.Errorf("no plugins for type %s has been registered", pluginType)
 		return

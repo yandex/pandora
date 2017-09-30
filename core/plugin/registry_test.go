@@ -69,7 +69,7 @@ var _ = DescribeTable("register valid",
 		newDefaultConfigOptional ...interface{},
 	) {
 		Expect(func() {
-			newTypeRegistry().testRegister(newPluginImpl, newDefaultConfigOptional...)
+			NewRegistry().testRegister(newPluginImpl, newDefaultConfigOptional...)
 		}).NotTo(Panic())
 	},
 	Entry("return impl",
@@ -99,7 +99,7 @@ var _ = DescribeTable("register invalid",
 	) {
 		Expect(func() {
 			defer recoverExpectationFail()
-			newTypeRegistry().testRegister(newPluginImpl, newDefaultConfigOptional...)
+			NewRegistry().testRegister(newPluginImpl, newDefaultConfigOptional...)
 		}).NotTo(Panic())
 	},
 	Entry("return not impl",
@@ -122,13 +122,13 @@ var _ = DescribeTable("register invalid",
 
 var _ = Describe("registry", func() {
 	It("register name collision panics", func() {
-		r := newTypeRegistry()
+		r := NewRegistry()
 		r.testRegister(newTestPluginImpl)
 		defer recoverExpectationFail()
 		r.testRegister(newTestPluginImpl)
 	})
 	It("lookup", func() {
-		r := newTypeRegistry()
+		r := NewRegistry()
 		r.testRegister(newTestPluginImpl)
 		Expect(r.Lookup(testPluginType())).To(BeTrue())
 		Expect(r.Lookup(reflect.TypeOf(0))).To(BeFalse())
@@ -139,9 +139,9 @@ var _ = Describe("registry", func() {
 })
 
 var _ = Describe("new", func() {
-	type New func(r typeRegistry, fillConfOptional ...func(conf interface{}) error) (interface{}, error)
+	type New func(r *Registry, fillConfOptional ...func(conf interface{}) error) (interface{}, error)
 	var (
-		r         typeRegistry
+		r         *Registry
 		testNew   New
 		testNewOk = func(fillConfOptional ...func(conf interface{}) error) (pluginVal string) {
 			plugin, err := testNew(r, fillConfOptional...)
@@ -149,7 +149,7 @@ var _ = Describe("new", func() {
 			return plugin.(*testPluginImpl).Value
 		}
 	)
-	BeforeEach(func() { r = newTypeRegistry() })
+	BeforeEach(func() { r = NewRegistry() })
 	runTestCases := func() {
 		It("no conf", func() {
 			r.testRegister(newTestPluginImpl)
@@ -216,12 +216,12 @@ var _ = Describe("new", func() {
 		})
 	}
 	Context("use New", func() {
-		BeforeEach(func() { testNew = typeRegistry.testNew })
+		BeforeEach(func() { testNew = (*Registry).testNew })
 		runTestCases()
 
 	})
 	Context("use NewFactory", func() {
-		BeforeEach(func() { testNew = typeRegistry.testNewFactory })
+		BeforeEach(func() { testNew = (*Registry).testNewFactory })
 		runTestCases()
 	})
 
@@ -229,7 +229,7 @@ var _ = Describe("new", func() {
 
 var _ = Describe("decode", func() {
 	It("ok", func() {
-		r := newTypeRegistry()
+		r := NewRegistry()
 		const nameKey = "type"
 
 		var hook mapstructure.DecodeHookFunc

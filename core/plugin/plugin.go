@@ -10,6 +10,10 @@ import (
 	"reflect"
 )
 
+func DefaultRegistry() *Registry {
+	return defaultRegistry
+}
+
 // Register registers plugin factory and optional default config factory,
 // for given plugin interface type and plugin name.
 // See package doc for type expectations details.
@@ -21,19 +25,19 @@ func Register(
 	newPluginImpl interface{},
 	newDefaultConfigOptional ...interface{},
 ) {
-	defaultRegistry.Register(pluginType, name, newPluginImpl, newDefaultConfigOptional...)
+	DefaultRegistry().Register(pluginType, name, newPluginImpl, newDefaultConfigOptional...)
 }
 
 // Lookup returns true if any plugin factory has been registered for given
 // type.
 func Lookup(pluginType reflect.Type) bool {
-	return defaultRegistry.Lookup(pluginType)
+	return DefaultRegistry().Lookup(pluginType)
 }
 
 // LookupFactory returns true if factoryType looks like func() (SomeInterface[, error])
 // and any plugin factory has been registered for SomeInterface.
 func LookupFactory(factoryType reflect.Type) bool {
-	return defaultRegistry.LookupFactory(factoryType)
+	return DefaultRegistry().LookupFactory(factoryType)
 }
 
 // New creates plugin by registered plugin factory. Returns error if creation
@@ -96,7 +100,7 @@ func isFactoryType(t reflect.Type) bool {
 	return t.Out(1) == errorType
 }
 
-var defaultRegistry = newTypeRegistry()
+var defaultRegistry = NewRegistry()
 
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
 

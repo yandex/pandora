@@ -10,7 +10,7 @@ var _ = Describe("Default registry", func() {
 		Register(testPluginType(), testPluginName, newTestPluginImpl)
 	})
 	AfterEach(func() {
-		defaultRegistry = newTypeRegistry()
+		defaultRegistry = NewRegistry()
 	})
 	It("lookup", func() {
 		Expect(Lookup(testPluginType())).To(BeTrue())
