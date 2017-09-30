@@ -51,9 +51,9 @@ var _ = Describe("new default config container", func() {
 		Entry("no default ptr config",
 			newTestPluginImplPtrConf),
 		Entry("default config",
-			newTestPluginImplConf, newTestPluginDefaultConf),
+			newTestPluginImplConf, newTestDefaultConf),
 		Entry("default ptr config",
-			newTestPluginImplPtrConf, newTestPluginDefaultPtrConf),
+			newTestPluginImplPtrConf, newTestDefaultPtrConf),
 	)
 
 	It("fill no config failed", func() {
@@ -182,11 +182,11 @@ var _ = Describe("new", func() {
 			Expect(testNewOk()).To(Equal(""))
 		})
 		It("default", func() {
-			r.testRegister(newTestPluginImplConf, newTestPluginDefaultConf)
+			r.testRegister(newTestPluginImplConf, newTestDefaultConf)
 			Expect(testNewOk()).To(Equal(testDefaultValue))
 		})
 		It("fill conf default", func() {
-			r.testRegister(newTestPluginImplConf, newTestPluginDefaultConf)
+			r.testRegister(newTestPluginImplConf, newTestDefaultConf)
 			Expect("conf").To(Equal(testNewOk(fillTestPluginConf)))
 		})
 		It("fill conf no default", func() {
@@ -260,7 +260,7 @@ var _ = Describe("decode", func() {
 				})
 			})
 
-		r.Register(testPluginType(), "my-plugin", newTestPluginImplConf, newTestPluginDefaultConf)
+		r.Register(testPluginType(), "my-plugin", newTestPluginImplConf, newTestDefaultConf)
 		input := map[string]interface{}{
 			"plugin": map[string]interface{}{
 				nameKey: "my-plugin",

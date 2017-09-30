@@ -1,3 +1,8 @@
+// Copyright (c) 2017 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MPL 2.0
+// license that can be found in the LICENSE file.
+// Author: Vladimir Skipor <skipor@yandex-team.ru>
+
 package plugin
 
 import (
@@ -7,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/lib/testutil"
 )
@@ -47,14 +53,15 @@ type testPlugin interface {
 
 func testPluginType() reflect.Type     { return reflect.TypeOf((*testPlugin)(nil)).Elem() }
 func testPluginImplType() reflect.Type { return reflect.TypeOf((*testPluginImpl)(nil)).Elem() }
+
 func testPluginFactoryType() reflect.Type {
 	return reflect.TypeOf(func() (testPlugin, error) { panic("") })
 }
-func testPluginImplFactoryType() reflect.Type {
-	return reflect.TypeOf(func() (*testPluginImpl, error) { panic("") })
-}
 func testPluginNoErrFactoryType() reflect.Type {
 	return reflect.TypeOf(func() testPlugin { panic("") })
+}
+func testPluginFactoryConfigType() reflect.Type {
+	return reflect.TypeOf(func(testPluginConfig) (testPlugin, error) { panic("") })
 }
 
 type testPluginImpl struct{ Value string }
@@ -72,8 +79,19 @@ func newTestPluginImplPtrConf(c *testPluginConfig) *testPluginImpl {
 	return &testPluginImpl{c.Value}
 }
 
-func newTestPluginDefaultConf() testPluginConfig     { return testPluginConfig{testDefaultValue} }
-func newTestPluginDefaultPtrConf() *testPluginConfig { return &testPluginConfig{testDefaultValue} }
+func newTestPluginImplErr() (*testPluginImpl, error) {
+	return &testPluginImpl{Value: testInitValue}, nil
+}
+
+var testPluginCreateFailedErr = errors.New("test plugin create failed")
+var testConfigurationFailedErr = errors.New("test plugin configuration failed")
+
+func newTestPluginImplErrFailed() (*testPluginImpl, error) {
+	return nil, testPluginCreateFailedErr
+}
+
+func newTestDefaultConf() testPluginConfig     { return testPluginConfig{testDefaultValue} }
+func newTestDefaultPtrConf() *testPluginConfig { return &testPluginConfig{testDefaultValue} }
 
 func fillTestPluginConf(conf interface{}) error {
 	return config.Decode(map[string]interface{}{"Value": testFilledValue}, conf)
