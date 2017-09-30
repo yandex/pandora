@@ -6,13 +6,13 @@
 package plugin
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 )
 
 var _ = Describe("plugin constructor", func() {
@@ -66,7 +66,7 @@ var _ = Describe("plugin constructor", func() {
 			return factory
 		}
 
-		It("from conversion", func() {
+		It("same type - no wrap", func() {
 			factory := newFactoryOK(ptestNew, ptestNewType(), nil)
 			expectSameFunc(factory, ptestNew)
 		})
@@ -170,8 +170,140 @@ var _ = Describe("factory constructor", func() {
 			func() func() (_, _ ptestPlugin) { panic("") }),
 	)
 
-	// FIXME
+	Context("new plugin", func() {
+		newPlugin := func(newFactory interface{}, maybeConf []reflect.Value) (interface{}, error) {
+			testee := newFactoryConstructor(ptestType(), newFactory)
+			return testee.NewPlugin(maybeConf)
+		}
 
+		It("", func() {
+			plugin, err := newPlugin(ptestNewFactory, nil)
+			Expect(err).NotTo(HaveOccurred())
+			ptestExpectConfigValue(plugin, ptestInitValue)
+		})
+
+		It("impl", func() {
+			plugin, err := newPlugin(ptestNewFactoryImpl, nil)
+			Expect(err).NotTo(HaveOccurred())
+			ptestExpectConfigValue(plugin, ptestInitValue)
+		})
+
+		It("config", func() {
+			plugin, err := newPlugin(ptestNewFactoryConf, confToMaybe(ptestDefaultConf()))
+			Expect(err).NotTo(HaveOccurred())
+			ptestExpectConfigValue(plugin, ptestDefaultValue)
+		})
+
+		It("failed", func() {
+			plugin, err := newPlugin(ptestNewFactoryErrFailing, nil)
+			Expect(err).To(Equal(ptestCreateFailedErr))
+			Expect(plugin).To(BeNil())
+		})
+
+		It("factory failed", func() {
+			plugin, err := newPlugin(ptestNewFactoryFactoryErrFailing, nil)
+			Expect(err).To(Equal(ptestCreateFailedErr))
+			Expect(plugin).To(BeNil())
+		})
+	})
+
+	Context("new factory", func() {
+		newFactory := func(newFactory interface{}, factoryType reflect.Type, getMaybeConf func() ([]reflect.Value, error)) (interface{}, error) {
+			testee := newFactoryConstructor(ptestType(), newFactory)
+			return testee.NewFactory(factoryType, getMaybeConf)
+		}
+		newFactoryOK := func(newF interface{}, factoryType reflect.Type, getMaybeConf func() ([]reflect.Value, error)) interface{} {
+			factory, err := newFactory(newF, factoryType, getMaybeConf)
+			Expect(err).NotTo(HaveOccurred())
+			return factory
+		}
+
+		It("no err, same type - no wrap", func() {
+			factory := newFactoryOK(ptestNewFactory, ptestNewType(), nil)
+			expectSameFunc(factory, ptestNew)
+		})
+
+		It("has err, same type - no wrap", func() {
+			factory := newFactoryOK(ptestNewFactoryFactoryErr, ptestNewErrType(), nil)
+			expectSameFunc(factory, ptestNewErr)
+		})
+
+		It("from new impl", func() {
+			factory := newFactoryOK(ptestNewFactoryImpl, ptestNewType(), nil)
+			f, ok := factory.(func() ptestPlugin)
+			Expect(ok).To(BeTrue())
+			plugin := f()
+			ptestExpectConfigValue(plugin, ptestInitValue)
+		})
+
+		It("add err", func() {
+			factory := newFactoryOK(ptestNewFactory, ptestNewErrType(), nil)
+			f, ok := factory.(func() (ptestPlugin, error))
+			Expect(ok).To(BeTrue())
+			plugin, err := f()
+			Expect(err).NotTo(HaveOccurred())
+			ptestExpectConfigValue(plugin, ptestInitValue)
+		})
+
+		It("factory construction not failed", func() {
+			factory := newFactoryOK(ptestNewFactoryErr, ptestNewType(), nil)
+			f, ok := factory.(func() ptestPlugin)
+			Expect(ok).To(BeTrue())
+			plugin := f()
+			ptestExpectConfigValue(plugin, ptestInitValue)
+		})
+
+		It("trim nil err", func() {
+			factory := newFactoryOK(ptestNewFactoryFactoryErr, ptestNewType(), nil)
+			f, ok := factory.(func() ptestPlugin)
+			Expect(ok).To(BeTrue())
+			plugin := f()
+			ptestExpectConfigValue(plugin, ptestInitValue)
+		})
+
+		It("config", func() {
+			factory := newFactoryOK(ptestNewFactoryConf, ptestNewType(), confToGetMaybe(ptestDefaultConf()))
+			f, ok := factory.(func() ptestPlugin)
+			Expect(ok).To(BeTrue())
+			plugin := f()
+			ptestExpectConfigValue(plugin, ptestDefaultValue)
+		})
+
+		It("get config failed", func() {
+			factory, err := newFactory(ptestNewFactoryConf, ptestNewErrType(), errToGetMaybe(ptestConfigurationFailedErr))
+			Expect(err).To(Equal(ptestConfigurationFailedErr))
+			Expect(factory).To(BeNil())
+		})
+
+		It("factory create failed", func() {
+			factory, err := newFactory(ptestNewFactoryErrFailing, ptestNewErrType(), nil)
+			Expect(err).To(Equal(ptestCreateFailedErr))
+			Expect(factory).To(BeNil())
+		})
+
+		It("plugin create failed", func() {
+			factory := newFactoryOK(ptestNewFactoryFactoryErrFailing, ptestNewErrType(), nil)
+			f, ok := factory.(func() (ptestPlugin, error))
+			Expect(ok).To(BeTrue())
+			plugin, err := f()
+			Expect(err).To(Equal(ptestCreateFailedErr))
+			Expect(plugin).To(BeNil())
+		})
+
+		It("panic on trim non nil err", func() {
+			factory := newFactoryOK(ptestNewFactoryFactoryErrFailing, ptestNewType(), nil)
+			f, ok := factory.(func() ptestPlugin)
+			Expect(ok).To(BeTrue())
+			func() {
+				defer func() {
+					r := recover()
+					Expect(r).To(Equal(ptestCreateFailedErr))
+				}()
+				f()
+			}()
+		})
+
+	})
 })
 
 func confToMaybe(conf interface{}) []reflect.Value {

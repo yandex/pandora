@@ -61,8 +61,8 @@ func ptestNewErrFailing() (ptestPlugin, error)   { return nil, ptestCreateFailed
 
 func ptestNewFactory() func() ptestPlugin    { return ptestNew }
 func ptestNewFactoryImpl() func() *ptestImpl { return ptestNewImpl }
-func ptestNewFactoryConf() func(ptestConfig) ptestPlugin {
-	return func(c ptestConfig) ptestPlugin {
+func ptestNewFactoryConf(c ptestConfig) func() ptestPlugin {
+	return func() ptestPlugin {
 		return ptestNewConf(c)
 	}
 }

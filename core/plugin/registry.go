@@ -80,9 +80,17 @@ func (r *Registry) NewFactory(factoryType reflect.Type, name string, fillConfOpt
 	if err != nil {
 		return
 	}
-	// OPTIMIZE: not create getMaybeConfig when there no config required. Just check it once on empty struct ptr.
-	getMaybeConfig := func() ([]reflect.Value, error) {
-		return registered.defaultConfig.Get(fillConf)
+	var getMaybeConfig func() ([]reflect.Value, error)
+	if registered.defaultConfig.configRequired() {
+		getMaybeConfig = func() ([]reflect.Value, error) {
+			return registered.defaultConfig.Get(fillConf)
+		}
+	} else if fillConf != nil {
+		// Just check, that fillConf not fails, when there is no config fields.
+		err := fillConf(&struct{}{})
+		if err != nil {
+			return nil, err
+		}
 	}
 	return registered.constructor.NewFactory(factoryType, getMaybeConfig)
 }
@@ -114,7 +122,6 @@ type defaultConfigContainer struct {
 	newValue reflect.Value
 }
 
-// newDefaultConfigContainer should not be called
 func newDefaultConfigContainer(constructorType reflect.Type, newDefaultConfig interface{}) defaultConfigContainer {
 	if constructorType.NumIn() == 0 {
 		expect(newDefaultConfig == nil, "constructor accept no config, but newDefaultConfig passed")

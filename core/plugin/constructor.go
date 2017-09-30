@@ -48,8 +48,6 @@ func (c *pluginConstructor) NewPlugin(maybeConf []reflect.Value) (plugin interfa
 }
 
 func (c *pluginConstructor) NewFactory(factoryType reflect.Type, getMaybeConf func() ([]reflect.Value, error)) (interface{}, error) {
-	// FIXME: TEST no config and same type return newPlugin interface
-	// FIXME: TEST no error returning factories
 	if c.newPlugin.Type() == factoryType {
 		return c.newPlugin.Interface(), nil
 	}
