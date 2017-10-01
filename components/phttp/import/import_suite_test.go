@@ -30,13 +30,13 @@ var _ = Describe("preResolveTargetAddr", func() {
 		conf := &ClientConfig{}
 		conf.Dialer.DNSCache = true
 
-		listener, err := net.ListenTCP("tcp6", nil)
+		listener, err := net.ListenTCP("tcp4", nil)
 		defer listener.Close()
 		Expect(err).NotTo(HaveOccurred())
 
 		port := strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 		target := "localhost:" + port
-		expectedResolved := "[::1]:" + port
+		expectedResolved := "127.0.0.1:" + port
 
 		err = preResolveTargetAddr(conf, &target)
 		Expect(err).NotTo(HaveOccurred())

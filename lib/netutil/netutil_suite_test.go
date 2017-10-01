@@ -21,13 +21,13 @@ func TestNetutil(t *testing.T) {
 var _ = Describe("DNS", func() {
 
 	It("lookup reachable", func() {
-		listener, err := net.ListenTCP("tcp6", nil)
+		listener, err := net.ListenTCP("tcp4", nil)
 		defer listener.Close()
 		Expect(err).NotTo(HaveOccurred())
 
 		port := strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 		addr := "localhost:" + port
-		expectedResolved := "[::1]:" + port
+		expectedResolved := "127.0.0.1:" + port
 
 		resolved, err := LookupReachable(addr)
 		Expect(err).NotTo(HaveOccurred())
