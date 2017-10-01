@@ -36,7 +36,7 @@ func NewHTTPGun(conf HTTPGunConfig) *HTTPGun {
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
 func NewHTTP2Gun(conf HTTP2GunConfig) (*HTTPGun, error) {
 	if !conf.Gun.SSL {
-		// Open issue on github if you need this feature.
+		// Open issue on github if you really need this feature.
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
 	}
 	transport := NewHTTP2Transport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext)

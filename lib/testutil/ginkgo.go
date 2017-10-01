@@ -7,14 +7,23 @@ package testutil
 
 import (
 	"strings"
+	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+
+func RunSuite(t *testing.T, description string) {
+	format.UseStringerRepresentation = true
+	ReplaceGlobalLogger()
+	RegisterFailHandler(Fail)
+	RunSpecs(t, description)
+}
 
 func ReplaceGlobalLogger() *zap.Logger {
 	log := NewLogger()

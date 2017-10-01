@@ -6,7 +6,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/format"
 	"github.com/spf13/afero"
 
 	"github.com/yandex/pandora/core"
@@ -16,13 +15,8 @@ import (
 )
 
 func TestImport(t *testing.T) {
-	format.UseStringerRepresentation = true
-	RegisterFailHandler(Fail)
-
-	testutil.ReplaceGlobalLogger()
 	Import(afero.NewOsFs())
-
-	RunSpecs(t, "Import Suite")
+	testutil.RunSuite(t, "Import Suite")
 }
 
 var _ = Describe("plugin decode", func() {

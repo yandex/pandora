@@ -14,7 +14,7 @@ _cd_into_top_level() {
 }
 
 _generate_coverage_files() {
-  for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/vendor/*' -type d); do
+  for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/vendor/*' -not -path '*/mocks/*' -type d); do
     if ls $dir/*.go &>/dev/null ; then
       go test -covermode=count -coverprofile=$dir/profile.coverprofile $dir || fail=1
     fi
