@@ -54,7 +54,7 @@ func AddKindHook(hook KindHook) (_ struct{}) {
 // Example: you need to configure only some subset fields of struct Multi,
 // in such case you can from this subset of fields struct Single, decode config
 // into it, and map it on Multi.
-func Map(dst, src interface{}) error {
+func Map(dst, src interface{}) {
 	conf := &mapstructure.DecoderConfig{
 		ErrorUnused: true,
 		ZeroFields:  true,
@@ -62,11 +62,14 @@ func Map(dst, src interface{}) error {
 	}
 	d, err := mapstructure.NewDecoder(conf)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	s := structs.New(src)
 	s.TagName = "map"
-	return d.Decode(s.Map())
+	err = d.Decode(s.Map())
+	if err != nil {
+		panic(err)
+	}
 }
 
 func newDecoderConfig(result interface{}) *mapstructure.DecoderConfig {

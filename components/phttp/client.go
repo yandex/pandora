@@ -71,10 +71,7 @@ func (f DialerFunc) DialContext(ctx context.Context, network, address string) (n
 
 func NewDialer(conf DialerConfig) *net.Dialer {
 	d := &net.Dialer{}
-	err := config.Map(d, conf)
-	if err != nil {
-		zap.L().Panic("Dialer config map fail", zap.Error(err))
-	}
+	config.Map(d, conf)
 	return d
 }
 
@@ -107,10 +104,7 @@ func NewTransport(conf TransportConfig, dial DialerFunc) *http.Transport {
 		InsecureSkipVerify: true,                 // We should not spend time for this stuff.
 		NextProtos:         []string{"http/1.1"}, // Disable HTTP/2. Use HTTP/2 transport explicitly, if needed.
 	}
-	err := config.Map(tr, conf)
-	if err != nil {
-		zap.L().Panic("Transport config map fail", zap.Error(err))
-	}
+	config.Map(tr, conf)
 	tr.DialContext = dial
 	return tr
 }
