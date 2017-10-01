@@ -24,15 +24,31 @@ func newNameRegistry() nameRegistry { return make(nameRegistry) }
 type nameRegistry map[string]nameRegistryEntry
 
 type nameRegistryEntry struct {
-	constructor   constructor
+	constructor   implConstructor
 	defaultConfig defaultConfigContainer
 }
 
+// Register registers plugin constructor and optional default config factory,
+// for given plugin interface type and plugin name.
+// See package doc for type expectations details.
+// Register designed to be called in package init func, so it panics if something go wrong.
+// Panics if type expectations are violated.
+// Panics if some constructor have been already registered for this (pluginType, name) pair.
+// Register is thread unsafe.
+//
+// If constructor receive config argument, default config factory can be
+// registered. Default config factory type should be: is func() <configType>.
+// Default config factory is optional. If no default config factory has been
+// registered, than plugin factory will receive zero config (zero struct or
+// pointer to zero struct).
+// Registered constructor will never receive nil config, even there
+// are no registered default config factory, or default config is nil. Config
+// will be pointer to zero config in such case.
 func (r *Registry) Register(
-	pluginType reflect.Type, // plugin interface type
+	pluginType reflect.Type,
 	name string,
-	newPluginImpl interface{},
-	newDefaultConfigOptional ...interface{},
+	constructor interface{},
+	newDefaultConfigOptional ...interface{}, // default config factory, or nothing.
 ) {
 	expect(pluginType.Kind() == reflect.Interface, "plugin type should be interface, but have: %T", pluginType)
 	expect(name != "", "empty name")
@@ -44,18 +60,30 @@ func (r *Registry) Register(
 	_, ok := nameReg[name]
 	expect(!ok, "plugin %s with name %q had been already registered", pluginType, name)
 	newDefaultConfig := getNewDefaultConfig(newDefaultConfigOptional)
-	nameReg[name] = newNameRegistryEntry(pluginType, newPluginImpl, newDefaultConfig)
+	nameReg[name] = newNameRegistryEntry(pluginType, constructor, newDefaultConfig)
 }
 
+// Lookup returns true if any plugin constructor has been registered for given
+// type.
 func (r *Registry) Lookup(pluginType reflect.Type) bool {
 	_, ok := r.typeToNameReg[pluginType]
 	return ok
 }
 
+// LookupFactory returns true if factoryType looks like func() (SomeInterface[, error])
+// and any plugin constructor has been registered for SomeInterface.
+// That is, you may create instance of this factoryType using this registry.
 func (r *Registry) LookupFactory(factoryType reflect.Type) bool {
 	return isFactoryType(factoryType) && r.Lookup(factoryType.Out(0))
 }
 
+// New creates plugin using registered plugin constructor. Returns error if creation
+// failed or no plugin were registered for given type and name.
+// Passed fillConf called on created config before calling plugin factory.
+// fillConf argument is always valid struct pointer, even if plugin factory
+// receives no config: fillConf is called on empty struct pointer in such case.
+// fillConf error fails plugin creation.
+// New is thread safe, if there is no concurrent Register calls.
 func (r *Registry) New(pluginType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
 	expect(pluginType.Kind() == reflect.Interface, "plugin type should be interface, but have: %T", pluginType)
 	expect(name != "", "empty name")
@@ -71,6 +99,10 @@ func (r *Registry) New(pluginType reflect.Type, name string, fillConfOptional ..
 	return registered.constructor.NewPlugin(conf)
 }
 
+// NewFactory behaves like New, but creates factory func() (PluginInterface[, error]), that on call
+// creates New plugin by registered factory.
+// If registered constructor is <newPlugin> config is created filled for every factory call,
+// if <newFactory, that only once for factory creation.
 func (r *Registry) NewFactory(factoryType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (factory interface{}, err error) {
 	expect(isFactoryType(factoryType), "plugin factory type should be like `func() (PluginInterface, error)`, but have: %T", factoryType)
 	expect(name != "", "empty name")
@@ -95,10 +127,10 @@ func (r *Registry) NewFactory(factoryType reflect.Type, name string, fillConfOpt
 	return registered.constructor.NewFactory(factoryType, getMaybeConfig)
 }
 
-func newNameRegistryEntry(pluginType reflect.Type, newPluginImpl interface{}, newDefaultConfig interface{}) nameRegistryEntry {
-	constructor := newPluginConstructor(pluginType, newPluginImpl)
-	defaultConfig := newDefaultConfigContainer(reflect.TypeOf(newPluginImpl), newDefaultConfig)
-	return nameRegistryEntry{constructor, defaultConfig}
+func newNameRegistryEntry(pluginType reflect.Type, constructor interface{}, newDefaultConfig interface{}) nameRegistryEntry {
+	implConstructor := newImplConstructor(pluginType, constructor)
+	defaultConfig := newDefaultConfigContainer(reflect.TypeOf(constructor), newDefaultConfig)
+	return nameRegistryEntry{implConstructor, defaultConfig}
 }
 
 func (r *Registry) get(pluginType reflect.Type, name string) (factory nameRegistryEntry, err error) {

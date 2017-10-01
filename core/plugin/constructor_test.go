@@ -45,6 +45,12 @@ var _ = Describe("plugin constructor", func() {
 			ptestExpectConfigValue(plugin, ptestInitValue)
 		})
 
+		It("more that plugin", func() {
+			plugin, err := newPlugin(ptestNewMoreThan, nil)
+			Expect(err).NotTo(HaveOccurred())
+			ptestExpectConfigValue(plugin, ptestInitValue)
+		})
+
 		It("config", func() {
 			plugin, err := newPlugin(ptestNewConf, confToMaybe(ptestDefaultConf()))
 			Expect(err).NotTo(HaveOccurred())
@@ -71,8 +77,16 @@ var _ = Describe("plugin constructor", func() {
 			expectSameFunc(factory, ptestNew)
 		})
 
-		It("from new impl", func() {
+		It(" new impl", func() {
 			factory := newFactoryOK(ptestNewImpl, ptestNewType(), nil)
+			f, ok := factory.(func() ptestPlugin)
+			Expect(ok).To(BeTrue())
+			plugin := f()
+			ptestExpectConfigValue(plugin, ptestInitValue)
+		})
+
+		It("more than", func() {
+			factory := newFactoryOK(ptestNewMoreThan, ptestNewType(), nil)
 			f, ok := factory.(func() ptestPlugin)
 			Expect(ok).To(BeTrue())
 			plugin := f()
@@ -188,6 +202,12 @@ var _ = Describe("factory constructor", func() {
 			ptestExpectConfigValue(plugin, ptestInitValue)
 		})
 
+		It("impl more than", func() {
+			plugin, err := newPlugin(ptestNewFactoryMoreThan, nil)
+			Expect(err).NotTo(HaveOccurred())
+			ptestExpectConfigValue(plugin, ptestInitValue)
+		})
+
 		It("config", func() {
 			plugin, err := newPlugin(ptestNewFactoryConf, confToMaybe(ptestDefaultConf()))
 			Expect(err).NotTo(HaveOccurred())
@@ -230,6 +250,14 @@ var _ = Describe("factory constructor", func() {
 
 		It("from new impl", func() {
 			factory := newFactoryOK(ptestNewFactoryImpl, ptestNewType(), nil)
+			f, ok := factory.(func() ptestPlugin)
+			Expect(ok).To(BeTrue())
+			plugin := f()
+			ptestExpectConfigValue(plugin, ptestInitValue)
+		})
+
+		It("from new impl", func() {
+			factory := newFactoryOK(ptestNewFactoryMoreThan, ptestNewType(), nil)
 			f, ok := factory.(func() ptestPlugin)
 			Expect(ok).To(BeTrue())
 			plugin := f()

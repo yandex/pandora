@@ -10,12 +10,12 @@ import (
 	"reflect"
 )
 
-// constructor interface representing ability to create some plugin interface
+// implConstructor interface representing ability to create some plugin interface
 // implementations and is't factory functions. Usually it wraps some newPlugin or newFactory function, and
 // use is as implementation creator.
-// constructor expects, that caller pass correct maybeConf value, that can be
+// implConstructor expects, that caller pass correct maybeConf value, that can be
 // passed to underlying implementation creator.
-type constructor interface {
+type implConstructor interface {
 	// NewPlugin constructs plugin implementation.
 	NewPlugin(maybeConf []reflect.Value) (plugin interface{}, err error)
 	// getMaybeConf may be nil, if no config required.
@@ -24,18 +24,27 @@ type constructor interface {
 	NewFactory(factoryType reflect.Type, getMaybeConf func() ([]reflect.Value, error)) (pluginFactory interface{}, err error)
 }
 
+func newImplConstructor(pluginType reflect.Type, constructor interface{}) implConstructor {
+	constructorType := reflect.TypeOf(constructor)
+	expect(constructorType.Kind() == reflect.Func, "plugin constructor should be func")
+	expect(constructorType.NumOut() >= 1,
+		"plugin constructor should return plugin implementation as first output parameter")
+	if constructorType.Out(0).Kind() == reflect.Func {
+		return newFactoryConstructor(pluginType, constructor)
+	}
+	return newPluginConstructor(pluginType, constructor)
+}
+
 func newPluginConstructor(pluginType reflect.Type, newPlugin interface{}) *pluginConstructor {
 	expectPluginConstructor(pluginType, reflect.TypeOf(newPlugin), true)
 	return &pluginConstructor{pluginType, reflect.ValueOf(newPlugin)}
 }
 
-// pluginConstructor is abstract constructor of some pluginType interface implementations
-// and it's factory functions, using some func newPlugin func.
+// pluginConstructor use newPlugin func([config <configType>]) (<pluginImpl> [, error])
+// to construct plugin implementations
 type pluginConstructor struct {
 	pluginType reflect.Type
-	// newPlugin type is func([config <configType>]) (<pluginImpl> [, error]),
-	// where configType kind is struct or struct pointer.
-	newPlugin reflect.Value
+	newPlugin  reflect.Value
 }
 
 func (c *pluginConstructor) NewPlugin(maybeConf []reflect.Value) (plugin interface{}, err error) {
@@ -68,15 +77,14 @@ func (c *pluginConstructor) NewFactory(factoryType reflect.Type, getMaybeConf fu
 			}
 		}
 		out := c.newPlugin.Call(maybeConf)
-		return convertFactoryOutParam(c.pluginType, factoryType.NumOut(), out)
+		return convertFactoryOutParams(c.pluginType, factoryType.NumOut(), out)
 	}).Interface(), nil
 }
 
-// factoryConstructor is abstract constructor of some pluginType interface and it's
-// factory functions, using some func newFactory func.
+// factoryConstructor use newFactory func([config <configType>]) (func() (<pluginImpl>[, error])[, error)
+// to construct plugin implementations.
 type factoryConstructor struct {
 	pluginType reflect.Type
-	// newFactory type is func([config <configType>]) (func() (<pluginImpl>[, error])[, error),
 	newFactory reflect.Value
 }
 
@@ -126,7 +134,7 @@ func (c *factoryConstructor) NewFactory(factoryType reflect.Type, getMaybeConf f
 	}
 	return reflect.MakeFunc(factoryType, func(in []reflect.Value) []reflect.Value {
 		out := factory.Call(nil)
-		return convertFactoryOutParam(c.pluginType, factoryType.NumOut(), out)
+		return convertFactoryOutParams(c.pluginType, factoryType.NumOut(), out)
 	}).Interface(), nil
 }
 
@@ -155,8 +163,8 @@ func expectPluginConstructor(pluginType, factoryType reflect.Type, configAllowed
 	}
 }
 
-// convertFactoryOutParam converts output params of some factory (newFactory) call, to required.
-func convertFactoryOutParam(pluginType reflect.Type, numOut int, out []reflect.Value) []reflect.Value {
+// convertFactoryOutParams converts output params of some factory (newPlugin) call to required.
+func convertFactoryOutParams(pluginType reflect.Type, numOut int, out []reflect.Value) []reflect.Value {
 	switch numOut {
 	case 1, 2:
 		// OK.

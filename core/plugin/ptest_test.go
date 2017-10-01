@@ -14,7 +14,7 @@ import (
 	"github.com/yandex/pandora/core/config"
 )
 
-// ptest contains samples and utils for testing plugin pkg
+// ptest contains examples and utils for testing plugin pkg
 
 const (
 	ptestPluginName = "ptest_name"
@@ -47,27 +47,34 @@ var (
 type ptestPlugin interface {
 	DoSomething()
 }
+type ptestMoreThanPlugin interface {
+	ptestPlugin
+	DoSomethingElse()
+}
 type ptestImpl struct{ Value string }
 type ptestConfig struct{ Value string }
 
-func (p *ptestImpl) DoSomething() {}
+func (p *ptestImpl) DoSomething()     {}
+func (p *ptestImpl) DoSomethingElse() {}
 
 func ptestNew() ptestPlugin                      { return ptestNewImpl() }
+func ptestNewMoreThan() ptestMoreThanPlugin      { return ptestNewImpl() }
 func ptestNewImpl() *ptestImpl                   { return &ptestImpl{Value: ptestInitValue} }
 func ptestNewConf(c ptestConfig) ptestPlugin     { return &ptestImpl{c.Value} }
 func ptestNewPtrConf(c *ptestConfig) ptestPlugin { return &ptestImpl{c.Value} }
 func ptestNewErr() (ptestPlugin, error)          { return &ptestImpl{Value: ptestInitValue}, nil }
 func ptestNewErrFailing() (ptestPlugin, error)   { return nil, ptestCreateFailedErr }
 
-func ptestNewFactory() func() ptestPlugin    { return ptestNew }
-func ptestNewFactoryImpl() func() *ptestImpl { return ptestNewImpl }
+func ptestNewFactory() func() ptestPlugin                 { return ptestNew }
+func ptestNewFactoryMoreThan() func() ptestMoreThanPlugin { return ptestNewMoreThan }
+func ptestNewFactoryImpl() func() *ptestImpl              { return ptestNewImpl }
 func ptestNewFactoryConf(c ptestConfig) func() ptestPlugin {
 	return func() ptestPlugin {
 		return ptestNewConf(c)
 	}
 }
-func ptestNewFactoryPtrConf() func(*ptestConfig) ptestPlugin {
-	return func(c *ptestConfig) ptestPlugin {
+func ptestNewFactoryPtrConf(c *ptestConfig) func() ptestPlugin {
+	return func() ptestPlugin {
 		return ptestNewPtrConf(c)
 	}
 }

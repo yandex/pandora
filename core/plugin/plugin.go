@@ -10,15 +10,12 @@ import (
 	"reflect"
 )
 
+// DefaultRegistry returns default Registry used for package Registry like functions.
 func DefaultRegistry() *Registry {
 	return defaultRegistry
 }
 
-// Register registers plugin factory and optional default config factory,
-// for given plugin interface type and plugin name.
-// See package doc for type expectations details.
-// Register designed to be called in package init func, so it panics if type
-// expectations were failed. Register is thread unsafe.
+// Register is DefaultRegistry().Register shortcut.
 func Register(
 	pluginType reflect.Type,
 	name string,
@@ -28,37 +25,22 @@ func Register(
 	DefaultRegistry().Register(pluginType, name, newPluginImpl, newDefaultConfigOptional...)
 }
 
-// Lookup returns true if any plugin factory has been registered for given
-// type.
+// Lookup is DefaultRegistry().Lookup shortcut.
 func Lookup(pluginType reflect.Type) bool {
 	return DefaultRegistry().Lookup(pluginType)
 }
 
-// LookupFactory returns true if factoryType looks like func() (SomeInterface[, error])
-// and any plugin factory has been registered for SomeInterface.
+// LookupFactory is DefaultRegistry().LookupFactory shortcut.
 func LookupFactory(factoryType reflect.Type) bool {
 	return DefaultRegistry().LookupFactory(factoryType)
 }
 
-// New creates plugin by registered plugin factory. Returns error if creation
-// failed or no plugin were registered for given type and name.
-// Passed fillConf called on created config before calling plugin factory.
-// fillConf argument is always valid struct pointer, even if plugin factory
-// receives no config: fillConf is called on empty struct pointer in such case.
-// fillConf error fails plugin creation.
-// New is thread safe, if there is no concurrent Register calls.
+// New is DefaultRegistry().New shortcut.
 func New(pluginType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
 	return defaultRegistry.New(pluginType, name, fillConfOptional...)
 }
 
-// TODO (skipor): add support for `func() PluginInterface` factories, that
-// panics on error.
-// TODO (skipor): add NewSharedConfigsFactory that decodes config once and use
-// it to create all plugin instances.
-
-// NewFactory behaves like New, but creates factory func() (PluginInterface, error), that on call
-// creates New plugin by registered factory.
-// New config is created filled for every factory call.
+// NewFactory is DefaultRegistry().NewFactory shortcut.
 func NewFactory(factoryType reflect.Type, name string, fillConfOptional ...func(conf interface{}) error) (factory interface{}, err error) {
 	return defaultRegistry.NewFactory(factoryType, name, fillConfOptional...)
 }

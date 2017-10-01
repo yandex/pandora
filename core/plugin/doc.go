@@ -7,27 +7,24 @@
 // extensible Go packages, libraries, and applications. Like
 // github.com/progrium/go-extpoints, but reflect based: doesn't require code
 // generation, but have more overhead; provide more flexibility, but less type
-// safety. It allows to register factory for some plugin interface, and create
-// new plugin instances by registered factory.
+// safety. It allows to register constructor for some plugin interface, and create
+// new plugin instances or plugin instance factories.
 // Main feature is flexible plugin configuration: plugin factory can
 // accept config struct, that could be filled by passed hook. Config default
 // values could be provided by registering default config factory.
 // Such flexibility can be used to decode structured text (json/yaml/etc) into
-// struct with plugin interface fields.
+// struct.
 //
 // Type expectations.
-// Plugin factory type should be:
-// func([config <configType>]) (<pluginImpl>[, error])
-// where configType kind is struct or struct pointer, and pluginImpl implements
-// plugin interface. Plugin factory will never receive nil config, even there
-// are no registered default config factory, or default config is nil. Config
-// will be pointer to zero config in such case.
-// If plugin factory receive config argument, default config factory can be
-// registered. Default config factory type should be: is func() <configType>.
-// Default config factory is optional. If no default config factory has been
-// registered, than plugin factory will receive zero config (zero struct or
-// pointer to zero struct).
+// Here and bellow we mean by <someTypeName> some type expectations.
+// [some type signature part] means that this part of type signature is optional.
 //
-// Note, that plugin interface type could be taken as reflect.TypeOf((*PluginInterface)(nil)).Elem().
-// FIXME: doc plugin factory
+// Plugin type, let's label it as <plugin>, should be interface.
+// Registered plugin constructor should be one of: <newPlugin> or <newFactory>.
+// <newPlugin> should have type func([config <configType>]) (<pluginImpl>[, error]).
+// <newFactory> should have type func([config <configType]) (func() (<pluginImpl>[, error])[, error]).
+// <pluginImpl> should be assignable to <plugin>.
+// That is, <plugin> methods should be subset <pluginImpl> methods. In other words, <pluginImpl> should be
+// some <plugin> implementation, <plugin> or interface, that contains <plugin> methods as subset.
+// <configType> type should be struct or struct pointer.
 package plugin
