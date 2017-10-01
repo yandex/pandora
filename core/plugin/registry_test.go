@@ -63,63 +63,6 @@ var _ = Describe("new default config container", func() {
 	})
 })
 
-var _ = DescribeTable("register valid",
-	func(
-		newPluginImpl interface{},
-		newDefaultConfigOptional ...interface{},
-	) {
-		Expect(func() {
-			NewRegistry().ptestRegister(newPluginImpl, newDefaultConfigOptional...)
-		}).NotTo(Panic())
-	},
-	Entry("return impl",
-		func() *ptestImpl { return nil }),
-	Entry("return interface",
-		func() ptestPlugin { return nil }),
-	Entry("super interface",
-		func() interface {
-			io.Writer
-			ptestPlugin
-		} {
-			return nil
-		}),
-	Entry("struct config",
-		func(ptestConfig) ptestPlugin { return nil }),
-	Entry("struct ptr config",
-		func(*ptestConfig) ptestPlugin { return nil }),
-	Entry("default config",
-		func(*ptestConfig) ptestPlugin { return nil },
-		func() *ptestConfig { return nil }),
-)
-
-var _ = DescribeTable("register invalid",
-	func(
-		newPluginImpl interface{},
-		newDefaultConfigOptional ...interface{},
-	) {
-		Expect(func() {
-			defer recoverExpectationFail()
-			NewRegistry().ptestRegister(newPluginImpl, newDefaultConfigOptional...)
-		}).NotTo(Panic())
-	},
-	Entry("return not impl",
-		func() ptestImpl { panic("") }),
-	Entry("invalid config type",
-		func(int) ptestPlugin { return nil }),
-	Entry("invalid config ptr type",
-		func(*int) ptestPlugin { return nil }),
-	Entry("to many args",
-		func(_, _ ptestConfig) ptestPlugin { return nil }),
-	Entry("default without config",
-		func() ptestPlugin { return nil }, func() *ptestConfig { return nil }),
-	Entry("extra default config",
-		func(*ptestConfig) ptestPlugin { return nil }, func() *ptestConfig { return nil }, 0),
-	Entry("invalid default config",
-		func(ptestConfig) ptestPlugin { return nil }, func() *ptestConfig { return nil }),
-	Entry("default config accepts args",
-		func(*ptestConfig) ptestPlugin { return nil }, func(int) *ptestConfig { return nil }),
-)
-
 var _ = Describe("registry", func() {
 	It("register name collision panics", func() {
 		r := NewRegistry()
@@ -127,6 +70,7 @@ var _ = Describe("registry", func() {
 		defer recoverExpectationFail()
 		r.ptestRegister(ptestNewImpl)
 	})
+
 	It("lookup", func() {
 		r := NewRegistry()
 		r.ptestRegister(ptestNewImpl)
@@ -134,6 +78,17 @@ var _ = Describe("registry", func() {
 		Expect(r.Lookup(reflect.TypeOf(0))).To(BeFalse())
 		Expect(r.Lookup(reflect.TypeOf(&ptestImpl{}))).To(BeFalse())
 		Expect(r.Lookup(reflect.TypeOf((*io.Writer)(nil)).Elem())).To(BeFalse())
+	})
+
+	It("lookup factory", func() {
+		r := NewRegistry()
+		r.ptestRegister(ptestNewImpl)
+		Expect(r.LookupFactory(ptestNewType())).To(BeTrue())
+		Expect(r.LookupFactory(ptestNewErrType())).To(BeTrue())
+
+		Expect(r.LookupFactory(reflect.TypeOf(0))).To(BeFalse())
+		Expect(r.LookupFactory(reflect.TypeOf(&ptestImpl{}))).To(BeFalse())
+		Expect(r.LookupFactory(reflect.TypeOf((*io.Writer)(nil)).Elem())).To(BeFalse())
 	})
 
 })
@@ -151,68 +106,128 @@ var _ = Describe("new", func() {
 	)
 	BeforeEach(func() { r = NewRegistry() })
 	runTestCases := func() {
-		It("no conf", func() {
-			r.ptestRegister(ptestNewImpl)
-			Expect(testNewOk()).To(Equal(ptestInitValue))
-		})
-		It("nil error", func() {
-			r.ptestRegister(func() (ptestPlugin, error) {
-				return ptestNewImpl(), nil
+		Context("plugin constructor", func() {
+			It("no conf", func() {
+				r.ptestRegister(ptestNewImpl)
+				Expect(testNewOk()).To(Equal(ptestInitValue))
 			})
-			Expect(testNewOk()).To(Equal(ptestInitValue))
-		})
-		It("non-nil error", func() {
-			expectedErr := errors.New("fill conf err")
-			r.ptestRegister(func() (ptestPlugin, error) {
-				return nil, expectedErr
+			It("nil error", func() {
+				r.ptestRegister(ptestNewErr)
+				Expect(testNewOk()).To(Equal(ptestInitValue))
 			})
-			_, err := testNew(r)
-			Expect(err).To(HaveOccurred())
-			err = errors.Cause(err)
-			Expect(expectedErr).To(Equal(err))
+			It("non-nil error", func() {
+				r.ptestRegister(ptestNewErrFailing)
+				_, err := testNew(r)
+				Expect(err).To(HaveOccurred())
+				err = errors.Cause(err)
+				Expect(ptestCreateFailedErr).To(Equal(err))
+			})
+			It("no conf, fill conf error", func() {
+				r.ptestRegister(ptestNewImpl)
+				expectedErr := errors.New("fill conf err")
+				_, err := testNew(r, func(_ interface{}) error { return expectedErr })
+				Expect(expectedErr).To(Equal(err))
+			})
+			It("no default", func() {
+				r.ptestRegister(ptestNewConf)
+				Expect(testNewOk()).To(Equal(""))
+			})
+			It("default", func() {
+				r.ptestRegister(ptestNewConf, ptestDefaultConf)
+				Expect(testNewOk()).To(Equal(ptestDefaultValue))
+			})
+			It("fill conf default", func() {
+				r.ptestRegister(ptestNewConf, ptestDefaultConf)
+				Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
+			})
+			It("fill conf no default", func() {
+				r.ptestRegister(ptestNewConf)
+				Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
+			})
+			It("fill ptr conf no default", func() {
+				r.ptestRegister(ptestNewPtrConf)
+				Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
+			})
+			It("no default ptr conf not nil", func() {
+				r.ptestRegister(ptestNewPtrConf)
+				Expect("").To(Equal(testNewOk()))
+			})
+			It("nil default, conf not nil", func() {
+				r.ptestRegister(ptestNewPtrConf, func() *ptestConfig { return nil })
+				Expect(testNewOk()).To(Equal(""))
+			})
+			It("fill nil default", func() {
+				r.ptestRegister(ptestNewPtrConf, func() *ptestConfig { return nil })
+				Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
+			})
+			It("more than one fill conf panics", func() {
+				r.ptestRegister(ptestNewPtrConf)
+				defer recoverExpectationFail()
+				testNew(r, ptestFillConf, ptestFillConf)
+			})
 		})
-		It("no conf, fill conf error", func() {
-			r.ptestRegister(ptestNewImpl)
-			expectedErr := errors.New("fill conf err")
-			_, err := testNew(r, func(_ interface{}) error { return expectedErr })
-			Expect(expectedErr).To(Equal(err))
-		})
-		It("no default", func() {
-			r.ptestRegister(func(c ptestConfig) *ptestImpl { return &ptestImpl{c.Value} })
-			Expect(testNewOk()).To(Equal(""))
-		})
-		It("default", func() {
-			r.ptestRegister(ptestNewConf, ptestDefaultConf)
-			Expect(testNewOk()).To(Equal(ptestDefaultValue))
-		})
-		It("fill conf default", func() {
-			r.ptestRegister(ptestNewConf, ptestDefaultConf)
-			Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
-		})
-		It("fill conf no default", func() {
-			r.ptestRegister(ptestNewConf)
-			Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
-		})
-		It("fill ptr conf no default", func() {
-			r.ptestRegister(ptestNewPtrConf)
-			Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
-		})
-		It("no default ptr conf not nil", func() {
-			r.ptestRegister(ptestNewPtrConf)
-			Expect("").To(Equal(testNewOk()))
-		})
-		It("nil default, conf not nil", func() {
-			r.ptestRegister(ptestNewPtrConf, func() *ptestConfig { return nil })
-			Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
-		})
-		It("fill nil default", func() {
-			r.ptestRegister(ptestNewPtrConf, func() *ptestConfig { return nil })
-			Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
-		})
-		It("more than one fill conf panics", func() {
-			r.ptestRegister(ptestNewPtrConf)
-			defer recoverExpectationFail()
-			testNew(r, ptestFillConf, ptestFillConf)
+
+		Context("factory constructor", func() {
+			It("no conf", func() {
+				r.ptestRegister(ptestNewFactory)
+				Expect(testNewOk()).To(Equal(ptestInitValue))
+			})
+			It("nil error", func() {
+				r.ptestRegister(func() (ptestPlugin, error) {
+					return ptestNewImpl(), nil
+				})
+				Expect(testNewOk()).To(Equal(ptestInitValue))
+			})
+			It("non-nil error", func() {
+				r.ptestRegister(ptestNewFactoryFactoryErrFailing)
+				_, err := testNew(r)
+				Expect(err).To(HaveOccurred())
+				err = errors.Cause(err)
+				Expect(ptestCreateFailedErr).To(Equal(err))
+			})
+			It("no conf, fill conf error", func() {
+				r.ptestRegister(ptestNewFactory)
+				expectedErr := errors.New("fill conf err")
+				_, err := testNew(r, func(_ interface{}) error { return expectedErr })
+				Expect(expectedErr).To(Equal(err))
+			})
+			It("no default", func() {
+				r.ptestRegister(ptestNewFactoryConf)
+				Expect(testNewOk()).To(Equal(""))
+			})
+			It("default", func() {
+				r.ptestRegister(ptestNewFactoryConf, ptestDefaultConf)
+				Expect(testNewOk()).To(Equal(ptestDefaultValue))
+			})
+			It("fill conf default", func() {
+				r.ptestRegister(ptestNewFactoryConf, ptestDefaultConf)
+				Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
+			})
+			It("fill conf no default", func() {
+				r.ptestRegister(ptestNewFactoryConf)
+				Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
+			})
+			It("fill ptr conf no default", func() {
+				r.ptestRegister(ptestNewFactoryPtrConf)
+				Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
+			})
+			It("no default ptr conf not nil", func() {
+				r.ptestRegister(ptestNewFactoryPtrConf)
+				Expect("").To(Equal(testNewOk()))
+			})
+			It("nil default, conf not nil", func() {
+				r.ptestRegister(ptestNewFactoryPtrConf, func() *ptestConfig { return nil })
+				Expect(testNewOk()).To(Equal(""))
+			})
+			It("fill nil default", func() {
+				r.ptestRegister(ptestNewFactoryPtrConf, func() *ptestConfig { return nil })
+				Expect(testNewOk(ptestFillConf)).To(Equal(ptestFilledValue))
+			})
+			It("more than one fill conf panics", func() {
+				r.ptestRegister(ptestNewFactoryPtrConf)
+				defer recoverExpectationFail()
+				testNew(r, ptestFillConf, ptestFillConf)
+			})
 		})
 	}
 	Context("use New", func() {

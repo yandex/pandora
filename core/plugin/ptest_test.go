@@ -24,8 +24,8 @@ const (
 	ptestFilledValue  = "ptest_FILLED"
 )
 
-func (r *Registry) ptestRegister(newPluginImpl interface{}, newDefaultConfigOptional ...interface{}) {
-	r.Register(ptestType(), ptestPluginName, newPluginImpl, newDefaultConfigOptional...)
+func (r *Registry) ptestRegister(constructor interface{}, newDefaultConfigOptional ...interface{}) {
+	r.Register(ptestType(), ptestPluginName, constructor, newDefaultConfigOptional...)
 }
 func (r *Registry) ptestNew(fillConfOptional ...func(conf interface{}) error) (plugin interface{}, err error) {
 	return r.New(ptestType(), ptestPluginName, fillConfOptional...)
