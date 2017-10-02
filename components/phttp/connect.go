@@ -15,6 +15,7 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
+	"github.com/yandex/pandora/lib/netutil"
 )
 
 type ConnectGunConfig struct {
@@ -78,7 +79,7 @@ func newConnectClient(conf ConnectGunConfig) Client {
 	return newClient(transport, conf.Client.Redirect)
 }
 
-func newConnectDialFunc(target string, connectSSL bool, dialer Dialer) DialerFunc {
+func newConnectDialFunc(target string, connectSSL bool, dialer netutil.Dialer) netutil.DialerFunc {
 	return func(ctx context.Context, network, address string) (conn net.Conn, err error) {
 		// TODO(skipor): make connect sample.
 		// TODO(skipor): make httptrace callbacks called correctly.

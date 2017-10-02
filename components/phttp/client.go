@@ -6,7 +6,6 @@
 package phttp
 
 import (
-	"context"
 	"crypto/tls"
 	"net"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core/config"
+	"github.com/yandex/pandora/lib/netutil"
 )
 
 //go:generate mockery -name=Client -case=underscore -inpkg -testonly
@@ -43,6 +43,8 @@ func NewDefaultClientConfig() ClientConfig {
 // DialerConfig can be mapped on net.Dialer.
 // Set net.Dialer for details.
 type DialerConfig struct {
+	DNSCache bool `config:"dns-cache" map:"-"`
+
 	Timeout   time.Duration `config:"timeout"`
 	DualStack bool          `config:"dual-stack"`
 
@@ -54,28 +56,20 @@ type DialerConfig struct {
 
 func NewDefaultDialerConfig() DialerConfig {
 	return DialerConfig{
+		DNSCache:  true,
+		DualStack: true,
 		Timeout:   3 * time.Second,
 		KeepAlive: 120 * time.Second,
 	}
 }
 
-type Dialer interface {
-	DialContext(ctx context.Context, network, address string) (net.Conn, error)
-}
-
-type DialerFunc func(ctx context.Context, network, address string) (net.Conn, error)
-
-func (f DialerFunc) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	return f(ctx, network, address)
-}
-
-func NewDialer(conf DialerConfig) *net.Dialer {
+func NewDialer(conf DialerConfig) netutil.Dialer {
 	d := &net.Dialer{}
-	err := config.Map(d, conf)
-	if err != nil {
-		zap.L().Panic("Dialer config map fail", zap.Error(err))
+	config.Map(d, conf)
+	if !conf.DNSCache {
+		return d
 	}
-	return d
+	return netutil.NewDNSCachingDialer(d, netutil.DefaultDNSCache)
 }
 
 // TransportConfig can be mapped on http.Transport.
@@ -101,21 +95,18 @@ func NewDefaultTransportConfig() TransportConfig {
 	}
 }
 
-func NewTransport(conf TransportConfig, dial DialerFunc) *http.Transport {
+func NewTransport(conf TransportConfig, dial netutil.DialerFunc) *http.Transport {
 	tr := &http.Transport{}
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,                 // We should not spend time for this stuff.
 		NextProtos:         []string{"http/1.1"}, // Disable HTTP/2. Use HTTP/2 transport explicitly, if needed.
 	}
-	err := config.Map(tr, conf)
-	if err != nil {
-		zap.L().Panic("Transport config map fail", zap.Error(err))
-	}
+	config.Map(tr, conf)
 	tr.DialContext = dial
 	return tr
 }
 
-func NewHTTP2Transport(conf TransportConfig, dial DialerFunc) *http.Transport {
+func NewHTTP2Transport(conf TransportConfig, dial netutil.DialerFunc) *http.Transport {
 	tr := NewTransport(conf, dial)
 	err := http2.ConfigureTransport(tr)
 	if err != nil {

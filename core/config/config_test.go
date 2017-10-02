@@ -151,13 +151,11 @@ type SingleString struct {
 
 func TestMapFlat(t *testing.T) {
 	a := &MultiStrings{}
-	err := Map(a, &SingleString{B: "b"})
-	require.NoError(t, err)
+	Map(a, &SingleString{B: "b"})
 	assert.Equal(t, &MultiStrings{B: "b"}, a)
 
 	a = &MultiStrings{A: "a", B: "not b"}
-	err = Map(a, &SingleString{B: "b"})
-	require.NoError(t, err)
+	Map(a, &SingleString{B: "b"})
 	assert.Equal(t, &MultiStrings{A: "a", B: "b"}, a)
 }
 
@@ -170,8 +168,7 @@ func TestMapRecursive(t *testing.T) {
 		MultiStrings
 	}
 	n := &N{MultiStrings: MultiStrings{B: "b"}, A: "a"}
-	err := Map(n, &M{MultiStrings: MultiStrings{A: "a"}})
-	require.NoError(t, err)
+	Map(n, &M{MultiStrings: MultiStrings{A: "a"}})
 	assert.Equal(t, &N{A: "a", MultiStrings: MultiStrings{A: "a"}}, n)
 }
 
@@ -184,8 +181,7 @@ func TestMapTagged(t *testing.T) {
 		SomeOtherFieldName MultiStrings `map:"MultiStrings"`
 	}
 	n := &N{MultiStrings: MultiStrings{B: "b"}, A: "a"}
-	err := Map(n, &M{SomeOtherFieldName: MultiStrings{A: "a"}})
-	require.NoError(t, err)
+	Map(n, &M{SomeOtherFieldName: MultiStrings{A: "a"}})
 	assert.Equal(t, &N{A: "a", MultiStrings: MultiStrings{A: "a"}}, n)
 }
 

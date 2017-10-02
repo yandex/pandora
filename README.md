@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yandex/pandora](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/yandex/pandora?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/yandex/pandora.svg)](https://travis-ci.org/yandex/pandora)
-[![Coverage Status](https://coveralls.io/repos/yandex/pandora/badge.svg?branch=master&service=github)](https://coveralls.io/github/yandex/pandora?branch=master)
+[![Coverage Status](https://coveralls.io/repos/yandex/pandora/badge.svg?branch=develop&service=github)](https://coveralls.io/github/yandex/pandora?branch=develop)
 
 A load generator in Go language.
 
