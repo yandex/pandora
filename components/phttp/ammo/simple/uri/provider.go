@@ -19,7 +19,7 @@ import (
 
 type Config struct {
 	File string `validate:"required"`
-	Headers string
+	URIHeaders string `config:"uri-headers"`
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
 	// Passes limits ammo file passes. Unlimited if zero.
@@ -46,8 +46,13 @@ type Provider struct {
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	p.decoder = newDecoder(ctx, p.Sink, &p.Pool)
 
-	for _, header := range strings.Split(p.Config.Headers, "]") {
-		p.decoder.decodeHeader([]byte(strings.TrimSpace(header) + "]"))
+	for _, header := range strings.Split(p.Config.URIHeaders, "]") {
+		if len(header) >= 5 {
+			err := p.decoder.decodeHeader([]byte(strings.TrimSpace(header) + "]"))
+			if err != nil {
+				return errors.Wrapf(err, "failed to decode header %v]", header)
+			}
+		}
 	}
 
 	var passNum int
