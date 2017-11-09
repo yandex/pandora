@@ -43,17 +43,25 @@ type Provider struct {
 	decoder *decoder // Initialized on start.
 }
 
+
+func (p *Provider) reloadUriHeaders() error {
+        for _, header := range strings.Split(p.Config.URIHeaders, "]") {
+                if len(header) >= 5 {
+                        err := p.decoder.decodeHeader([]byte(strings.TrimSpace(header) + "]"))
+                        if err != nil {
+                                return errors.Wrapf(err, "failed to decode header %v]", header)
+                        }
+                }
+        }
+	return nil
+}
+
+
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	p.decoder = newDecoder(ctx, p.Sink, &p.Pool)
 
-	for _, header := range strings.Split(p.Config.URIHeaders, "]") {
-		if len(header) >= 5 {
-			err := p.decoder.decodeHeader([]byte(strings.TrimSpace(header) + "]"))
-			if err != nil {
-				return errors.Wrapf(err, "failed to decode header %v]", header)
-			}
-		}
-	}
+
+	p.reloadUriHeaders()
 
 	var passNum int
 	for {
@@ -77,6 +85,7 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		}
 		ammoFile.Seek(0, 0)
 		p.decoder.ResetHeader()
+		p.reloadUriHeaders()
 	}
 	zap.L().Debug("Ran out of ammo")
 	return nil
