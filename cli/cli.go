@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"runtime/pprof"
 	"syscall"
 	"time"
@@ -88,6 +89,9 @@ func readConfig() (*zap.Logger, cliConfig) {
 
 	v := newViper()
 	if len(flag.Args()) > 0 {
+		if len(flag.Args()) > 1 {
+			zap.L().Fatal("Too many command line arguments", zap.Strings("args", flag.Args()))
+		}
 		v.SetConfigFile(flag.Args()[0])
 	}
 	err = v.ReadInConfig()
@@ -143,6 +147,7 @@ type monitoringConfig struct {
 }
 
 func startMonitoring(conf monitoringConfig) (stop func()) {
+	zap.L().Debug("Start monitoring", zap.Reflect("conf", conf))
 	if conf.Expvar {
 		go func() {
 			err := http.ListenAndServe(":1234", nil)
@@ -151,10 +156,11 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 	}
 	var stops []func()
 	if conf.CPUProfile != "" {
-		f, err := os.Create(conf.MemProfile)
+		f, err := os.Create(conf.CPUProfile)
 		if err != nil {
-			zap.L().Fatal("Memory profile file create fail", zap.Error(err))
+			zap.L().Fatal("CPU profile file create fail", zap.Error(err))
 		}
+		zap.L().Info("Starting CPU profiling")
 		pprof.StartCPUProfile(f)
 		stops = append(stops, func() {
 			pprof.StopCPUProfile()
@@ -162,11 +168,13 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 		})
 	}
 	if conf.MemProfile != "" {
-		f, err := os.Create(conf.CPUProfile)
+		f, err := os.Create(conf.MemProfile)
 		if err != nil {
-			zap.L().Fatal("CPU profile file create fail", zap.Error(err))
+			zap.L().Fatal("Memory profile file create fail", zap.Error(err))
 		}
 		stops = append(stops, func() {
+			zap.L().Info("Writing memory profile")
+			runtime.GC()
 			pprof.WriteHeapProfile(f)
 			f.Close()
 		})
