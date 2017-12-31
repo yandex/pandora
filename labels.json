@@ -1,0 +1,25 @@
+[
+  { "name": "Priority: Minor", "color": "#009800" },
+  { "name": "Priority: Low", "color": "#009800" },
+  { "name": "Priority: Medium", "color": "#fbca04" },
+  { "name": "Priority: High", "color": "#eb6420" },
+  { "name": "Priority: Critical", "color": "#e11d21" },
+
+  { "name": "Status: Blocked", "color": "#e11d21" },
+  { "name": "Status: Available", "color": "#bfe5bf" },
+  { "name": "Status: In Progress", "color": "#cccccc" },
+  { "name": "Status: Review", "color": "#fbca04" },
+  { "name": "Status: Resolved", "color": "#fef2c0" },
+
+  { "name": "Resolution: Resolved", "color": "#fef2c0" },
+  { "name": "Resolution: Wontfix", "color": "#ffffff" },
+  { "name": "Resolution: Invalid", "color": "#e6e6e6" },
+  { "name": "Resolution: Duplicate", "color": "#cccccc" },
+
+  { "name": "Type: Bug", "color": "#e11d21" },
+  { "name": "Type: Feature", "color": "#e11d21" },
+  { "name": "Type: Epic", "color": "#e11d21" },
+  { "name": "Type: Maintenance", "color": "#fbca04" },
+  { "name": "Type: Enhancement", "color": "#84b6eb" },
+  { "name": "Type: Question", "color": "#cc317c" }
+]
