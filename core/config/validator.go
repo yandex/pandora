@@ -1,16 +1,11 @@
 // Copyright (c) 2016 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
 package config
 
 import (
-	"reflect"
-
 	"github.com/pkg/errors"
-
-	"gopkg.in/go-playground/validator.v8"
+	"gopkg.in/bluesuncorp/validator.v9"
 )
 
 var validations = []struct {
@@ -33,38 +28,58 @@ var stringValidations = []struct {
 
 var defaultValidator = newValidator()
 
-type validate struct {
-	V validator.Validate
+func Validate(value interface{}) error {
+	return errors.WithStack(defaultValidator.Struct(value))
 }
 
-func (v *validate) Validate(value interface{}) error {
-	return errors.WithStack(v.V.Struct(value))
-}
-
-func newValidator() *validate {
-	config := &validator.Config{TagName: "validate"}
-	v := *validator.New(config)
+func newValidator() *validator.Validate {
+	validate := validator.New()
+	validate.SetTagName("validate")
 	for _, val := range validations {
-		v.RegisterValidation(val.key, val.val)
+		validate.RegisterValidation(val.key, val.val)
 	}
 	for _, val := range stringValidations {
-		v.RegisterValidation(val.key, StringToAbstractValidation(val.val))
+		validate.RegisterValidation(val.key, StringToAbstractValidation(val.val))
 	}
-	return &validate{v}
+	return validate
 }
 
-func Validate(value interface{}) error {
-	return defaultValidator.Validate(value)
+// RegisterCustom used to set custom validation check hooks on specific types,
+// that will be called on such type validation, even if it is nested field.
+func RegisterCustom(v CustomValidation, types ...interface{}) (_ struct{}) {
+	if len(types) < 1 {
+		panic("should be registered for at least one type")
+	}
+	defaultValidator.RegisterStructValidation(func(sl validator.StructLevel) {
+		v(structLevelHandle{sl})
+	}, types...)
+	return
 }
 
 type StringValidation func(value string) bool
 
 // StringToAbstractValidation wraps StringValidation into validator.Func.
 func StringToAbstractValidation(sv StringValidation) validator.Func {
-	return func(v *validator.Validate, topStruct reflect.Value, currentStruct reflect.Value, field reflect.Value, fieldtype reflect.Type, fieldKind reflect.Kind, param string) bool {
-		if strVal, ok := field.Interface().(string); ok {
+	return func(fl validator.FieldLevel) bool {
+		if strVal, ok := fl.Field().Interface().(string); ok {
 			return sv(strVal)
 		}
 		return false
 	}
+}
+
+type ValidateHandle interface {
+	Value() interface{}
+	ReportError(field, reason string)
+}
+
+type CustomValidation func(h ValidateHandle)
+
+type structLevelHandle struct{ validator.StructLevel }
+
+var _ ValidateHandle = structLevelHandle{}
+
+func (sl structLevelHandle) Value() interface{} { return sl.Current().Interface() }
+func (sl structLevelHandle) ReportError(field, reason string) {
+	sl.StructLevel.ReportError(nil, field, "", reason, "")
 }
