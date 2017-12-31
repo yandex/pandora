@@ -1,0 +1,80 @@
+
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#  name = "github.com/x/y"
+#  version = "2.4.0"
+
+
+[[constraint]]
+  name = "github.com/asaskevich/govalidator"
+
+[[constraint]]
+  name = "github.com/c2h5oh/datasize"
+
+[[constraint]]
+  name = "github.com/facebookgo/stack"
+
+[[constraint]]
+  name = "github.com/facebookgo/stackerr"
+
+[[constraint]]
+  name = "github.com/fatih/structs"
+
+[[constraint]]
+  name = "github.com/ghodss/yaml"
+
+[[constraint]]
+  name = "github.com/mitchellh/mapstructure"
+  source = "https://github.com/skipor/mapstructure"
+
+[[constraint]]
+  name = "github.com/onsi/ginkgo"
+
+[[constraint]]
+  name = "github.com/onsi/gomega"
+
+[[constraint]]
+  name = "github.com/pkg/errors"
+
+[[constraint]]
+  name = "github.com/pquerna/ffjson"
+
+[[constraint]]
+  name = "github.com/spf13/afero"
+
+[[constraint]]
+  name = "github.com/spf13/viper"
+
+[[constraint]]
+  name = "github.com/stretchr/testify"
+
+[[constraint]]
+  name = "github.com/uber-go/atomic"
+
+[[constraint]]
+  name = "go.uber.org/atomic"
+
+[[constraint]]
+  name = "go.uber.org/zap"
+
+[[constraint]]
+  name = "golang.org/x/net"
+
+[[constraint]]
+  name = "gopkg.in/go-playground/validator.v8"

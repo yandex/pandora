@@ -4,7 +4,7 @@ NO_COLOR=\033[0m
 OK_COLOR=\033[32;01m
 ERROR_COLOR=\033[31;01m
 WARN_COLOR=\033[33;01m
-PKGSDIRS=`find -L . -type f -name "*.go" -not -path "./vendor/*"`
+PKGSDIRS=`go list ./... | grep -v vendor`
 
 all: test vet checkfmt
 
@@ -14,7 +14,7 @@ prepare: fmt test vet
 
 test:
 	@echo "$(OK_COLOR)Test packages$(NO_COLOR)"
-	@go test -v `glide novendor`
+	@go test -v $(PKGSDIRS)
 
 coverage:
 	@echo "$(OK_COLOR)Make coverage report$(NO_COLOR)"
@@ -23,7 +23,7 @@ coverage:
 
 lint:
 	@echo "$(OK_COLOR)Run lint$(NO_COLOR)"
-	@for dir in `glide novendor` ; do \
+	@for dir in $(PKGSDIRS) ; do \
 	    golint -set_exit_status -min_confidence 0.1 $$dir || FAIL="true" ;\
 	done
 	@if [[ FAIL ]] ; then  \
@@ -32,7 +32,7 @@ lint:
 
 vet:
 	@echo "$(OK_COLOR)Run vet$(NO_COLOR)"
-	@go vet `glide novendor`
+	@go vet $(PKGSDIRS)
 
 
 checkfmt:
@@ -53,5 +53,5 @@ tools:
 
 updep:
 	@echo "$(OK_COLOR)Update dependencies$(NO_COLOR)"
-	@glide up
+	@dep ensure -update
 

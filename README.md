@@ -12,13 +12,13 @@ A load generator in Go language.
 [Download](https://github.com/yandex/pandora/releases) available.
 
 ### Building from sources
-We use [glide](https://glide.sh) for package management. Install it before compiling Pandora
-Compile a binary with go tool (use go >= 1.8):
+We use [dep](https://github.com/golang/dep) for package management. Install it before compiling Pandora
+Compile a binary with go tool (use go >= 1.8.3):
 ```bash
 go get github.com/yandex/pandora
 cd $GOPATH/src/github.com/yandex/pandora
-glide install
-go build
+dep ensure
+go install
 ```
 
 You can also cross-compile for other arch/os:
