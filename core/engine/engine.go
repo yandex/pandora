@@ -91,7 +91,7 @@ func (e *Engine) Run(ctx context.Context) error {
 					return ctx.Err()
 				default:
 				}
-				return fmt.Errorf("%q pool run failed: %s", res.Id, res.Err)
+				return errors.WithMessage(res.Err, fmt.Sprintf("%q pool run failed", res.Id))
 			}
 		case <-ctx.Done():
 			e.log.Info("Engine run canceled")
@@ -198,14 +198,14 @@ func (p *instancePool) Run(ctx context.Context) error {
 				toWait--
 				p.log.Debug("Provider awaited", zap.Error(err))
 				if nonCtxErr(ctx, err) {
-					errAwaited(fmt.Errorf("provider failed: %s", err))
+					errAwaited(errors.WithMessage(err, "provider failed"))
 				}
 			case err := <-aggregatorErr:
 				aggregatorErr = nil
 				toWait--
 				p.log.Debug("Aggregator awaited", zap.Error(err))
 				if nonCtxErr(ctx, err) {
-					errAwaited(fmt.Errorf("aggregator failed: %s", err))
+					errAwaited(errors.WithMessage(err, "aggregator failed"))
 				}
 			case res := <-startRes:
 				startRes = nil
@@ -213,7 +213,7 @@ func (p *instancePool) Run(ctx context.Context) error {
 				startedInstances = res.Started
 				p.log.Debug("Instances start awaited", zap.Int("started", startedInstances), zap.Error(res.Err))
 				if res.Err != nil {
-					errAwaited(fmt.Errorf("instances start failed: %s", res.Err))
+					errAwaited(errors.WithMessage(res.Err, "instances start failed"))
 				}
 				if startedInstances <= awaitedInstances {
 					onAllInstancesFinished()
@@ -224,7 +224,7 @@ func (p *instancePool) Run(ctx context.Context) error {
 					ent.Write(zap.String("id", res.Id), zap.Error(res.Err), zap.Int("awaited", awaitedInstances))
 				}
 				if res.Err != nil {
-					errAwaited(fmt.Errorf("istance %q run failed: %s", res.Id, res.Err))
+					errAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.Id)))
 				}
 				startFinished := startRes == nil
 				if !startFinished || awaitedInstances < startedInstances {

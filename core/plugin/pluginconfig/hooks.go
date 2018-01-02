@@ -93,7 +93,7 @@ func parseConf(t reflect.Type, data interface{}) (name string, fillConf func(con
 		}
 		err := config.DecodeAndValidate(confData, conf)
 		if err != nil {
-			err = fmt.Errorf("%s %s plugin\n"+
+			err = errors.Errorf("%s %s plugin\n"+
 				"%s from %v %s",
 				t, name, reflect.TypeOf(conf).Elem(), confData, err)
 		}

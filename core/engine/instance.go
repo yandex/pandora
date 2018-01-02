@@ -7,7 +7,6 @@ package engine
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
@@ -50,11 +49,11 @@ func (i *instance) Run(ctx context.Context) error {
 
 	shed, err := i.newSchedule()
 	if err != nil {
-		return fmt.Errorf("schedule create failed: %s", err)
+		return errors.WithMessage(err, "schedule create failed")
 	}
 	gun, err := i.newGun()
 	if err != nil {
-		return fmt.Errorf("gun create failed: %s", err)
+		return errors.WithMessage(err, "gun create failed")
 	}
 
 	if gun, ok := gun.(io.Closer); ok {
