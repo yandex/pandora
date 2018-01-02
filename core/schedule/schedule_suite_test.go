@@ -10,11 +10,11 @@ import (
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coretest"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestSchedule(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Schedule Suite")
+	testutil.RunSuite(t, "Schedule Suite")
 }
 
 var _ = Describe("unlimited", func() {

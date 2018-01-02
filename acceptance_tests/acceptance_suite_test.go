@@ -16,7 +16,6 @@ import (
 	"github.com/onsi/gomega/gexec"
 	"go.uber.org/zap"
 
-	"github.com/onsi/gomega/format"
 	"github.com/yandex/pandora/lib/tag"
 	"github.com/yandex/pandora/lib/testutil"
 )
@@ -24,10 +23,7 @@ import (
 var pandoraBin string
 
 func TestAcceptanceTests(t *testing.T) {
-	RegisterFailHandler(Fail)
-	format.UseStringerRepresentation = true
-
-	testutil.ReplaceGlobalLogger()
+	testutil.SetupSuite()
 	var args []string
 	if tag.Race {
 		zap.L().Debug("Building with race detector")

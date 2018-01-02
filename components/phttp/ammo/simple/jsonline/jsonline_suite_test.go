@@ -19,11 +19,11 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestJsonline(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Jsonline Suite")
+	testutil.RunSuite(t, "Jsonline Suite")
 }
 
 const testFile = "./ammo.jsonline"

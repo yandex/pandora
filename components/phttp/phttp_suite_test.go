@@ -8,14 +8,9 @@ package phttp
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestPhttp(t *testing.T) {
-	RegisterFailHandler(Fail)
-	testutil.ReplaceGlobalLogger()
-	RunSpecs(t, "HTTP Suite")
+	testutil.RunSuite(t, "HTTP Suite")
 }

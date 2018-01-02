@@ -2,9 +2,7 @@ package netsample
 
 import (
 	"context"
-	"fmt"
 	"strings"
-	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -68,10 +66,6 @@ const (
 	testSamplePhout     = "1484660999.002	tag1|tag2#42	333333	0	0	0	0	0	0	0	13	999"
 	testSampleNoIdPhout = "1484660999.002	tag1|tag2	333333	0	0	0	0	0	0	0	13	999"
 )
-
-func TestOUt(t *testing.T) {
-	fmt.Println(newTestSample().String())
-}
 
 func newTestSample() *Sample {
 	s := &Sample{}

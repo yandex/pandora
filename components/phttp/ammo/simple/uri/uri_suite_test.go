@@ -3,11 +3,9 @@ package uri
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestUri(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Uri Suite")
+	testutil.RunSuite(t, "Uri Suite")
 }

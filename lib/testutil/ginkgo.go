@@ -18,10 +18,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func RunSuite(t *testing.T, description string) {
-	format.UseStringerRepresentation = true
+func SetupSuite() {
+	format.UseStringerRepresentation = true // Otherwise error stacks have binary format.
 	ReplaceGlobalLogger()
 	RegisterFailHandler(Fail)
+}
+
+func RunSuite(t *testing.T, description string) {
+	SetupSuite()
 	RunSpecs(t, description)
 }
 
