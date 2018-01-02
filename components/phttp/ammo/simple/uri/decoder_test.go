@@ -48,7 +48,6 @@ var _ = Describe("Decoder", func() {
 		Entry("no closing brace", "[key: val "),
 		Entry("no header key", "[ : val ]"),
 		Entry("no colon", "[ key  val ]"),
-		Entry("extra space", "[key: val ] "),
 	)
 
 	Decode := func(line string) {
@@ -127,7 +126,7 @@ var _ = Describe("Decoder", func() {
 			}))
 		})
 		It("spaces", func() {
-			Decode("[ C :   d   ]")
+			Decode(" [ C :   d   ] 			")
 			Expect(decoder.header).To(Equal(http.Header{
 				"C": []string{"d"},
 			}))
