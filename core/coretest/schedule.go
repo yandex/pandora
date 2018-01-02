@@ -8,41 +8,50 @@ package coretest
 import (
 	"time"
 
-	"github.com/onsi/gomega"
-
+	. "github.com/onsi/gomega"
 	"github.com/yandex/pandora/core"
 )
 
-func ExpectScheduleNexts(sched core.Schedule, nexts ...time.Duration) {
-	actualNexts := StartAndDrainSchedule(sched)
-	gomega.ExpectWithOffset(1, actualNexts).To(gomega.Equal(nexts))
+func ExpectScheduleNextsStartAt(sched core.Schedule, startAt time.Time, nexts ...time.Duration) {
+	beforeStartLeft := sched.Left()
+	tokensExpected := len(nexts) - 1 // Last next is finish time.
+	Expect(beforeStartLeft).To(Equal(tokensExpected))
+	sched.Start(startAt)
+	actualNexts := DrainScheduleDuration(sched, startAt)
+	Expect(actualNexts).To(Equal(nexts))
 }
 
-// StartAndDrainSchedule starts shcedule and takes all tokens from it.
-// Returns all tokens and finish time relative to start
-func StartAndDrainSchedule(sched core.Schedule) []time.Duration {
-	start := time.Now()
-	sched.Start(start)
-	nexts := DrainSchedule(sched)
-	durations := make([]time.Duration, len(nexts))
-	for i, next := range nexts {
-		durations[i] = next.Sub(start)
-	}
-	return durations
+func ExpectScheduleNexts(sched core.Schedule, nexts ...time.Duration) {
+	ExpectScheduleNextsStartAt(sched, time.Now(), nexts...)
 }
 
 const drainLimit = 1000000
 
+// DrainSchedule starts schedule and takes all tokens from it.
+// Returns all tokens and finish time relative to start
+func DrainScheduleDuration(sched core.Schedule, startAt time.Time) []time.Duration {
+	nexts := DrainSchedule(sched)
+	durations := make([]time.Duration, len(nexts))
+	for i, next := range nexts {
+		durations[i] = next.Sub(startAt)
+	}
+	return durations
+}
+
 // DrainSchedule takes all tokens from passed schedule.
 // Returns all tokens and finish time.
 func DrainSchedule(sched core.Schedule) []time.Time {
+	expectedLeft := sched.Left()
 	var nexts []time.Time
 	for len(nexts) < drainLimit {
 		next, ok := sched.Next()
 		nexts = append(nexts, next)
 		if !ok {
+			Expect(sched.Left()).To(Equal(0))
 			return nexts
 		}
+		expectedLeft--
+		Expect(sched.Left()).To(Equal(expectedLeft))
 	}
 	panic("drain limit reached")
 }

@@ -23,16 +23,20 @@ var _ = Describe("unlimited", func() {
 		testee := NewUnlimitedConf(conf)
 		start := time.Now()
 		finish := start.Add(conf.Duration)
+		Expect(testee.Left()).To(BeEquivalentTo(-1))
 		testee.Start(start)
 		var i int
 		for prev := time.Now(); ; i++ {
+			left := testee.Left()
 			x, ok := testee.Next()
 			if !ok {
 				break
 			}
+			Expect(left).To(BeEquivalentTo(-1))
 			Expect(x).To(BeTemporally(">", prev))
 			Expect(x).To(BeTemporally("<", finish))
 		}
+		Expect(testee.Left()).To(BeEquivalentTo(0))
 		Expect(i).To(BeNumerically(">", 50))
 	})
 })

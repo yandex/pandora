@@ -30,7 +30,7 @@ type unlimitedSchedule struct {
 }
 
 func (s *unlimitedSchedule) Start(startAt time.Time) {
-	if !s.finish.IsZero() {
+	if s.isStarted() {
 		panic("schedule is already started")
 	}
 	s.finish = startAt.Add(s.duration)
@@ -45,4 +45,15 @@ func (s *unlimitedSchedule) Next() (tx time.Time, ok bool) {
 		return now, true
 	}
 	return s.finish, false
+}
+
+func (s *unlimitedSchedule) Left() int {
+	if !s.isStarted() || time.Now().Before(s.finish) {
+		return -1
+	}
+	return 0
+}
+
+func (s *unlimitedSchedule) isStarted() bool {
+	return !s.finish.IsZero()
 }

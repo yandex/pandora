@@ -83,4 +83,32 @@ var _ = Describe("composite", func() {
 		wg.Wait()
 		Expect(tokensGot.Load()).To(Equal(tokensExpected))
 	})
+
+	It("left with unknown", func() {
+		unlimitedDuration := time.Second
+		testee := NewComposite(
+			NewUnlimited(unlimitedDuration),
+			NewOnce(0),
+			NewConst(1, 2*time.Second),
+			NewOnce(1),
+		)
+		Expect(testee.Left()).To(Equal(-1))
+		startAt := time.Now().Add(-unlimitedDuration)
+		testee.Start(startAt)
+
+		unlimitedFinish := startAt.Add(unlimitedDuration)
+		sched := testee.(*compositeSchedule).scheds[0]
+		Expect(sched.(*unlimitedSchedule).finish).To(Equal(unlimitedFinish))
+
+		Expect(testee.Left()).To(Equal(3))
+
+		actualNexts := coretest.DrainScheduleDuration(testee, unlimitedFinish)
+		expectedNests := []time.Duration{
+			time.Second,
+			2 * time.Second,
+			2 * time.Second,
+			2 * time.Second, // Finish.
+		}
+		Expect(actualNexts).To(Equal(expectedNests))
+	})
 })

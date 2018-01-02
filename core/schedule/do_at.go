@@ -61,3 +61,11 @@ func (s *doAtSchedule) Next() (tx time.Time, ok bool) {
 	}
 	return s.start.Add(s.doAt(i)), true
 }
+
+func (s *doAtSchedule) Left() int {
+	left := int(s.n - s.i.Load())
+	if left < 0 {
+		return 0
+	}
+	return left
+}

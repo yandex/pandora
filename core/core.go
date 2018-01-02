@@ -82,6 +82,11 @@ type Schedule interface {
 	// If there is no operation tokens left, Next returns Schedule
 	// finish time and ok equals false.
 	Next() (ts time.Time, ok bool)
+
+	// Left returns n >= 0 number operation token left, if it is known exactly.
+	// Returns n < 0, if number of operation tokens is unknown.
+	// It's OK to call Left before start.
+	Left() int
 }
 
 //go:generate mockery -name=Gun -case=underscore -outpkg=coremock
