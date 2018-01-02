@@ -13,11 +13,31 @@ import (
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregate"
+	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/core/provider"
 	"github.com/yandex/pandora/core/schedule"
 	"github.com/yandex/pandora/lib/testutil"
 )
+
+var _ = Describe("config validation", func() {
+	It("dive validation", func() {
+		conf := Config{
+			Pools: []InstancePoolConfig{
+				{},
+			},
+		}
+		err := config.Validate(conf)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("pools required", func() {
+		conf := Config{}
+		err := config.Validate(conf)
+		Expect(err).To(HaveOccurred())
+	})
+
+})
 
 func newTestPoolConf() (InstancePoolConfig, *coremock.Gun) {
 	gun := &coremock.Gun{}
