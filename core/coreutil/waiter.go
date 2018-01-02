@@ -64,3 +64,12 @@ func (w *Waiter) Wait() (ok bool) {
 		return false
 	}
 }
+
+func (w *Waiter) IsFinished() (ok bool) {
+	select {
+	case <-w.ctx.Done():
+		return true
+	default:
+		return w.sched.Left() == 0
+	}
+}

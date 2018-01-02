@@ -66,11 +66,12 @@ var _ = Describe("Instance", func() {
 			provider.On("Acquire").Return(func() (core.Ammo, bool) {
 				acquired++
 				return acquired, true
-			}) // TODO(skipor): .Times(times) after fix one extra ammo consume at schedule end.
+			}).Times(times)
 			for i := 1; i <= times; i++ {
 				gun.On("Shoot", ctx, i).Once()
 				provider.On("Release", i).Once()
 			}
+
 		})
 		It("start ok", func() {
 			err := ins.Run(ctx)
@@ -92,13 +93,12 @@ var _ = Describe("Instance", func() {
 
 	})
 
-	Context("context canceled", func() {
+	Context("context canceled after run", func() {
 		BeforeEach(func() {
-			ctx, _ = context.WithTimeout(ctx, 5*time.Millisecond)
-			sched.(*coremock.Schedule).On("Next").
-				Return(func() (time.Time, bool) {
-					return time.Now().Add(5 * time.Second), true
-				})
+			ctx, _ = context.WithTimeout(ctx, 10*time.Millisecond)
+			sched := sched.(*coremock.Schedule)
+			sched.On("Next").Return(time.Now().Add(5*time.Second), true)
+			sched.On("Left").Return(1)
 			gun.On("Bind", aggregator)
 			provider.On("Acquire").Return(struct{}{}, true)
 		})
@@ -107,6 +107,22 @@ var _ = Describe("Instance", func() {
 			Expect(err).To(Equal(context.DeadlineExceeded))
 			testutil.AssertExpectations(gun, provider)
 		}, 2)
+
+	})
+
+	Context("context canceled before run", func() {
+		BeforeEach(func() {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
+			cancel()
+			gun.On("Bind", aggregator)
+		})
+		It("nothing acquired and schedule not started", func() {
+			err := ins.Run(ctx)
+			Expect(err).To(Equal(context.Canceled))
+			testutil.AssertExpectations(gun, provider)
+		}, 2)
+
 	})
 
 	Context("schedule create failed", func() {

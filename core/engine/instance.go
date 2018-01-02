@@ -73,23 +73,26 @@ func (i *instance) Run(ctx context.Context) error {
 	return i.shoot(ctx, gun, nextShoot)
 }
 
-func (i *instance) shoot(ctx context.Context, gun core.Gun, next *coreutil.Waiter) (err error) {
+func (i *instance) shoot(ctx context.Context, gun core.Gun, sched *coreutil.Waiter) (err error) {
 	defer func() {
 		r := recover()
 		if r != nil {
 			err = errors.Errorf("shoot panic: %s", r)
 		}
 	}()
-	for {
-		// Try get ammo before schedule wait, to be ready shoot just in time.
-		// Acquire should unblock in case of context cancel.
-		// TODO: we just throw away acquired ammo, if our schedule finished. Fix it.
+
+	for !sched.IsFinished() {
+		select {
+		case <-ctx.Done():
+			break
+		default:
+		}
 		ammo, more := i.provider.Acquire()
 		if !more {
 			i.log.Debug("Ammo ended")
 			break
 		}
-		if !next.Wait() {
+		if !sched.Wait() {
 			break
 		}
 		i.Request.Add(1)
