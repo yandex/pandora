@@ -195,11 +195,42 @@ var _ = Describe("line", func() {
 })
 
 func BenchmarkLineSchedule(b *testing.B) {
-	doAt := NewLine(0, float64(b.N), 2*time.Second)
-	doAt.Start(time.Now())
+	schedule := NewLine(0, float64(b.N), 2*time.Second)
+	benchmarkScheduleNext(b, schedule)
+}
+
+func BenchmarkLineScheduleParallel(b *testing.B) {
+	schedule := NewLine(0, float64(b.N), 2*time.Second)
+	benchmarkScheduleNextParallel(b, schedule)
+}
+
+func BenchmarkUnlimitedSchedule(b *testing.B) {
+	schedule := NewUnlimited(time.Minute)
+	benchmarkScheduleNext(b, schedule)
+}
+
+func BenchmarkUnlimitedScheduleParallel(b *testing.B) {
+	schedule := NewUnlimited(time.Minute)
+	benchmarkScheduleNextParallel(b, schedule)
+}
+
+func benchmarkScheduleNextParallel(b *testing.B, schedule core.Schedule) {
+	run := func(pb *testing.PB) {
+		for pb.Next() {
+			schedule.Next()
+		}
+	}
+	schedule.Start(time.Now())
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(run)
+}
+
+func benchmarkScheduleNext(b *testing.B, schedule core.Schedule) {
+	schedule.Start(time.Now())
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		doAt.Next()
+		schedule.Next()
 	}
 }

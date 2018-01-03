@@ -77,7 +77,7 @@ func (s *compositeSchedule) Next() (tx time.Time, ok bool) {
 	if schedsLeft == 1 {
 		return // All nested schedules has been finished, so composite is finished too.
 	}
-	// Current schedule is finished, but some are leftBefore.
+	// Current schedule is finished, but some are left.
 	// Let's start next, with got finish time from previous!
 	s.rwMu.Lock()
 	schedsLeftNow := len(s.scheds)
@@ -93,7 +93,7 @@ func (s *compositeSchedule) Next() (tx time.Time, ok bool) {
 		// Should very rare, so let's just retry.
 		return s.Next()
 	}
-	s.shiftLocked(tx)
+	s.startNext(tx)
 	tx, ok = s.scheds[0].Next()
 	s.rwMu.Unlock()
 	if !ok && schedsLeftNow > 1 {
@@ -113,12 +113,21 @@ func (s *compositeSchedule) Left() int {
 		return left
 	}
 	if left == 0 {
-		s.rwMu.Lock()
-		currentFinishTime, ok := s.scheds[0].Next()
-		if ok {
-			panic("current schedule is not finished")
+		if leftAfter >= 0 {
+			return leftAfter
 		}
-		s.shiftLocked(currentFinishTime)
+		// leftAfter was unknown, at schedule create moment.
+		// But now, it can be finished. Let's shift, and try one more time.
+		s.rwMu.Lock()
+		shedsLeftNow := len(s.scheds)
+		if shedsLeftNow == schedsLeft {
+			currentFinishTime, ok := s.scheds[0].Next()
+			if ok {
+				s.rwMu.Unlock()
+				panic("current schedule is not finished")
+			}
+			s.startNext(currentFinishTime)
+		}
 		s.rwMu.Unlock()
 		return s.Left()
 	}
@@ -128,7 +137,7 @@ func (s *compositeSchedule) Left() int {
 	return left + leftAfter
 }
 
-func (s *compositeSchedule) shiftLocked(currentFinishTime time.Time) {
+func (s *compositeSchedule) startNext(currentFinishTime time.Time) {
 	s.scheds = s.scheds[1:]
 	s.leftAfter = s.leftAfter[1:]
 	s.scheds[0].Start(currentFinishTime)

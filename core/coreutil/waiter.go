@@ -56,7 +56,6 @@ func (w *Waiter) Wait() (ok bool) {
 	} else {
 		w.timer.Reset(waitFor)
 	}
-	// OPTIMIZE(skipor): maybe just time.Sleep, if waitFor is less than 200ms?
 	select {
 	case _ = <-w.timer.C:
 		return true

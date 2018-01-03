@@ -131,13 +131,19 @@ type instancePool struct {
 // when all started subroutines will be finished.
 func (p *instancePool) Run(ctx context.Context) error {
 	p.log.Info("Pool started")
-	originalCtx := ctx                     // Canceled only in case of other pool fail.
-	ctx, cancel := context.WithCancel(ctx) // Canceled in case of fail, or all instances finish.
-
+	originalCtx := ctx                               // Canceled only in case of other pool fail.
+	ctx, cancel := context.WithCancel(ctx)           // Canceled in case of fail, or all instances finish.
+	startCtx, startCancel := context.WithCancel(ctx) // Canceled also on out of ammo, and finish of shared RPS schedule.
+	// TODO(skipor): err should not be visible bellow. Too complex. Refactor.
+	newInstanceSchedule, err := p.buildNewInstanceSchedule(startCtx, startCancel)
+	if err != nil {
+		return err
+	}
 	defer func() {
 		p.log.Info("Pool run finished")
 		cancel()
 	}()
+
 	var (
 		providerErr   = make(chan error, 1)
 		aggregatorErr = make(chan error, 1)
@@ -151,8 +157,8 @@ func (p *instancePool) Run(ctx context.Context) error {
 		aggregatorErr <- p.Aggregator.Run(ctx)
 	}()
 	go func() {
-		// Running in separate goroutine, so we can cancel instance creation in case of error.
-		started, err := p.startInstances(ctx, runRes)
+		// Running in separate goroutine, so we can cancel instance creation.
+		started, err := p.startInstances(startCtx, ctx, newInstanceSchedule, runRes)
 		startRes <- startResult{started, err}
 	}()
 
@@ -179,10 +185,14 @@ func (p *instancePool) Run(ctx context.Context) error {
 		const subroutines = 4 // Provider, Aggregator, instance start, instance run.
 		var (
 			toWait           = subroutines
-			startedInstances = -1
+			startedInstances = -1 // Undefined, until instance start finish.
 			awaitedInstances = 0
 		)
-		onAllInstancesFinished := func() {
+		checkAllInstancesAreFinished := func() {
+			startFinished := startRes == nil
+			if !startFinished || awaitedInstances < startedInstances {
+				return
+			}
 			close(runRes) // Nothing should be sent more.
 			runRes = nil
 			toWait--
@@ -200,6 +210,10 @@ func (p *instancePool) Run(ctx context.Context) error {
 				if nonCtxErr(ctx, err) {
 					errAwaited(errors.WithMessage(err, "provider failed"))
 				}
+				if err == nil && startRes != nil {
+					p.log.Debug("Canceling instance start because out of ammo")
+					startCancel()
+				}
 			case err := <-aggregatorErr:
 				aggregatorErr = nil
 				toWait--
@@ -212,25 +226,19 @@ func (p *instancePool) Run(ctx context.Context) error {
 				toWait--
 				startedInstances = res.Started
 				p.log.Debug("Instances start awaited", zap.Int("started", startedInstances), zap.Error(res.Err))
-				if res.Err != nil {
+				if nonCtxErr(startCtx, res.Err) {
 					errAwaited(errors.WithMessage(res.Err, "instances start failed"))
 				}
-				if startedInstances <= awaitedInstances {
-					onAllInstancesFinished()
-				}
+				checkAllInstancesAreFinished()
 			case res := <-runRes:
 				awaitedInstances++
 				if ent := p.log.Check(zap.DebugLevel, "Instance run awaited"); ent != nil {
 					ent.Write(zap.String("id", res.Id), zap.Error(res.Err), zap.Int("awaited", awaitedInstances))
 				}
-				if res.Err != nil {
+				if nonCtxErr(ctx, res.Err) {
 					errAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.Id)))
 				}
-				startFinished := startRes == nil
-				if !startFinished || awaitedInstances < startedInstances {
-					continue
-				}
-				onAllInstancesFinished()
+				checkAllInstancesAreFinished()
 			}
 		}
 	}()
@@ -249,26 +257,84 @@ func (p *instancePool) Run(ctx context.Context) error {
 	}
 }
 
-func (p *instancePool) startInstances(ctx context.Context, runRes chan<- runResult) (started int, err error) {
-	newInstanceSchedule := func() func() (core.Schedule, error) {
-		if p.RPSPerInstance {
-			return p.NewRPSSchedule
-		}
-		sharedSchedule, err := p.NewRPSSchedule()
-		return func() (core.Schedule, error) {
-			return sharedSchedule, err
-		}
+func (p *instancePool) startInstances(
+	startCtx, runCtx context.Context,
+	newInstanceSchedule func() (core.Schedule, error),
+	runRes chan<- runResult) (started int, err error) {
+	deps := instanceDeps{
+		p.Aggregator,
+		newInstanceSchedule,
+		p.NewGun,
+		instanceSharedDeps{p.Provider, p.metrics},
+	}
+
+	waiter := coreutil.NewWaiter(p.StartupSchedule, startCtx)
+
+	// If create all instances asynchronously, and creation will fail, too many errors appears in log.
+	ok := waiter.Wait()
+	if !ok {
+		err = startCtx.Err()
+		return
+	}
+	firstInstance, err := newInstance(p.log, instanceId(0), deps)
+	if err != nil {
+		return
+	}
+	started++
+	go func() {
+		defer firstInstance.Close()
+		runRes <- runResult{firstInstance.id, firstInstance.Run(runCtx)}
 	}()
-	deps := instanceDeps{p.Provider, p.Aggregator, newInstanceSchedule, p.NewGun, p.metrics}
-	for next := coreutil.NewWaiter(p.StartupSchedule, ctx); next.Wait(); started++ {
+
+	for ; waiter.Wait(); started++ {
 		id := strconv.Itoa(started)
-		instance := newInstance(p.log, id, deps)
 		go func() {
-			runRes <- runResult{instance.id, instance.Run(ctx)}
+			runRes <- runResult{id, runNewInstance(runCtx, p.log, id, deps)}
 		}()
 	}
-	err = ctx.Err()
+	err = startCtx.Err()
 	return
+}
+
+func (p *instancePool) buildNewInstanceSchedule(startCtx context.Context, cancelStart context.CancelFunc) (
+	newInstanceSchedule func() (core.Schedule, error), err error,
+) {
+	if p.RPSPerInstance {
+		newInstanceSchedule = p.NewRPSSchedule
+		return
+	}
+	var sharedRPSSchedule core.Schedule
+	sharedRPSSchedule, err = p.NewRPSSchedule()
+	if err != nil {
+		return
+	}
+	sharedRPSSchedule = coreutil.NewCallbackOnFinishSchedule(sharedRPSSchedule, func() {
+		select {
+		case <-startCtx.Done():
+			p.log.Debug("RPS schedule has been finished")
+			return
+		default:
+			p.log.Info("RPS schedule has been finished. Canceling instance start.")
+			cancelStart()
+		}
+	})
+	newInstanceSchedule = func() (core.Schedule, error) {
+		return sharedRPSSchedule, err
+	}
+	return
+}
+
+func runNewInstance(ctx context.Context, log *zap.Logger, id string, deps instanceDeps) error {
+	instance, err := newInstance(log, id, deps)
+	if err != nil {
+		return err
+	}
+	defer instance.Close()
+	return instance.Run(ctx)
+}
+
+func instanceId(startN int) string {
+	return strconv.Itoa(startN)
 }
 
 type runResult struct {

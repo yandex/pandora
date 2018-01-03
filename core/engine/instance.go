@@ -14,32 +14,47 @@ import (
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coreutil"
+	"github.com/yandex/pandora/lib/tag"
 )
 
 type instance struct {
-	log *zap.Logger
-	id  string
-	instanceDeps
+	log      *zap.Logger
+	id       string
+	gun      core.Gun
+	schedule core.Schedule
+	instanceSharedDeps
 }
 
-func newInstance(log *zap.Logger, id string, deps instanceDeps) *instance {
+func newInstance(log *zap.Logger, id string, deps instanceDeps) (*instance, error) {
+	sched, err := deps.newSchedule()
+	if err != nil {
+		return nil, err
+	}
+	gun, err := deps.newGun()
+	if err != nil {
+		return nil, err
+	}
+	gun.Bind(deps.aggregator)
 	log = log.With(zap.String("instance", id))
-	return &instance{log, id, deps}
+	inst := &instance{log, id, gun, sched, deps.instanceSharedDeps}
+	return inst, nil
 }
 
-type instanceDeps struct {
-	provider    core.Provider
-	aggregator  core.Aggregator
-	newSchedule func() (core.Schedule, error)
-	newGun      func() (core.Gun, error)
+type instanceSharedDeps struct {
+	provider core.Provider
 	Metrics
 }
 
-// Run blocks until ammo finish, error or context cancel.
-func (i *instance) Run(ctx context.Context) error {
-	// Creating deps in instance start, which is running in separate goroutine.
-	// That allows to create instances parallel and faster.
+type instanceDeps struct {
+	aggregator  core.Aggregator
+	newSchedule func() (core.Schedule, error)
+	newGun      func() (core.Gun, error)
+	instanceSharedDeps
+}
 
+// Run blocks until ammo finish, error or context cancel.
+// Expects, that gun is already bind.
+func (i *instance) Run(ctx context.Context) error {
 	i.log.Debug("Instance started")
 	i.InstanceStart.Add(1)
 	defer func() {
@@ -47,33 +62,10 @@ func (i *instance) Run(ctx context.Context) error {
 		i.InstanceFinish.Add(1)
 	}()
 
-	shed, err := i.newSchedule()
-	if err != nil {
-		return errors.WithMessage(err, "schedule create failed")
-	}
-	gun, err := i.newGun()
-	if err != nil {
-		return errors.WithMessage(err, "gun create failed")
-	}
-
-	if gun, ok := gun.(io.Closer); ok {
-		defer func() {
-			err := gun.Close()
-			if err != nil {
-				i.log.Warn("Gun close fail", zap.Error(err))
-			}
-			i.log.Debug("Gun closed")
-		}()
-	}
-
-	gun.Bind(i.aggregator)
-	nextShoot := coreutil.NewWaiter(shed, ctx)
-
-	i.log.Debug("Instance init done. Run shooting")
-	return i.shoot(ctx, gun, nextShoot)
+	return i.shoot(ctx)
 }
 
-func (i *instance) shoot(ctx context.Context, gun core.Gun, sched *coreutil.Waiter) (err error) {
+func (i *instance) shoot(ctx context.Context) (err error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -81,24 +73,39 @@ func (i *instance) shoot(ctx context.Context, gun core.Gun, sched *coreutil.Wait
 		}
 	}()
 
-	for !sched.IsFinished() {
-		select {
-		case <-ctx.Done():
-			break
-		default:
-		}
+	waiter := coreutil.NewWaiter(i.schedule, ctx)
+	for !waiter.IsFinished() {
 		ammo, more := i.provider.Acquire()
 		if !more {
 			i.log.Debug("Ammo ended")
 			break
 		}
-		if !sched.Wait() {
+		if tag.Debug {
+			i.log.Debug("Ammo acquired", zap.Any("ammo", ammo))
+		}
+		if !waiter.Wait() {
 			break
 		}
-		i.Request.Add(1)
-		gun.Shoot(ctx, ammo)
-		i.Response.Add(1)
+		i.Metrics.Request.Add(1)
+		if tag.Debug {
+			i.log.Debug("Shooting", zap.Any("ammo", ammo))
+		}
+		i.gun.Shoot(ctx, ammo)
+		i.Metrics.Response.Add(1)
 		i.provider.Release(ammo)
 	}
 	return ctx.Err()
+}
+
+func (i *instance) Close() error {
+	gunCloser, ok := i.gun.(io.Closer)
+	if !ok {
+		return nil
+	}
+	err := gunCloser.Close()
+	if err != nil {
+		i.log.Warn("Gun close fail", zap.Error(err))
+	}
+	i.log.Debug("Gun closed")
+	return err
 }

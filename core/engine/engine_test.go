@@ -3,13 +3,15 @@ package engine
 import (
 	"context"
 	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/atomic"
+	"go.uber.org/zap"
 
-	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregate"
 	"github.com/yandex/pandora/core/mocks"
@@ -24,7 +26,7 @@ func newTestPoolConf() (InstancePoolConfig, *coremock.Gun) {
 	gun.On("Shoot", mock.Anything, mock.Anything)
 	conf := InstancePoolConfig{
 		Provider:   provider.NewNum(-1),
-		Aggregator: aggregate.NewDiscard(),
+		Aggregator: aggregate.NewTest(),
 		NewGun: func() (core.Gun, error) {
 			return gun, nil
 		},
@@ -173,14 +175,55 @@ var _ = Describe("instance pool", func() {
 
 })
 
+var _ = Describe("multiple instance", func() {
+	It("out of ammo - instance start is canceled", func() {
+		conf, _ := newTestPoolConf()
+		conf.Provider = provider.NewNum(3)
+		conf.NewRPSSchedule = func() (core.Schedule, error) {
+			return schedule.NewUnlimited(time.Hour), nil
+		}
+		conf.StartupSchedule = schedule.NewComposite(
+			schedule.NewOnce(2),
+			schedule.NewConst(1, 5*time.Second),
+		)
+		pool := newPool(testutil.NewLogger(), newTestMetrics(), nil, conf)
+		ctx := context.Background()
+
+		err := pool.Run(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pool.metrics.InstanceStart.Get()).To(BeNumerically("<=", 3))
+	}, 1)
+
+	It("out of RPS - instance start is canceled", func() {
+		conf, _ := newTestPoolConf()
+		conf.NewRPSSchedule = func() (core.Schedule, error) {
+			zap.L().Warn("Schedule created") // FIXME
+			return schedule.NewOnce(5), nil
+		}
+		conf.StartupSchedule = schedule.NewComposite(
+			schedule.NewOnce(2),
+			schedule.NewConst(1, 2*time.Second),
+		)
+		pool := newPool(testutil.NewLogger(), newTestMetrics(), nil, conf)
+		ctx := context.Background()
+
+		err := pool.Run(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pool.metrics.InstanceStart.Get()).To(BeNumerically("<=", 3))
+	})
+
+})
+
+// TODO instance start canceled after out of ammo
+// TODO instance start cancdled after RPS finish
+
 var _ = Describe("engine", func() {
 	var (
 		gun1, gun2 *coremock.Gun
-		//conf1, conf2 InstancePoolConfig
-		confs  []InstancePoolConfig
-		ctx    context.Context
-		cancel context.CancelFunc
-		engine *Engine
+		confs      []InstancePoolConfig
+		ctx        context.Context
+		cancel     context.CancelFunc
+		engine     *Engine
 	)
 	BeforeEach(func() {
 		confs = make([]InstancePoolConfig, 2)
@@ -244,7 +287,6 @@ var _ = Describe("engine", func() {
 	Context("one pool failed", func() {
 		var (
 			failErr = errors.New("test err")
-			//blockShoot sync.WaitGroup
 		)
 		BeforeEach(func() {
 			aggr := &coremock.Aggregator{}
@@ -259,6 +301,61 @@ var _ = Describe("engine", func() {
 			engine.Wait()
 		}, 1)
 	})
+})
+
+var _ = Describe("build instance schedule", func() {
+	It("per instance schedule ", func() {
+		conf, _ := newTestPoolConf()
+		conf.RPSPerInstance = true
+		pool := newPool(testutil.NewLogger(), newTestMetrics(), nil, conf)
+		newInstanceSchedule, err := pool.buildNewInstanceSchedule(context.Background(), func() {
+			Fail("should not be called")
+		})
+		Expect(err).NotTo(HaveOccurred())
+		testutil.ExpectFuncsEqual(newInstanceSchedule, conf.NewRPSSchedule)
+	})
+
+	It("shared schedule create failed", func() {
+		conf, _ := newTestPoolConf()
+		scheduleCreateErr := errors.New("test err")
+		conf.NewRPSSchedule = func() (core.Schedule, error) {
+			return nil, scheduleCreateErr
+		}
+		pool := newPool(testutil.NewLogger(), newTestMetrics(), nil, conf)
+		newInstanceSchedule, err := pool.buildNewInstanceSchedule(context.Background(), func() {
+			Fail("should not be called")
+		})
+		Expect(err).To(Equal(scheduleCreateErr))
+		Expect(newInstanceSchedule).To(BeNil())
+	})
+
+	It("shared schedule work", func() {
+		conf, _ := newTestPoolConf()
+		var newScheduleCalled bool
+		conf.NewRPSSchedule = func() (core.Schedule, error) {
+			Expect(newScheduleCalled).To(BeFalse())
+			newScheduleCalled = true
+			return schedule.NewOnce(1), nil
+		}
+		pool := newPool(testutil.NewLogger(), newTestMetrics(), nil, conf)
+		ctx, cancel := context.WithCancel(context.Background())
+		newInstanceSchedule, err := pool.buildNewInstanceSchedule(context.Background(), cancel)
+		Expect(err).NotTo(HaveOccurred())
+
+		schedule, err := newInstanceSchedule()
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(newInstanceSchedule()).To(Equal(schedule))
+
+		Expect(ctx.Done()).NotTo(BeClosed())
+		_, ok := schedule.Next()
+		Expect(ok).To(BeTrue())
+		Expect(ctx.Done()).NotTo(BeClosed())
+		_, ok = schedule.Next()
+		Expect(ok).To(BeFalse())
+		Expect(ctx.Done()).To(BeClosed())
+	})
+
 })
 
 var _ = Describe("nonCtxErr", func() {
