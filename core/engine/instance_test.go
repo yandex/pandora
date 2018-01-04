@@ -31,7 +31,6 @@ var _ = Describe("Instance", func() {
 		newSchedule func() (core.Schedule, error)
 		newGun      func() (core.Gun, error)
 	)
-	const instanceId = "id"
 
 	BeforeEach(func() {
 		provider = &coremock.Provider{}
@@ -56,7 +55,7 @@ var _ = Describe("Instance", func() {
 				metrics,
 			},
 		}
-		ins, insCreateErr = newInstance(testutil.NewLogger(), instanceId, deps)
+		ins, insCreateErr = newInstance(testutil.NewLogger(), 0, deps)
 	})
 
 	AfterEach(func() {

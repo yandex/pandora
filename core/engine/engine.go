@@ -345,20 +345,20 @@ func (p *instancePool) startInstances(
 		err = startCtx.Err()
 		return
 	}
-	firstInstance, err := newInstance(p.log, instanceId(0), deps)
+	firstInstance, err := newInstance(p.log, 0, deps)
 	if err != nil {
 		return
 	}
 	started++
 	go func() {
 		defer firstInstance.Close()
-		runRes <- runResult{firstInstance.id, firstInstance.Run(runCtx)}
+		runRes <- runResult{"0", firstInstance.Run(runCtx)}
 	}()
 
 	for ; waiter.Wait(); started++ {
-		id := strconv.Itoa(started)
+		id := started
 		go func() {
-			runRes <- runResult{id, runNewInstance(runCtx, p.log, id, deps)}
+			runRes <- runResult{strconv.Itoa(id), runNewInstance(runCtx, p.log, id, deps)}
 		}()
 	}
 	err = startCtx.Err()
@@ -393,17 +393,13 @@ func (p *instancePool) buildNewInstanceSchedule(startCtx context.Context, cancel
 	return
 }
 
-func runNewInstance(ctx context.Context, log *zap.Logger, id string, deps instanceDeps) error {
+func runNewInstance(ctx context.Context, log *zap.Logger, id int, deps instanceDeps) error {
 	instance, err := newInstance(log, id, deps)
 	if err != nil {
 		return err
 	}
 	defer instance.Close()
 	return instance.Run(ctx)
-}
-
-func instanceId(startN int) string {
-	return strconv.Itoa(startN)
 }
 
 type runResult struct {

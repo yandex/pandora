@@ -19,13 +19,13 @@ import (
 
 type instance struct {
 	log      *zap.Logger
-	id       string
+	id       int
 	gun      core.Gun
 	schedule core.Schedule
 	instanceSharedDeps
 }
 
-func newInstance(log *zap.Logger, id string, deps instanceDeps) (*instance, error) {
+func newInstance(log *zap.Logger, id int, deps instanceDeps) (*instance, error) {
 	sched, err := deps.newSchedule()
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func newInstance(log *zap.Logger, id string, deps instanceDeps) (*instance, erro
 		return nil, err
 	}
 	gun.Bind(deps.aggregator)
-	log = log.With(zap.String("instance", id))
+	log = log.With(zap.Int("instance", id))
 	inst := &instance{log, id, gun, sched, deps.instanceSharedDeps}
 	return inst, nil
 }
