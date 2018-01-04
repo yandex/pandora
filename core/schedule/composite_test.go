@@ -25,7 +25,7 @@ var _ = Describe("composite", func() {
 
 	It("only", func() {
 		testee := NewComposite(NewConst(1, time.Second))
-		coretest.ExpectScheduleNexts(testee, time.Second, time.Second)
+		coretest.ExpectScheduleNexts(testee, 0, time.Second)
 	})
 
 	It("composite", func() {
@@ -37,8 +37,8 @@ var _ = Describe("composite", func() {
 			NewOnce(1),
 		)
 		coretest.ExpectScheduleNexts(testee,
+			0,
 			time.Second,
-			2*time.Second,
 
 			2*time.Second,
 			2*time.Second,
@@ -104,8 +104,8 @@ var _ = Describe("composite", func() {
 
 		actualNexts := coretest.DrainScheduleDuration(testee, unlimitedFinish)
 		expectedNests := []time.Duration{
+			0,
 			time.Second,
-			2 * time.Second,
 			2 * time.Second,
 			2 * time.Second, // Finish.
 		}

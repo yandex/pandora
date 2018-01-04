@@ -71,16 +71,18 @@ type Aggregator interface {
 
 //go:generate mockery -name=Schedule -case=underscore -outpkg=coremock
 
-// Schedule represents operation schedule. Schedule must be goroutine safe.
+// Schedule represents operation schedule. Schedule MUST be goroutine safe.
 type Schedule interface {
 	// Run starts schedule at passed time.
 	// Run may be called once, before any Next call. (Before, means not concurrently too.)
 	// If start was not called, schedule is started at first Next call.
 	Start(startAt time.Time)
+
 	// Next withdraw one operation token and returns next operation time and
 	// ok equal true, when schedule is not finished.
 	// If there is no operation tokens left, Next returns Schedule
 	// finish time and ok equals false.
+	// When Next returns ok == true first time, tx SHOULD be start time.
 	Next() (ts time.Time, ok bool)
 
 	// Left returns n >= 0 number operation token left, if it is known exactly.

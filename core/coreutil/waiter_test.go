@@ -28,8 +28,12 @@ var _ = Describe("waiter", func() {
 	})
 
 	It("wait as expected", func() {
-		conf := schedule.ConstConfig{100, 100 * time.Millisecond}
-		sched := schedule.NewConstConf(conf)
+		const (
+			duration = 100 * time.Millisecond
+			ops      = 100
+			times    = ops * duration / time.Second
+		)
+		sched := schedule.NewConst(ops, duration)
 		ctx := context.Background()
 		w := NewWaiter(sched, ctx)
 		start := time.Now()
@@ -38,9 +42,9 @@ var _ = Describe("waiter", func() {
 		for ; w.Wait(); i++ {
 		}
 		finish := time.Now()
-		Expect(i).To(BeEquivalentTo(10))
-		Expect(finish.Sub(start)).To(BeNumerically(">=", conf.Duration))
-		Expect(finish.Sub(start)).To(BeNumerically("<", 3*conf.Duration)) // Smaller interval will be more flaky.
+		Expect(i).To(BeEquivalentTo(times))
+		Expect(finish.Sub(start)).To(BeNumerically(">=", duration*(times-1)/times))
+		Expect(finish.Sub(start)).To(BeNumerically("<", 3*duration)) // Smaller interval will be more flaky.
 	})
 
 	It("context canceled before wait", func() {
@@ -53,11 +57,12 @@ var _ = Describe("waiter", func() {
 
 	It("context canceled during wait", func() {
 		sched := schedule.NewConstConf(schedule.ConstConfig{Ops: 0.1, Duration: 100 * time.Second})
-		timeout := 10 * time.Millisecond
+		timeout := 20 * time.Millisecond
 		start := time.Now()
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		w := NewWaiter(sched, ctx)
+		Expect(w.Wait()).To(BeTrue()) // 0
 		Expect(w.Wait()).To(BeFalse())
 		Expect(time.Since(start)).To(BeNumerically(">", timeout))
 		Expect(time.Since(start)).To(BeNumerically("<", 10*timeout))

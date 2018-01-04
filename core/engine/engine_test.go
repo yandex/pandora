@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/atomic"
-	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregate"
@@ -197,7 +196,6 @@ var _ = Describe("multiple instance", func() {
 	It("out of RPS - instance start is canceled", func() {
 		conf, _ := newTestPoolConf()
 		conf.NewRPSSchedule = func() (core.Schedule, error) {
-			zap.L().Warn("Schedule created") // FIXME
 			return schedule.NewOnce(5), nil
 		}
 		conf.StartupSchedule = schedule.NewComposite(

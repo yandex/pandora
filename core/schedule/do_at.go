@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"go.uber.org/atomic"
-	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core"
 )
@@ -49,9 +48,8 @@ func (s *doAtSchedule) Next() (tx time.Time, ok bool) {
 		s.MarkStarted()
 		s.start = time.Now()
 	})
-	i := s.i.Inc()
-	zap.L().Warn("Schedule NEXT", zap.Int64("i", i-1))
-	if i > s.n {
+	i := s.i.Inc() - 1
+	if i >= s.n {
 		return s.start.Add(s.duration), false
 	}
 	return s.start.Add(s.doAt(i)), true

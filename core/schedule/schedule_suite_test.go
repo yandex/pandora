@@ -84,7 +84,7 @@ var _ = Describe("const", func() {
 		})
 		It("", func() {
 			Expect(underlying.n).To(BeEquivalentTo(2))
-			coretest.ExpectScheduleNexts(testee, time.Second, 2*time.Second, 2*time.Second)
+			coretest.ExpectScheduleNexts(testee, 0, time.Second, 2*time.Second)
 		})
 	})
 
@@ -118,7 +118,7 @@ var _ = Describe("line", func() {
 		BeforeEach(func() {
 			conf = LineConfig{
 				From:     0,
-				To:       1,
+				To:       1.999,
 				Duration: time.Second,
 			}
 		})
@@ -140,7 +140,7 @@ var _ = Describe("line", func() {
 
 		It("", func() {
 			Expect(underlying.n).To(BeEquivalentTo(2))
-			coretest.ExpectScheduleNexts(testee, time.Second, 2*time.Second, 2*time.Second)
+			coretest.ExpectScheduleNexts(testee, 0, time.Second, 2*time.Second)
 		})
 	})
 
@@ -155,7 +155,7 @@ var _ = Describe("line", func() {
 
 		It("", func() {
 			Expect(underlying.n).To(BeEquivalentTo(1))
-			coretest.ExpectScheduleNexts(testee, 2*time.Second, 2*time.Second)
+			coretest.ExpectScheduleNexts(testee, 0, 2*time.Second)
 		})
 	})
 
@@ -186,9 +186,7 @@ var _ = Describe("line", func() {
 			Expect(sort.SliceIsSorted(xs, func(i, j int) bool {
 				return xs[i].Before(xs[j])
 			})).To(BeTrue())
-
-			Expect(xs[9]).To(Equal(xs[10]))
-			Expect(start.Add(conf.Duration)).To(Equal(xs[10]))
+			Expect(start.Add(conf.Duration)).To(Equal(xs[len(xs)-1]))
 		})
 	})
 
