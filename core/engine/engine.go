@@ -130,118 +130,20 @@ type instancePool struct {
 // remaining results awaiting goroutine in background, that will call onWaitDone callback,
 // when all started subroutines will be finished.
 func (p *instancePool) Run(ctx context.Context) error {
-	p.log.Info("Pool started")
-	originalCtx := ctx                               // Canceled only in case of other pool fail.
-	ctx, cancel := context.WithCancel(ctx)           // Canceled in case of fail, or all instances finish.
-	startCtx, startCancel := context.WithCancel(ctx) // Canceled also on out of ammo, and finish of shared RPS schedule.
-	// TODO(skipor): err should not be visible bellow. Too complex. Refactor.
-	newInstanceSchedule, err := p.buildNewInstanceSchedule(startCtx, startCancel)
-	if err != nil {
-		return err
-	}
+	originalCtx := ctx // Canceled only in case of other pool fail.
+	p.log.Info("Pool run started")
+	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		p.log.Info("Pool run finished")
 		cancel()
 	}()
 
-	var (
-		providerErr   = make(chan error, 1)
-		aggregatorErr = make(chan error, 1)
-		runRes        = make(chan runResult, 1)
-		startRes      = make(chan startResult, 1)
-	)
-	go func() {
-		providerErr <- p.Provider.Run(ctx)
-	}()
-	go func() {
-		aggregatorErr <- p.Aggregator.Run(ctx)
-	}()
-	go func() {
-		// Running in separate goroutine, so we can cancel instance creation.
-		started, err := p.startInstances(startCtx, ctx, newInstanceSchedule, runRes)
-		startRes <- startResult{started, err}
-	}()
-
-	awaitErr := make(chan error)
-	errAwaited := func(err error) {
-		select {
-		case awaitErr <- err:
-		case <-ctx.Done():
-			if err != ctx.Err() {
-				p.log.Debug("Error suppressed after run cancel", zap.Error(err))
-			}
-		}
+	rh, err := p.runAsync(ctx)
+	if err != nil {
+		return err
 	}
-	// Await all launched in separate goroutine, so we can return first execution
-	// error, and still wait results in background.
-	go func() {
-		defer func() {
-			p.log.Debug("Pool wait finished")
-			close(awaitErr)
-			if p.onWaitDone != nil {
-				p.onWaitDone()
-			}
-		}()
-		const subroutines = 4 // Provider, Aggregator, instance start, instance run.
-		var (
-			toWait           = subroutines
-			startedInstances = -1 // Undefined, until instance start finish.
-			awaitedInstances = 0
-		)
-		checkAllInstancesAreFinished := func() {
-			startFinished := startRes == nil
-			if !startFinished || awaitedInstances < startedInstances {
-				return
-			}
-			close(runRes) // Nothing should be sent more.
-			runRes = nil
-			toWait--
-			p.log.Info("All instances runs awaited.", zap.Int("awaited", awaitedInstances))
-			cancel() // Signal to provider and aggregator, that pool run is finished.
-		}
 
-		for toWait > 0 {
-			select {
-			case err := <-providerErr:
-				providerErr = nil
-				// TODO(skipor): not wait for provider, to return success result?
-				toWait--
-				p.log.Debug("Provider awaited", zap.Error(err))
-				if nonCtxErr(ctx, err) {
-					errAwaited(errors.WithMessage(err, "provider failed"))
-				}
-				if err == nil && startRes != nil {
-					p.log.Debug("Canceling instance start because out of ammo")
-					startCancel()
-				}
-			case err := <-aggregatorErr:
-				aggregatorErr = nil
-				toWait--
-				p.log.Debug("Aggregator awaited", zap.Error(err))
-				if nonCtxErr(ctx, err) {
-					errAwaited(errors.WithMessage(err, "aggregator failed"))
-				}
-			case res := <-startRes:
-				startRes = nil
-				toWait--
-				startedInstances = res.Started
-				p.log.Debug("Instances start awaited", zap.Int("started", startedInstances), zap.Error(res.Err))
-				if nonCtxErr(startCtx, res.Err) {
-					errAwaited(errors.WithMessage(res.Err, "instances start failed"))
-				}
-				checkAllInstancesAreFinished()
-			case res := <-runRes:
-				awaitedInstances++
-				if ent := p.log.Check(zap.DebugLevel, "Instance run awaited"); ent != nil {
-					ent.Write(zap.String("id", res.Id), zap.Error(res.Err), zap.Int("awaited", awaitedInstances))
-				}
-				if nonCtxErr(ctx, res.Err) {
-					errAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.Id)))
-				}
-				checkAllInstancesAreFinished()
-			}
-		}
-	}()
+	awaitErr := p.awaitRunAsync(rh)
 
 	select {
 	case <-originalCtx.Done():
@@ -255,6 +157,173 @@ func (p *instancePool) Run(ctx context.Context) error {
 		p.log.Info("Pool run finished successfully")
 		return nil
 	}
+}
+
+type poolAsyncRunHandle struct {
+	runCtx              context.Context
+	runCancel           context.CancelFunc
+	instanceStartCtx    context.Context
+	instanceStartCancel context.CancelFunc
+
+	providerErr   <-chan error
+	aggregatorErr <-chan error
+	startRes      <-chan startResult
+	// Read only actually. But can be closed by reader, to be sure, that no result has been lost.
+	runRes chan runResult
+}
+
+func (p *instancePool) runAsync(runCtx context.Context) (*poolAsyncRunHandle, error) {
+	// Canceled in case all instances finish, fail or run runCancel.
+	runCtx, runCancel := context.WithCancel(runCtx)
+	// Canceled also on out of ammo, and finish of shared RPS schedule.
+	instanceStartCtx, instanceStartCancel := context.WithCancel(runCtx)
+	newInstanceSchedule, err := p.buildNewInstanceSchedule(instanceStartCtx, instanceStartCancel)
+	if err != nil {
+		return nil, err
+	}
+	// Seems good enough. Even if some run will block on result send, it's not real problem.
+	const runResultBufSize = 64
+	var (
+		// All channels are buffered. All results should be read.
+		providerErr   = make(chan error, 1)
+		aggregatorErr = make(chan error, 1)
+		startRes      = make(chan startResult, 1)
+		runRes        = make(chan runResult, runResultBufSize)
+	)
+	go func() {
+		providerErr <- p.Provider.Run(runCtx)
+	}()
+	go func() {
+		aggregatorErr <- p.Aggregator.Run(runCtx)
+	}()
+	go func() {
+		started, err := p.startInstances(instanceStartCtx, runCtx, newInstanceSchedule, runRes)
+		startRes <- startResult{started, err}
+	}()
+	return &poolAsyncRunHandle{
+		runCtx:              runCtx,
+		runCancel:           runCancel,
+		instanceStartCtx:    instanceStartCtx,
+		instanceStartCancel: instanceStartCancel,
+		providerErr:         providerErr,
+		aggregatorErr:       aggregatorErr,
+		runRes:              runRes,
+		startRes:            startRes,
+	}, nil
+}
+
+func (p *instancePool) awaitRunAsync(runHandle *poolAsyncRunHandle) <-chan error {
+	ah, awaitErr := p.newAwaitRunHandle(runHandle)
+	go func() {
+		defer func() {
+			ah.log.Debug("Pool wait finished")
+			close(ah.awaitErr)
+			if p.onWaitDone != nil {
+				p.onWaitDone()
+			}
+		}()
+		ah.awaitRun()
+	}()
+	return awaitErr
+}
+
+type runAwaitHandle struct {
+	log *zap.Logger
+	poolAsyncRunHandle
+	awaitErr         chan<- error
+	toWait           int
+	startedInstances int
+	awaitedInstances int
+}
+
+func (p *instancePool) newAwaitRunHandle(runHandle *poolAsyncRunHandle) (*runAwaitHandle, <-chan error) {
+	awaitErr := make(chan error)
+	const resultsToWait = 4 // Provider, Aggregator, instance start, instance run.
+	awaitHandle := &runAwaitHandle{
+		log:                p.log,
+		poolAsyncRunHandle: *runHandle,
+		awaitErr:           awaitErr,
+		toWait:             resultsToWait,
+		startedInstances:   -1, // Undefined until start finish.
+	}
+	return awaitHandle, awaitErr
+}
+
+func (ah *runAwaitHandle) awaitRun() {
+	for ah.toWait > 0 {
+		select {
+		case err := <-ah.providerErr:
+			ah.providerErr = nil
+			// TODO(skipor): not wait for provider, to return success result?
+			ah.toWait--
+			ah.log.Debug("Provider awaited", zap.Error(err))
+			if nonCtxErr(ah.runCtx, err) {
+				ah.onErrAwaited(errors.WithMessage(err, "provider failed"))
+			}
+			if err == nil && ah.startRes != nil {
+				ah.log.Debug("Canceling instance start because out of ammo")
+				ah.instanceStartCancel()
+			}
+		case err := <-ah.aggregatorErr:
+			ah.aggregatorErr = nil
+			ah.toWait--
+			ah.log.Debug("Aggregator awaited", zap.Error(err))
+			if nonCtxErr(ah.runCtx, err) {
+				ah.onErrAwaited(errors.WithMessage(err, "aggregator failed"))
+			}
+		case res := <-ah.startRes:
+			ah.startRes = nil
+			ah.toWait--
+			ah.startedInstances = res.Started
+			ah.log.Debug("Instances start awaited", zap.Int("started", ah.startedInstances), zap.Error(res.Err))
+			if nonCtxErr(ah.instanceStartCtx, res.Err) {
+				ah.onErrAwaited(errors.WithMessage(res.Err, "instances start failed"))
+			}
+			ah.checkAllInstancesAreFinished()
+		case res := <-ah.runRes:
+			ah.awaitedInstances++
+			if ent := ah.log.Check(zap.DebugLevel, "Instance run awaited"); ent != nil {
+				ent.Write(zap.String("id", res.Id), zap.Error(res.Err), zap.Int("awaited", ah.awaitedInstances))
+			}
+			if nonCtxErr(ah.runCtx, res.Err) {
+				ah.onErrAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.Id)))
+			}
+			ah.checkAllInstancesAreFinished()
+		}
+	}
+}
+
+func (ah *runAwaitHandle) onErrAwaited(err error) {
+	select {
+	case ah.awaitErr <- err:
+	case <-ah.runCtx.Done():
+		if err != ah.runCtx.Err() {
+			ah.log.Debug("Error suppressed after run cancel", zap.Error(err))
+		}
+	}
+}
+
+func (ah *runAwaitHandle) checkAllInstancesAreFinished() {
+	allFinished := ah.isStartFinished() && ah.awaitedInstances >= ah.startedInstances
+	if !allFinished {
+		return
+	}
+	// Assert, that all run results are awaited.
+	close(ah.runRes)
+	res, ok := <-ah.runRes
+	if ok {
+		ah.log.Panic("Unexpected run result", zap.Any("res", res))
+	}
+
+	ah.runRes = nil
+	ah.toWait--
+	ah.log.Info("All instances runs awaited.", zap.Int("awaited", ah.awaitedInstances))
+	ah.runCancel() // Signal to provider and aggregator, that pool run is finished.
+
+}
+
+func (ah *runAwaitHandle) isStartFinished() bool {
+	return ah.startRes == nil
 }
 
 func (p *instancePool) startInstances(

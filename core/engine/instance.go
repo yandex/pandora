@@ -74,10 +74,12 @@ func (i *instance) shoot(ctx context.Context) (err error) {
 	}()
 
 	waiter := coreutil.NewWaiter(i.schedule, ctx)
+	// Checking, that schedule is not finished, required, to not consume extra ammo,
+	// on finish in case of per instance schedule.
 	for !waiter.IsFinished() {
-		ammo, more := i.provider.Acquire()
-		if !more {
-			i.log.Debug("Ammo ended")
+		ammo, ok := i.provider.Acquire()
+		if !ok {
+			i.log.Debug("Out of ammo")
 			break
 		}
 		if tag.Debug {
