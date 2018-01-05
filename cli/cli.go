@@ -17,6 +17,7 @@ import (
 
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/engine"
+	"github.com/yandex/pandora/lib/zaputil"
 )
 
 const Version = "0.2.0"
@@ -83,7 +84,7 @@ func readConfig() (*zap.Logger, cliConfig) {
 	if err != nil {
 		panic(err)
 	}
-	log.Info("Pandora started", zap.String("version", Version))
+	log = log.WithOptions(zap.WrapCore(zaputil.NewStackExtractCore))
 	zap.ReplaceGlobals(log)
 	zap.RedirectStdLog(log)
 
