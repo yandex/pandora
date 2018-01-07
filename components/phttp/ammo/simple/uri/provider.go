@@ -11,7 +11,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
@@ -66,6 +65,5 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		ammoFile.Seek(0, 0)
 		p.decoder.ResetHeader()
 	}
-	zap.L().Debug("Ran out of ammo")
 	return nil
 }

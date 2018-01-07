@@ -21,8 +21,8 @@ import (
 
 func newTestPoolConf() (InstancePoolConfig, *coremock.Gun) {
 	gun := &coremock.Gun{}
-	gun.On("Bind", mock.Anything)
-	gun.On("Shoot", mock.Anything, mock.Anything)
+	gun.On("Bind", mock.Anything, mock.Anything).Return(nil)
+	gun.On("Shoot", mock.Anything)
 	conf := InstancePoolConfig{
 		Provider:   provider.NewNum(-1),
 		Aggregator: aggregate.NewTest(),
@@ -84,8 +84,8 @@ var _ = Describe("instance pool", func() {
 		BeforeEach(func() {
 			blockShoot.Add(1)
 			prov := &coremock.Provider{}
-			prov.On("Run", mock.Anything).
-				Return(func(startCtx context.Context) error {
+			prov.On("Run", mock.Anything, mock.Anything).
+				Return(func(startCtx context.Context, deps core.ProviderDeps) error {
 					<-startCtx.Done()
 					return nil
 				})
@@ -114,8 +114,8 @@ var _ = Describe("instance pool", func() {
 		BeforeEach(func() {
 			blockShootAndAggr.Add(1)
 			prov := &coremock.Provider{}
-			prov.On("Run", mock.Anything).
-				Return(func(context.Context) error {
+			prov.On("Run", mock.Anything, mock.Anything).
+				Return(func(context.Context, core.ProviderDeps) error {
 					return failErr
 				})
 			prov.On("Acquire").Return(func() (core.Ammo, bool) {
@@ -124,8 +124,8 @@ var _ = Describe("instance pool", func() {
 			})
 			conf.Provider = prov
 			aggr := &coremock.Aggregator{}
-			aggr.On("Run", mock.Anything).
-				Return(func(context.Context) error {
+			aggr.On("Run", mock.Anything, mock.Anything).
+				Return(func(context.Context, core.AggregatorDeps) error {
 					blockShootAndAggr.Wait()
 					return nil
 				})
@@ -146,7 +146,7 @@ var _ = Describe("instance pool", func() {
 		failErr := errors.New("test err")
 		BeforeEach(func() {
 			aggr := &coremock.Aggregator{}
-			aggr.On("Run", mock.Anything).Return(failErr)
+			aggr.On("Run", mock.Anything, mock.Anything).Return(failErr)
 			conf.Aggregator = aggr
 		})
 		It("", func() {
@@ -253,8 +253,8 @@ var _ = Describe("engine", func() {
 			blockPools.Add(1)
 			for i := range confs {
 				prov := &coremock.Provider{}
-				prov.On("Run", mock.Anything).
-					Return(func(startCtx context.Context) error {
+				prov.On("Run", mock.Anything, mock.Anything).
+					Return(func(startCtx context.Context, deps core.ProviderDeps) error {
 						<-startCtx.Done()
 						blockPools.Wait()
 						return nil
@@ -288,7 +288,7 @@ var _ = Describe("engine", func() {
 		)
 		BeforeEach(func() {
 			aggr := &coremock.Aggregator{}
-			aggr.On("Run", mock.Anything).Return(failErr)
+			aggr.On("Run", mock.Anything, mock.Anything).Return(failErr)
 			confs[0].Aggregator = aggr
 		})
 

@@ -6,7 +6,6 @@
 package phttp
 
 import (
-	"context"
 	"io"
 	"net"
 	"net/http"
@@ -91,9 +90,9 @@ var _ = Describe("connect", func() {
 		connectGun := NewConnectGun(conf)
 
 		results := &netsample.TestAggregator{}
-		connectGun.Bind(results)
+		connectGun.Bind(results, testDeps())
 
-		connectGun.Shoot(context.Background(), newAmmoURL(origin.URL))
+		connectGun.Shoot(newAmmoURL(origin.URL))
 		Expect(results.Samples[0].Err()).To(BeNil())
 
 		Expect(results.Samples).To(HaveLen(1))

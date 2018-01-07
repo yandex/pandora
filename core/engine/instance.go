@@ -25,7 +25,9 @@ type instance struct {
 	instanceSharedDeps
 }
 
-func newInstance(log *zap.Logger, id int, deps instanceDeps) (*instance, error) {
+func newInstance(ctx context.Context, log *zap.Logger, id int, deps instanceDeps) (*instance, error) {
+	log = log.With(zap.Int("instance", id))
+	gunDeps := core.GunDeps{ctx, log, id}
 	sched, err := deps.newSchedule()
 	if err != nil {
 		return nil, err
@@ -34,15 +36,12 @@ func newInstance(log *zap.Logger, id int, deps instanceDeps) (*instance, error) 
 	if err != nil {
 		return nil, err
 	}
-	gun.Bind(deps.aggregator)
-	log = log.With(zap.Int("instance", id))
+	err = gun.Bind(deps.aggregator, gunDeps)
+	if err != nil {
+		return nil, err
+	}
 	inst := &instance{log, id, gun, sched, deps.instanceSharedDeps}
 	return inst, nil
-}
-
-type instanceSharedDeps struct {
-	provider core.Provider
-	Metrics
 }
 
 type instanceDeps struct {
@@ -50,6 +49,11 @@ type instanceDeps struct {
 	newSchedule func() (core.Schedule, error)
 	newGun      func() (core.Gun, error)
 	instanceSharedDeps
+}
+
+type instanceSharedDeps struct {
+	provider core.Provider
+	Metrics
 }
 
 // Run blocks until ammo finish, error or context cancel.
@@ -92,7 +96,7 @@ func (i *instance) shoot(ctx context.Context) (err error) {
 		if tag.Debug {
 			i.log.Debug("Shooting", zap.Any("ammo", ammo))
 		}
-		i.gun.Shoot(ctx, ammo)
+		i.gun.Shoot(ammo)
 		i.Metrics.Response.Add(1)
 		i.provider.Release(ammo)
 	}

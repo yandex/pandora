@@ -18,7 +18,7 @@ func NewDiscard() core.Aggregator {
 
 type discard struct{}
 
-func (discard) Run(ctx context.Context) error {
+func (discard) Run(ctx context.Context, _ core.AggregatorDeps) error {
 	<-ctx.Done()
 	return nil
 }

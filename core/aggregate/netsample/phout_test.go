@@ -8,6 +8,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
+
+	"github.com/yandex/pandora/core"
 )
 
 var _ = Describe("Phout", func() {
@@ -37,7 +39,7 @@ var _ = Describe("Phout", func() {
 		Expect(err).NotTo(HaveOccurred())
 		runErr = make(chan error)
 		go func() {
-			runErr <- testee.Run(ctx)
+			runErr <- testee.Run(ctx, core.AggregatorDeps{})
 		}()
 	})
 	It("no id by default", func() {

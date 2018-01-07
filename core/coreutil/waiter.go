@@ -64,6 +64,8 @@ func (w *Waiter) Wait() (ok bool) {
 	}
 }
 
+// IsFinished is quick check, that wait context is not canceled and there are some tokens left in
+// schedule.
 func (w *Waiter) IsFinished() (ok bool) {
 	select {
 	case <-w.ctx.Done():

@@ -78,6 +78,7 @@ var _ = Describe("http", func() {
 				{"type": "once", "times": Instances},
 			}
 			gunConfig = conf.Pool[0].Gun
+			conf.Level = "debug"
 		})
 		itOk := func() {
 			It("ok", func() {

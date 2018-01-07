@@ -33,6 +33,7 @@ type Provider struct {
 	Sink      chan *Ammo
 	Pool      sync.Pool
 	idCounter atomic.Int64
+	core.ProviderDeps
 }
 
 func (p *Provider) Acquire() (core.Ammo, bool) {
@@ -47,7 +48,8 @@ func (p *Provider) Release(a core.Ammo) {
 	p.Pool.Put(a)
 }
 
-func (p *Provider) Run(ctx context.Context) error {
+func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) error {
+	p.ProviderDeps = deps
 	defer close(p.Sink)
 	file, err := p.fs.Open(p.fileName)
 	if err != nil {

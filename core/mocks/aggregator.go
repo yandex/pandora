@@ -10,18 +10,18 @@ type Aggregator struct {
 	mock.Mock
 }
 
-// Report provides a mock function with given fields: _a0
-func (_m *Aggregator) Report(_a0 core.Sample) {
-	_m.Called(_a0)
+// Report provides a mock function with given fields: s
+func (_m *Aggregator) Report(s core.Sample) {
+	_m.Called(s)
 }
 
-// Run provides a mock function with given fields: _a0
-func (_m *Aggregator) Run(_a0 context.Context) error {
-	ret := _m.Called(_a0)
+// Run provides a mock function with given fields: ctx, deps
+func (_m *Aggregator) Run(ctx context.Context, deps core.AggregatorDeps) error {
+	ret := _m.Called(ctx, deps)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func(context.Context, core.AggregatorDeps) error); ok {
+		r0 = rf(ctx, deps)
 	} else {
 		r0 = ret.Error(0)
 	}

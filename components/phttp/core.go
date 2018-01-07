@@ -6,7 +6,6 @@
 package phttp
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/yandex/pandora/core"
@@ -27,8 +26,8 @@ type Ammo interface {
 }
 
 type Gun interface {
-	Shoot(context.Context, Ammo)
-	Bind(netsample.Aggregator)
+	Shoot(ammo Ammo)
+	Bind(sample netsample.Aggregator, deps core.GunDeps) error
 }
 
 func WrapGun(g Gun) core.Gun {
@@ -40,10 +39,10 @@ func WrapGun(g Gun) core.Gun {
 
 type gunWrapper struct{ Gun }
 
-func (g *gunWrapper) Shoot(ctx context.Context, ammo core.Ammo) {
-	g.Gun.Shoot(ctx, ammo.(Ammo))
+func (g *gunWrapper) Shoot(ammo core.Ammo) {
+	g.Gun.Shoot(ammo.(Ammo))
 }
 
-func (g *gunWrapper) Bind(a core.Aggregator) {
-	g.Gun.Bind(netsample.UnwrapAggregator(a))
+func (g *gunWrapper) Bind(a core.Aggregator, deps core.GunDeps) error {
+	return g.Gun.Bind(netsample.UnwrapAggregator(a), deps)
 }

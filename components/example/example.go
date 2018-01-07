@@ -8,8 +8,9 @@ package example
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
+
+	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregate/netsample"
@@ -25,18 +26,21 @@ func NewGun() *Gun {
 
 type Gun struct {
 	aggregator core.Aggregator
+	core.GunDeps
 }
 
 var _ core.Gun = &Gun{}
 
-func (l *Gun) Bind(aggregator core.Aggregator) {
+func (l *Gun) Bind(aggregator core.Aggregator, deps core.GunDeps) error {
 	l.aggregator = aggregator
+	l.GunDeps = deps
+	return nil
 }
 
-func (l *Gun) Shoot(ctx context.Context, a core.Ammo) {
+func (l *Gun) Shoot(a core.Ammo) {
 	sample := netsample.Acquire("REQUEST")
 	// Do work here.
-	log.Println("example Gun mesage: ", a.(*Ammo).Message)
+	l.Log.Info("Example Gun message", zap.String("message", a.(*Ammo).Message))
 	sample.SetProtoCode(200)
 	l.aggregator.Report(sample)
 }
@@ -74,7 +78,7 @@ func (p *Provider) Release(ammo core.Ammo) {
 	p.pool.Put(ammo)
 }
 
-func (p *Provider) Run(ctx context.Context) error {
+func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) error {
 	defer close(p.sink)
 	for i := 0; i < p.AmmoLimit; i++ {
 		select {
@@ -84,7 +88,6 @@ func (p *Provider) Run(ctx context.Context) error {
 		}
 		break
 	}
-	log.Println("Ran out of ammo")
 	return nil
 }
 

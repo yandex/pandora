@@ -34,7 +34,7 @@ type num struct {
 	sink  chan core.Ammo
 }
 
-func (n *num) Run(ctx context.Context) error {
+func (n *num) Run(ctx context.Context, _ core.ProviderDeps) error {
 	defer close(n.sink)
 	for ; n.limit <= 0 || n.i < n.limit; n.i++ {
 		select {

@@ -9,6 +9,7 @@ import (
 	"reflect"
 
 	"github.com/spf13/afero"
+	"github.com/yandex/pandora/lib/tag"
 	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core"
@@ -59,7 +60,9 @@ func scheduleSliceToCompositeConfigHook(f reflect.Type, t reflect.Type, data int
 	if !isSchedule {
 		return data, nil
 	}
-	zap.L().Debug("Composite schedule hook triggered")
+	if tag.Debug {
+		zap.L().Debug("Composite schedule hook triggered")
+	}
 	return map[string]interface{}{
 		pluginconfig.PluginNameKey: compositeScheduleConfigName,
 		"nested":                   data,

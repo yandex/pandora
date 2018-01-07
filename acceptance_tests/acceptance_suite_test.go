@@ -35,7 +35,9 @@ func TestAcceptanceTests(t *testing.T) {
 	}
 	var err error
 	pandoraBin, err = gexec.Build("github.com/yandex/pandora", args...)
-	Expect(err).ToNot(HaveOccurred())
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer gexec.CleanupBuildArtifacts()
 	RunSpecs(t, "AcceptanceTests Suite")
 }
@@ -63,7 +65,13 @@ func NewTestConfig() *TestConfig {
 // PandoraConfig will be encoded to file via github.com/ghodss/yaml that supports json tags.
 // Or it can be encoded as JSON too, to test pandora JSON support.
 type PandoraConfig struct {
-	Pool []*InstancePoolConfig `json:"pools"`
+	Pool      []*InstancePoolConfig `json:"pools"`
+	LogConfig `json:"log,omitempty"`
+}
+
+type LogConfig struct {
+	Level string `json:"level,omitempty"`
+	File  string `json:"file,omitempty"`
 }
 
 func (pc *PandoraConfig) Append(ipc *InstancePoolConfig) {

@@ -7,24 +7,27 @@ package aggregate
 
 import (
 	"context"
-	"log"
+
+	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core"
 )
 
 func NewLog() core.Aggregator {
-	return &logging{make(chan core.Sample, 128)}
+	return &logging{sink: make(chan core.Sample, 128)}
 }
 
 type logging struct {
 	sink chan core.Sample
+	log  *zap.SugaredLogger
 }
 
 func (l *logging) Report(sample core.Sample) {
 	l.sink <- sample
 }
 
-func (l *logging) Run(ctx context.Context) error {
+func (l *logging) Run(ctx context.Context, deps core.AggregatorDeps) error {
+	l.log = deps.Log.Sugar()
 loop:
 	for {
 		select {
@@ -46,5 +49,5 @@ loop:
 }
 
 func (l *logging) handle(sample core.Sample) {
-	log.Println(sample)
+	l.log.Info("Sample reported: ", sample)
 }

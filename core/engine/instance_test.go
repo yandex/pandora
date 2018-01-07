@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/mocks"
@@ -55,7 +56,7 @@ var _ = Describe("Instance", func() {
 				metrics,
 			},
 		}
-		ins, insCreateErr = newInstance(testutil.NewLogger(), 0, deps)
+		ins, insCreateErr = newInstance(ctx, testutil.NewLogger(), 0, deps)
 	})
 
 	AfterEach(func() {
@@ -69,14 +70,14 @@ var _ = Describe("Instance", func() {
 		BeforeEach(func() {
 			const times = 5
 			sched = schedule.NewOnce(times)
-			gun.On("Bind", aggregator).Once()
+			gun.On("Bind", aggregator, mock.Anything).Return(nil).Once()
 			var acquired int
 			provider.On("Acquire").Return(func() (core.Ammo, bool) {
 				acquired++
 				return acquired, true
 			}).Times(times)
 			for i := 1; i <= times; i++ {
-				gun.On("Shoot", ctx, i).Once()
+				gun.On("Shoot", i).Once()
 				provider.On("Release", i).Once()
 			}
 		})
@@ -116,7 +117,7 @@ var _ = Describe("Instance", func() {
 			sched := sched.(*coremock.Schedule)
 			sched.On("Next").Return(time.Now().Add(5*time.Second), true)
 			sched.On("Left").Return(1)
-			gun.On("Bind", aggregator)
+			gun.On("Bind", aggregator, mock.Anything).Return(nil)
 			provider.On("Acquire").Return(struct{}{}, true)
 		})
 		It("start fail", func() {
@@ -132,7 +133,7 @@ var _ = Describe("Instance", func() {
 			var cancel context.CancelFunc
 			ctx, cancel = context.WithCancel(ctx)
 			cancel()
-			gun.On("Bind", aggregator)
+			gun.On("Bind", aggregator, mock.Anything).Return(nil)
 		})
 		It("nothing acquired and schedule not started", func() {
 			err := ins.Run(ctx)
