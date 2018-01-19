@@ -41,8 +41,6 @@
 
 [[constraint]]
   name = "github.com/mitchellh/mapstructure"
-  # Use patched fersion with https://github.com/mitchellh/mapstructure/issues/70 fix.
-  source = "https://github.com/skipor/mapstructure"
 
 [[constraint]]
   name = "github.com/onsi/ginkgo"
