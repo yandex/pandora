@@ -1,0 +1,82 @@
+[
+  {
+    "name": "Priority: Critical",
+    "color": "#e11d21"
+  },
+  {
+    "name": "Priority: High",
+    "color": "#eb6420"
+  },
+  {
+    "name": "Priority: Low",
+    "color": "#bfd4f2"
+  },
+  {
+    "name": "Priority: Medium",
+    "color": "#009800"
+  },
+  {
+    "name": "Priority: Minor",
+    "color": "#c5def5"
+  },
+  {
+    "name": "Resolution: Duplicate",
+    "color": "#cccccc"
+  },
+  {
+    "name": "Resolution: Invalid",
+    "color": "#e6e6e6"
+  },
+  {
+    "name": "Resolution: Resolved",
+    "color": "#fef2c0"
+  },
+  {
+    "name": "Resolution: Wontfix",
+    "color": "#ffffff"
+  },
+  {
+    "name": "Status: Available",
+    "color": "#bfe5bf"
+  },
+  {
+    "name": "Status: Blocked",
+    "color": "#e11d21"
+  },
+  {
+    "name": "Status: In Progress",
+    "color": "#cccccc"
+  },
+  {
+    "name": "Status: Resolved",
+    "color": "#fef2c0"
+  },
+  {
+    "name": "Status: Review",
+    "color": "#fbca04"
+  },
+  {
+    "name": "Type: Bug",
+    "color": "#e11d21"
+  },
+  {
+    "name": "Type: Enhancement",
+    "color": "#bfd4f2"
+  },
+  {
+    "name": "Type: Epic",
+    "color": "#f9d0c4"
+  },
+  {
+    "name": "Type: Feature",
+    "color": "#c2e0c6"
+  },
+  {
+    "name": "Type: Maintenance",
+    "color": "#fef2c0"
+  },
+  {
+    "name": "Type: Question",
+    "color": "#d4c5f9"
+  }
+]
