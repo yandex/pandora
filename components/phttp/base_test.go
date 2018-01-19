@@ -20,9 +20,18 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/yandex/pandora/components/phttp/mocks"
+	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregate/netsample"
 	"github.com/yandex/pandora/core/coretest"
+	"github.com/yandex/pandora/lib/testutil"
 )
+
+func testDeps() core.GunDeps {
+	return core.GunDeps{
+		Log: testutil.NewLogger(),
+		Ctx: context.Background(),
+	}
+}
 
 var _ = Describe("BaseGun", func() {
 
@@ -38,15 +47,15 @@ var _ = Describe("BaseGun", func() {
 	Context("BindResultTo", func() {
 		It("nil panics", func() {
 			Expect(func() {
-				base.Bind(nil)
+				base.Bind(nil, testDeps())
 			}).To(Panic())
 		})
 		It("second time panics", func() {
 			res := &netsample.TestAggregator{}
-			base.Bind(res)
+			base.Bind(res, testDeps())
 			Expect(base.Aggregator).To(Equal(res))
 			Expect(func() {
-				base.Bind(&netsample.TestAggregator{})
+				base.Bind(&netsample.TestAggregator{}, testDeps())
 			}).To(Panic())
 		})
 	})
@@ -62,7 +71,7 @@ var _ = Describe("BaseGun", func() {
 				Fail("should not be caled")
 			})
 		Expect(func() {
-			base.Shoot(context.Background(), am)
+			base.Shoot(am)
 		}).To(Panic())
 	}, 1)
 
@@ -85,7 +94,7 @@ var _ = Describe("BaseGun", func() {
 			req = httptest.NewRequest("GET", "/1/2/3/4", nil)
 			tag = ""
 			results = &netsample.TestAggregator{}
-			base.Bind(results)
+			base.Bind(results, testDeps())
 		})
 
 		JustBeforeEach(func() {
@@ -96,7 +105,7 @@ var _ = Describe("BaseGun", func() {
 				Body:       ioutil.NopCloser(body),
 				Request:    req,
 			}
-			base.Shoot(ctx, am)
+			base.Shoot(am)
 			Expect(results.Samples).To(HaveLen(1))
 			shootErr = results.Samples[0].Err()
 		})

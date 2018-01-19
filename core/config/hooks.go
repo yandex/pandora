@@ -6,6 +6,7 @@
 package config
 
 import (
+	"encoding"
 	stderrors "errors"
 	"fmt"
 	"net"
@@ -81,6 +82,38 @@ func StringToDataSizeHook(f reflect.Type, t reflect.Type, data interface{}) (int
 	var size datasize.ByteSize
 	err := size.UnmarshalText([]byte(data.(string)))
 	return size, err
+}
+
+var textUnmarshallerType = func() reflect.Type {
+	var ptr *encoding.TextUnmarshaler
+	return reflect.TypeOf(ptr).Elem()
+}
+
+func TextUnmarshallerHook(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	if f.Kind() != reflect.String {
+		return data, nil
+	}
+	if t.Implements(textUnmarshallerType()) {
+		val := reflect.Zero(t)
+		if t.Kind() == reflect.Ptr {
+			val = reflect.New(t.Elem())
+		}
+		err := unmarhsallText(val, data)
+		return val.Interface(), err
+	}
+	if reflect.PtrTo(t).Implements(textUnmarshallerType()) {
+		val := reflect.New(t)
+		err := unmarhsallText(val, data)
+		return val.Elem().Interface(), err
+	}
+	return data, nil
+}
+
+func unmarhsallText(v reflect.Value, data interface{}) error {
+	unmarshaller := v.Interface().(encoding.TextUnmarshaler)
+	unmarshaller.UnmarshalText([]byte(data.(string)))
+	err := unmarshaller.UnmarshalText([]byte(data.(string)))
+	return err
 }
 
 // DebugHook used to debug config decode.

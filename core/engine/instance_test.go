@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/mocks"
@@ -25,10 +26,12 @@ var _ = Describe("Instance", func() {
 		ctx            context.Context
 		metrics        Metrics
 
-		deps instanceDeps
-		ins  *instance
+		ins          *instance
+		insCreateErr error
+
+		newSchedule func() (core.Schedule, error)
+		newGun      func() (core.Gun, error)
 	)
-	const instanceId = "id"
 
 	BeforeEach(func() {
 		provider = &coremock.Provider{}
@@ -38,39 +41,48 @@ var _ = Describe("Instance", func() {
 		sched = &coremock.Schedule{}
 		newScheduleErr = nil
 		ctx = context.Background()
+		metrics = newTestMetrics()
+		newSchedule = func() (core.Schedule, error) { return sched, newScheduleErr }
+		newGun = func() (core.Gun, error) { return gun, newGunErr }
 	})
 
 	JustBeforeEach(func() {
-		metrics = newTestMetrics()
-		deps = instanceDeps{
-			provider,
+		deps := instanceDeps{
 			aggregator,
-			func() (core.Schedule, error) { return sched, newScheduleErr },
-			func() (core.Gun, error) { return gun, newGunErr },
-			metrics,
+			newSchedule,
+			newGun,
+			instanceSharedDeps{
+				provider,
+				metrics,
+			},
 		}
-		ins = newInstance(testutil.NewLogger(), instanceId, deps)
+		ins, insCreateErr = newInstance(ctx, testutil.NewLogger(), 0, deps)
 	})
 
 	AfterEach(func() {
-		Expect(metrics.InstanceStart.Get()).To(BeEquivalentTo(1))
-		Expect(metrics.InstanceFinish.Get()).To(BeEquivalentTo(1))
+		if newGunErr == nil && newScheduleErr == nil {
+			Expect(metrics.InstanceStart.Get()).To(BeEquivalentTo(1))
+			Expect(metrics.InstanceFinish.Get()).To(BeEquivalentTo(1))
+		}
 	})
 
 	Context("all ok", func() {
 		BeforeEach(func() {
 			const times = 5
 			sched = schedule.NewOnce(times)
-			gun.On("Bind", aggregator).Once()
+			gun.On("Bind", aggregator, mock.Anything).Return(nil).Once()
 			var acquired int
 			provider.On("Acquire").Return(func() (core.Ammo, bool) {
 				acquired++
 				return acquired, true
-			}) // TODO(skipor): .Times(times) after fix one extra ammo consume at schedule end.
+			}).Times(times)
 			for i := 1; i <= times; i++ {
-				gun.On("Shoot", ctx, i).Once()
+				gun.On("Shoot", i).Once()
 				provider.On("Release", i).Once()
 			}
+		})
+		JustBeforeEach(func() {
+			Expect(insCreateErr).NotTo(HaveOccurred())
 		})
 		It("start ok", func() {
 			err := ins.Run(ctx)
@@ -78,28 +90,34 @@ var _ = Describe("Instance", func() {
 			testutil.AssertExpectations(gun, provider)
 		}, 2)
 
-		It("gun implements io.Closer", func() {
-			closeGun := &mockGunCloser{*gun}
-			closeGun.On("Close").Return(nil)
-			deps.newGun = func() (core.Gun, error) {
-				return closeGun, nil
-			}
-			ins = newInstance(testutil.NewLogger(), instanceId, deps)
-			err := ins.Run(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			testutil.AssertExpectations(closeGun, provider)
-		})
+		Context("gun implements io.Closer", func() {
+			var closeGun mockGunCloser
+			BeforeEach(func() {
+				closeGun = mockGunCloser{gun}
+				closeGun.On("Close").Return(nil)
+				newGun = func() (core.Gun, error) {
+					return closeGun, nil
+				}
+			})
+			It("close called on instance close", func() {
+				err := ins.Run(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				testutil.AssertNotCalled(closeGun, "Close")
+				err = ins.Close()
+				Expect(err).NotTo(HaveOccurred())
+				testutil.AssertExpectations(closeGun, provider)
+			})
 
+		})
 	})
 
-	Context("context canceled", func() {
+	Context("context canceled after run", func() {
 		BeforeEach(func() {
-			ctx, _ = context.WithTimeout(ctx, 5*time.Millisecond)
-			sched.(*coremock.Schedule).On("Next").
-				Return(func() (time.Time, bool) {
-					return time.Now().Add(5 * time.Second), true
-				})
-			gun.On("Bind", aggregator)
+			ctx, _ = context.WithTimeout(ctx, 10*time.Millisecond)
+			sched := sched.(*coremock.Schedule)
+			sched.On("Next").Return(time.Now().Add(5*time.Second), true)
+			sched.On("Left").Return(1)
+			gun.On("Bind", aggregator, mock.Anything).Return(nil)
 			provider.On("Acquire").Return(struct{}{}, true)
 		})
 		It("start fail", func() {
@@ -107,6 +125,22 @@ var _ = Describe("Instance", func() {
 			Expect(err).To(Equal(context.DeadlineExceeded))
 			testutil.AssertExpectations(gun, provider)
 		}, 2)
+
+	})
+
+	Context("context canceled before run", func() {
+		BeforeEach(func() {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
+			cancel()
+			gun.On("Bind", aggregator, mock.Anything).Return(nil)
+		})
+		It("nothing acquired and schedule not started", func() {
+			err := ins.Run(ctx)
+			Expect(err).To(Equal(context.Canceled))
+			testutil.AssertExpectations(gun, provider)
+		}, 2)
+
 	})
 
 	Context("schedule create failed", func() {
@@ -114,10 +148,8 @@ var _ = Describe("Instance", func() {
 			sched = nil
 			newScheduleErr = errors.New("test err")
 		})
-		It("start fail", func() {
-			err := ins.Run(ctx)
-			Expect(err).ToNot(BeNil())
-			Expect(err.Error()).To(ContainSubstring(newScheduleErr.Error()))
+		It("instance create failed", func() {
+			Expect(insCreateErr).To(Equal(newScheduleErr))
 		})
 	})
 
@@ -126,20 +158,18 @@ var _ = Describe("Instance", func() {
 			gun = nil
 			newGunErr = errors.New("test err")
 		})
-		It("start fail", func() {
-			err := ins.Run(ctx)
-			Expect(err).ToNot(BeNil())
-			Expect(err.Error()).To(ContainSubstring(newGunErr.Error()))
+		It("instance create failed", func() {
+			Expect(insCreateErr).To(Equal(newGunErr))
 		})
 	})
 
 })
 
 type mockGunCloser struct {
-	coremock.Gun
+	*coremock.Gun
 }
 
-func (_m *mockGunCloser) Close() error {
+func (_m mockGunCloser) Close() error {
 	ret := _m.Called()
 
 	var r0 error

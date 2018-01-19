@@ -37,7 +37,7 @@ var _ = Describe("plugin decode", func() {
 			}
 			err := config.Decode(input(), &conf)
 			Expect(err).NotTo(HaveOccurred())
-			coretest.ExpectScheduleNexts(conf.Schedule, 0, time.Second, time.Second)
+			coretest.ExpectScheduleNexts(conf.Schedule, 0, 0, time.Second)
 		})
 
 		It("plugin factory", func() {
@@ -48,7 +48,7 @@ var _ = Describe("plugin decode", func() {
 			Expect(err).NotTo(HaveOccurred())
 			sched, err := conf.Schedule()
 			Expect(err).NotTo(HaveOccurred())
-			coretest.ExpectScheduleNexts(sched, 0, time.Second, time.Second)
+			coretest.ExpectScheduleNexts(sched, 0, 0, time.Second)
 		})
 	})
 

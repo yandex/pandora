@@ -25,7 +25,7 @@ var _ = Describe("composite", func() {
 
 	It("only", func() {
 		testee := NewComposite(NewConst(1, time.Second))
-		coretest.ExpectScheduleNexts(testee, time.Second, time.Second)
+		coretest.ExpectScheduleNexts(testee, 0, time.Second)
 	})
 
 	It("composite", func() {
@@ -37,8 +37,8 @@ var _ = Describe("composite", func() {
 			NewOnce(1),
 		)
 		coretest.ExpectScheduleNexts(testee,
+			0,
 			time.Second,
-			2*time.Second,
 
 			2*time.Second,
 			2*time.Second,
@@ -82,5 +82,33 @@ var _ = Describe("composite", func() {
 		}
 		wg.Wait()
 		Expect(tokensGot.Load()).To(Equal(tokensExpected))
+	})
+
+	It("left with unknown", func() {
+		unlimitedDuration := time.Second
+		testee := NewComposite(
+			NewUnlimited(unlimitedDuration),
+			NewOnce(0),
+			NewConst(1, 2*time.Second),
+			NewOnce(1),
+		)
+		Expect(testee.Left()).To(Equal(-1))
+		startAt := time.Now().Add(-unlimitedDuration)
+		testee.Start(startAt)
+
+		unlimitedFinish := startAt.Add(unlimitedDuration)
+		sched := testee.(*compositeSchedule).scheds[0]
+		Expect(sched.(*unlimitedSchedule).finish).To(Equal(unlimitedFinish))
+
+		Expect(testee.Left()).To(Equal(3))
+
+		actualNexts := coretest.DrainScheduleDuration(testee, unlimitedFinish)
+		expectedNests := []time.Duration{
+			0,
+			time.Second,
+			2 * time.Second,
+			2 * time.Second, // Finish.
+		}
+		Expect(actualNexts).To(Equal(expectedNests))
 	})
 })

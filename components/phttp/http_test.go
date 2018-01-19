@@ -6,7 +6,6 @@
 package phttp
 
 import (
-	"context"
 	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
@@ -50,10 +49,10 @@ var _ = Describe("BaseGun", func() {
 		conf.Gun.Target = strings.TrimPrefix(server.URL, "http://")
 		results := &netsample.TestAggregator{}
 		httpGun := NewHTTPGun(conf)
-		httpGun.Bind(results)
+		httpGun.Bind(results, testDeps())
 
 		am := newAmmoReq(expectedReq)
-		httpGun.Shoot(context.Background(), am)
+		httpGun.Shoot(am)
 		Expect(results.Samples[0].Err()).To(BeNil())
 
 		Expect(*actualReq).To(MatchFields(IgnoreExtras, Fields{
@@ -100,8 +99,8 @@ var _ = Describe("HTTP", func() {
 		conf.Gun.SSL = https
 		gun := NewHTTPGun(conf)
 		var aggr netsample.TestAggregator
-		gun.Bind(&aggr)
-		gun.Shoot(context.Background(), newAmmoURL("/"))
+		gun.Bind(&aggr, testDeps())
+		gun.Shoot(newAmmoURL("/"))
 
 		Expect(aggr.Samples).To(HaveLen(1))
 		Expect(aggr.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
@@ -125,8 +124,8 @@ var _ = Describe("HTTP", func() {
 		conf.Client.Redirect = redirect
 		gun := NewHTTPGun(conf)
 		var aggr netsample.TestAggregator
-		gun.Bind(&aggr)
-		gun.Shoot(context.Background(), newAmmoURL("/redirect"))
+		gun.Bind(&aggr, testDeps())
+		gun.Shoot(newAmmoURL("/redirect"))
 
 		Expect(aggr.Samples).To(HaveLen(1))
 		expectedCode := http.StatusMovedPermanently
@@ -162,8 +161,8 @@ var _ = Describe("HTTP", func() {
 		conf.Gun.SSL = true
 		gun := NewHTTPGun(conf)
 		var results netsample.TestAggregator
-		gun.Bind(&results)
-		gun.Shoot(context.Background(), newAmmoURL("/"))
+		gun.Bind(&results, testDeps())
+		gun.Shoot(newAmmoURL("/"))
 
 		Expect(results.Samples).To(HaveLen(1))
 		Expect(results.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
@@ -185,8 +184,8 @@ var _ = Describe("HTTP/2", func() {
 		conf.Gun.Target = server.Listener.Addr().String()
 		gun, _ := NewHTTP2Gun(conf)
 		var results netsample.TestAggregator
-		gun.Bind(&results)
-		gun.Shoot(context.Background(), newAmmoURL("/"))
+		gun.Bind(&results, testDeps())
+		gun.Shoot(newAmmoURL("/"))
 		Expect(results.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
 	})
 
@@ -199,13 +198,13 @@ var _ = Describe("HTTP/2", func() {
 		conf.Gun.Target = server.Listener.Addr().String()
 		gun, _ := NewHTTP2Gun(conf)
 		var results netsample.TestAggregator
-		gun.Bind(&results)
+		gun.Bind(&results, testDeps())
 		var r interface{}
 		func() {
 			defer func() {
 				r = recover()
 			}()
-			gun.Shoot(context.Background(), newAmmoURL("/"))
+			gun.Shoot(newAmmoURL("/"))
 		}()
 		Expect(r).NotTo(BeNil())
 		Expect(r).To(ContainSubstring(notHTTP2PanicMsg))

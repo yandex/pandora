@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
-	"go.uber.org/zap"
 )
 
 /*
@@ -55,7 +54,6 @@ type Config struct {
 	Passes int `validate:"min=0"`
 }
 
-// TODO: pass logger and metricsRegistry
 func NewProvider(fs afero.Fs, conf Config) *Provider {
 	var p Provider
 	p = Provider{
@@ -120,6 +118,5 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		}
 		ammoFile.Seek(0, 0)
 	}
-	zap.L().Debug("Ran out of ammo")
 	return nil
 }

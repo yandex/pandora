@@ -19,11 +19,12 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestJsonline(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Jsonline Suite")
+	testutil.RunSuite(t, "Jsonline Suite")
 }
 
 const testFile = "./ammo.jsonline"
@@ -102,7 +103,7 @@ var _ = Describe("provider start", func() {
 		p := newTestProvider(Config{File: testFile})
 		ctx, cancel := context.WithCancel(context.Background())
 		errch := make(chan error)
-		go func() { errch <- p.Run(ctx) }()
+		go func() { errch <- p.Run(ctx, core.ProviderDeps{}) }()
 		Expect(errch).NotTo(Receive())
 		cancel()
 		var err error
@@ -112,7 +113,7 @@ var _ = Describe("provider start", func() {
 
 	It("fail", func() {
 		p := newTestProvider(Config{File: "no_such_file"})
-		err := p.Run(context.Background())
+		err := p.Run(context.Background(), core.ProviderDeps{})
 		Expect(err).To(HaveOccurred())
 	})
 })
@@ -143,7 +144,7 @@ var _ = Describe("provider decode", func() {
 		errch = make(chan error)
 		var ctx context.Context
 		ctx, cancel = context.WithCancel(context.Background())
-		go func() { errch <- provider.Run(ctx) }()
+		go func() { errch <- provider.Run(ctx, core.ProviderDeps{}) }()
 		Expect(errch).NotTo(Receive())
 
 		for i := 0; i < successReceives; i++ {

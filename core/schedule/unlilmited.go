@@ -25,24 +25,34 @@ func NewUnlimitedConf(conf UnlimitedConfig) core.Schedule {
 }
 
 type unlimitedSchedule struct {
-	finish   time.Time
 	duration time.Duration
+
+	StartSync
+	finish time.Time
 }
 
 func (s *unlimitedSchedule) Start(startAt time.Time) {
-	if !s.finish.IsZero() {
-		panic("schedule is already started")
-	}
-	s.finish = startAt.Add(s.duration)
+	s.MarkStarted()
+	s.startOnce.Do(func() {
+		s.finish = startAt.Add(s.duration)
+	})
 }
 
 func (s *unlimitedSchedule) Next() (tx time.Time, ok bool) {
-	if s.finish.IsZero() {
-		s.Start(time.Now())
-	}
+	s.startOnce.Do(func() {
+		s.MarkStarted()
+		s.finish = time.Now().Add(s.duration)
+	})
 	now := time.Now()
 	if now.Before(s.finish) {
 		return now, true
 	}
 	return s.finish, false
+}
+
+func (s *unlimitedSchedule) Left() int {
+	if !s.IsStarted() || time.Now().Before(s.finish) {
+		return -1
+	}
+	return 0
 }

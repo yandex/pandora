@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
+	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregate/netsample"
 )
 
@@ -44,44 +45,44 @@ func NewDefaultBaseGunConfig() BaseGunConfig {
 }
 
 type BaseGun struct {
-	Log        *zap.Logger // If nil, zap.L() will be used.
-	DebugLog   bool        // Automaticaly set in Bind if Log accepts debug messages.
+	DebugLog   bool // Automaticaly set in Bind if Log accepts debug messages.
 	Config     BaseGunConfig
 	Do         func(r *http.Request) (*http.Response, error) // Required.
 	Connect    func(ctx context.Context) error               // Optional hook.
 	OnClose    func() error                                  // Optional. Called on Close().
 	Aggregator netsample.Aggregator                          // Lazy set via BindResultTo.
+	core.GunDeps
 }
 
 var _ Gun = (*BaseGun)(nil)
 var _ io.Closer = (*BaseGun)(nil)
 
-// TODO(skipor): pass logger here in https://github.com/yandex/pandora/issues/57
-func (b *BaseGun) Bind(aggregator netsample.Aggregator) {
-	if b.Log == nil {
-		b.Log = zap.L()
-	}
-	if ent := b.Log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
+func (b *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error {
+	log := deps.Log
+	if ent := log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
 		// Enable debug level logging during shooting. Creating log entries isn't free.
 		b.DebugLog = true
 	}
 
 	if b.Aggregator != nil {
-		b.Log.Panic("already binded")
+		log.Panic("already binded")
 	}
 	if aggregator == nil {
-		b.Log.Panic("nil aggregator")
+		log.Panic("nil aggregator")
 	}
 	b.Aggregator = aggregator
+	b.GunDeps = deps
+
+	return nil
 }
 
 // Shoot is thread safe iff Do and Connect hooks are thread safe.
-func (b *BaseGun) Shoot(ctx context.Context, ammo Ammo) {
+func (b *BaseGun) Shoot(ammo Ammo) {
 	if b.Aggregator == nil {
 		zap.L().Panic("must bind before shoot")
 	}
 	if b.Connect != nil {
-		err := b.Connect(ctx)
+		err := b.Connect(b.Ctx)
 		if err != nil {
 			b.Log.Warn("Connect fail", zap.Error(err))
 			return

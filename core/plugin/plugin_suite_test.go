@@ -8,14 +8,9 @@ package plugin
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestPlugin(t *testing.T) {
-	RegisterFailHandler(Fail)
-	testutil.ReplaceGlobalLogger()
-	RunSpecs(t, "Plugin Suite")
+	testutil.RunSuite(t, "Plugin Suite")
 }

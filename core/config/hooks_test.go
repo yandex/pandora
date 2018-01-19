@@ -8,6 +8,7 @@ package config
 import (
 	"net"
 	"net/url"
+	"strconv"
 	"testing"
 
 	"github.com/c2h5oh/datasize"
@@ -102,4 +103,44 @@ func TestStringToDataSizeHook(t *testing.T) {
 
 	err = Decode(M{"size": "Bullshit"}, &data)
 	assert.Error(t, err)
+}
+
+type ptrUnmarshaller int64
+
+func (i *ptrUnmarshaller) UnmarshalText(text []byte) error {
+	val, err := strconv.ParseInt(string(text), 10, 64)
+	if err != nil {
+		return err
+	}
+	*i = ptrUnmarshaller(val)
+	return nil
+}
+
+type valueUnmarshaller struct{ Value *int64 }
+
+var valueUnmarshallerSink int64
+
+func (v valueUnmarshaller) UnmarshalText(text []byte) error {
+	val, err := strconv.ParseInt(string(text), 10, 64)
+	if err != nil {
+		return err
+	}
+	valueUnmarshallerSink = val
+	return nil
+}
+
+func TestTextUnmarshallerHookImplementsByValue(t *testing.T) {
+	var data struct {
+		Val valueUnmarshaller
+	}
+	data.Val.Value = new(int64)
+
+	err := Decode(M{"val": "0"}, &data)
+	assert.NoError(t, err)
+	assert.EqualValues(t, 0, valueUnmarshallerSink)
+
+	err = Decode(M{"val": "128"}, &data)
+	assert.NoError(t, err)
+	assert.EqualValues(t, 128, valueUnmarshallerSink)
+
 }

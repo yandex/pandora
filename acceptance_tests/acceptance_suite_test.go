@@ -16,7 +16,6 @@ import (
 	"github.com/onsi/gomega/gexec"
 	"go.uber.org/zap"
 
-	"github.com/onsi/gomega/format"
 	"github.com/yandex/pandora/lib/tag"
 	"github.com/yandex/pandora/lib/testutil"
 )
@@ -24,10 +23,7 @@ import (
 var pandoraBin string
 
 func TestAcceptanceTests(t *testing.T) {
-	RegisterFailHandler(Fail)
-	format.UseStringerRepresentation = true
-
-	testutil.ReplaceGlobalLogger()
+	testutil.SetupSuite()
 	var args []string
 	if tag.Race {
 		zap.L().Debug("Building with race detector")
@@ -39,7 +35,9 @@ func TestAcceptanceTests(t *testing.T) {
 	}
 	var err error
 	pandoraBin, err = gexec.Build("github.com/yandex/pandora", args...)
-	Expect(err).ToNot(HaveOccurred())
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer gexec.CleanupBuildArtifacts()
 	RunSpecs(t, "AcceptanceTests Suite")
 }
@@ -67,7 +65,13 @@ func NewTestConfig() *TestConfig {
 // PandoraConfig will be encoded to file via github.com/ghodss/yaml that supports json tags.
 // Or it can be encoded as JSON too, to test pandora JSON support.
 type PandoraConfig struct {
-	Pool []*InstancePoolConfig `json:"pools"`
+	Pool      []*InstancePoolConfig `json:"pools"`
+	LogConfig `json:"log,omitempty"`
+}
+
+type LogConfig struct {
+	Level string `json:"level,omitempty"`
+	File  string `json:"file,omitempty"`
 }
 
 func (pc *PandoraConfig) Append(ipc *InstancePoolConfig) {

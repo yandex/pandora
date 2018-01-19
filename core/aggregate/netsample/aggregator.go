@@ -7,8 +7,8 @@ import (
 )
 
 type Aggregator interface {
-	Run(context.Context) error
-	Report(*Sample)
+	Run(ctx context.Context, deps core.AggregatorDeps) error
+	Report(sample *Sample)
 }
 
 func WrapAggregator(a Aggregator) core.Aggregator { return &aggregatorWrapper{a} }

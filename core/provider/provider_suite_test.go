@@ -1,13 +1,11 @@
 package provider
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"testing"
+
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestProvider(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Provider Suite")
+	testutil.RunSuite(t, "Provider Suite")
 }

@@ -3,11 +3,9 @@ package raw
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestRaw(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Raw Suite")
+	testutil.RunSuite(t, "Raw Suite")
 }

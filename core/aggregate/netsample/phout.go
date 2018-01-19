@@ -10,6 +10,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+
+	"github.com/yandex/pandora/core"
 )
 
 type PhoutConfig struct {
@@ -47,7 +49,7 @@ type phoutAggregator struct {
 
 func (a *phoutAggregator) Report(s *Sample) { a.sink <- s }
 
-func (a *phoutAggregator) Run(ctx context.Context) error {
+func (a *phoutAggregator) Run(ctx context.Context, _ core.AggregatorDeps) error {
 	shouldFlush := time.NewTicker(1 * time.Second)
 	defer func() {
 		a.writer.Flush()

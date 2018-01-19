@@ -56,11 +56,21 @@ func (w *Waiter) Wait() (ok bool) {
 	} else {
 		w.timer.Reset(waitFor)
 	}
-	// OPTIMIZE(skipor): maybe just time.Sleep, if waitFor is less than 200ms?
 	select {
 	case _ = <-w.timer.C:
 		return true
 	case <-w.ctx.Done():
 		return false
+	}
+}
+
+// IsFinished is quick check, that wait context is not canceled and there are some tokens left in
+// schedule.
+func (w *Waiter) IsFinished() (ok bool) {
+	select {
+	case <-w.ctx.Done():
+		return true
+	default:
+		return w.sched.Left() == 0
 	}
 }

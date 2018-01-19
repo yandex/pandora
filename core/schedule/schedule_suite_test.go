@@ -10,11 +10,11 @@ import (
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coretest"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestSchedule(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Schedule Suite")
+	testutil.RunSuite(t, "Schedule Suite")
 }
 
 var _ = Describe("unlimited", func() {
@@ -23,16 +23,20 @@ var _ = Describe("unlimited", func() {
 		testee := NewUnlimitedConf(conf)
 		start := time.Now()
 		finish := start.Add(conf.Duration)
+		Expect(testee.Left()).To(BeEquivalentTo(-1))
 		testee.Start(start)
 		var i int
 		for prev := time.Now(); ; i++ {
+			left := testee.Left()
 			x, ok := testee.Next()
 			if !ok {
 				break
 			}
+			Expect(left).To(BeEquivalentTo(-1))
 			Expect(x).To(BeTemporally(">", prev))
 			Expect(x).To(BeTemporally("<", finish))
 		}
+		Expect(testee.Left()).To(BeEquivalentTo(0))
 		Expect(i).To(BeNumerically(">", 50))
 	})
 })
@@ -80,7 +84,7 @@ var _ = Describe("const", func() {
 		})
 		It("", func() {
 			Expect(underlying.n).To(BeEquivalentTo(2))
-			coretest.ExpectScheduleNexts(testee, time.Second, 2*time.Second, 2*time.Second)
+			coretest.ExpectScheduleNexts(testee, 0, time.Second, 2*time.Second)
 		})
 	})
 
@@ -114,7 +118,7 @@ var _ = Describe("line", func() {
 		BeforeEach(func() {
 			conf = LineConfig{
 				From:     0,
-				To:       1,
+				To:       1.999,
 				Duration: time.Second,
 			}
 		})
@@ -136,7 +140,7 @@ var _ = Describe("line", func() {
 
 		It("", func() {
 			Expect(underlying.n).To(BeEquivalentTo(2))
-			coretest.ExpectScheduleNexts(testee, time.Second, 2*time.Second, 2*time.Second)
+			coretest.ExpectScheduleNexts(testee, 0, time.Second, 2*time.Second)
 		})
 	})
 
@@ -151,7 +155,7 @@ var _ = Describe("line", func() {
 
 		It("", func() {
 			Expect(underlying.n).To(BeEquivalentTo(1))
-			coretest.ExpectScheduleNexts(testee, 2*time.Second, 2*time.Second)
+			coretest.ExpectScheduleNexts(testee, 0, 2*time.Second)
 		})
 	})
 
@@ -182,20 +186,49 @@ var _ = Describe("line", func() {
 			Expect(sort.SliceIsSorted(xs, func(i, j int) bool {
 				return xs[i].Before(xs[j])
 			})).To(BeTrue())
-
-			Expect(xs[9]).To(Equal(xs[10]))
-			Expect(start.Add(conf.Duration)).To(Equal(xs[10]))
+			Expect(start.Add(conf.Duration)).To(Equal(xs[len(xs)-1]))
 		})
 	})
 
 })
 
 func BenchmarkLineSchedule(b *testing.B) {
-	doAt := NewLine(0, float64(b.N), 2*time.Second)
-	doAt.Start(time.Now())
+	schedule := NewLine(0, float64(b.N), 2*time.Second)
+	benchmarkScheduleNext(b, schedule)
+}
+
+func BenchmarkLineScheduleParallel(b *testing.B) {
+	schedule := NewLine(0, float64(b.N), 2*time.Second)
+	benchmarkScheduleNextParallel(b, schedule)
+}
+
+func BenchmarkUnlimitedSchedule(b *testing.B) {
+	schedule := NewUnlimited(time.Minute)
+	benchmarkScheduleNext(b, schedule)
+}
+
+func BenchmarkUnlimitedScheduleParallel(b *testing.B) {
+	schedule := NewUnlimited(time.Minute)
+	benchmarkScheduleNextParallel(b, schedule)
+}
+
+func benchmarkScheduleNextParallel(b *testing.B, schedule core.Schedule) {
+	run := func(pb *testing.PB) {
+		for pb.Next() {
+			schedule.Next()
+		}
+	}
+	schedule.Start(time.Now())
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(run)
+}
+
+func benchmarkScheduleNext(b *testing.B, schedule core.Schedule) {
+	schedule.Start(time.Now())
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		doAt.Next()
+		schedule.Next()
 	}
 }

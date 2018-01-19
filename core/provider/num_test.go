@@ -26,7 +26,7 @@ var _ = Describe("Num", func() {
 		ctx, cancel = context.WithCancel(context.Background())
 		p = NewNumConf(NumConfig{limit})
 		go func() {
-			runRes <- p.Run(ctx)
+			runRes <- p.Run(ctx, core.ProviderDeps{})
 		}()
 	})
 

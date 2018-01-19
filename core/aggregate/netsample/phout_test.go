@@ -2,14 +2,14 @@ package netsample
 
 import (
 	"context"
-	"fmt"
 	"strings"
-	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
+
+	"github.com/yandex/pandora/core"
 )
 
 var _ = Describe("Phout", func() {
@@ -39,7 +39,7 @@ var _ = Describe("Phout", func() {
 		Expect(err).NotTo(HaveOccurred())
 		runErr = make(chan error)
 		go func() {
-			runErr <- testee.Run(ctx)
+			runErr <- testee.Run(ctx, core.AggregatorDeps{})
 		}()
 	})
 	It("no id by default", func() {
@@ -68,10 +68,6 @@ const (
 	testSamplePhout     = "1484660999.002	tag1|tag2#42	333333	0	0	0	0	0	0	0	13	999"
 	testSampleNoIdPhout = "1484660999.002	tag1|tag2	333333	0	0	0	0	0	0	0	13	999"
 )
-
-func TestOUt(t *testing.T) {
-	fmt.Println(newTestSample().String())
-}
 
 func newTestSample() *Sample {
 	s := &Sample{}

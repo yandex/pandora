@@ -1,17 +1,14 @@
 package engine
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"testing"
 
 	"github.com/yandex/pandora/lib/monitoring"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestEngine(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Engine Suite")
+	testutil.RunSuite(t, "Engine Suite")
 }
 
 func newTestMetrics() Metrics {

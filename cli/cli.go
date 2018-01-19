@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/engine"
@@ -27,7 +28,33 @@ var configSearchDirs = []string{"./", "./config", "/etc/pandora"}
 
 type cliConfig struct {
 	Engine engine.Config `config:",squash"`
-	// TODO(skipor): monitoring, logging configs should be there
+	Log    logConfig     `config:"log"`
+	// TODO(skipor): monitoring
+}
+
+type logConfig struct {
+	Level zapcore.Level `config:"level"`
+	File  string        `config:"file"`
+}
+
+func newLogger(conf logConfig) *zap.Logger {
+	zapConf := zap.NewDevelopmentConfig()
+	zapConf.OutputPaths = []string{conf.File}
+	zapConf.Level.SetLevel(conf.Level)
+	log, err := zapConf.Build(zap.AddCaller())
+	if err != nil {
+		zap.L().Fatal("Logger build failed", zap.Error(err))
+	}
+	return log
+}
+
+func newDefaultConfig() *cliConfig {
+	return &cliConfig{
+		Log: logConfig{
+			Level: zap.InfoLevel,
+			File:  "stdout",
+		},
+	}
 }
 
 // TODO(skipor): make nice spf13/cobra CLI and integrate it with viper
@@ -53,7 +80,11 @@ func Run() {
 		// TODO: print example config file content
 	}
 
-	log, conf := readConfig()
+	conf := readConfig()
+	log := newLogger(conf.Log)
+	zap.ReplaceGlobals(log)
+	zap.RedirectStdLog(log)
+
 	closeMonitoring := startMonitoring(monitoring)
 	defer closeMonitoring()
 	m := newEngineMetrics()
@@ -79,7 +110,7 @@ func Run() {
 	log.Info("Engine run successfully finished")
 }
 
-func readConfig() (*zap.Logger, cliConfig) {
+func readConfig() *cliConfig {
 	log, err := zap.NewDevelopment(zap.AddCaller())
 	if err != nil {
 		panic(err)
@@ -100,12 +131,12 @@ func readConfig() (*zap.Logger, cliConfig) {
 	if err != nil {
 		log.Fatal("Config read failed", zap.Error(err))
 	}
-	var conf cliConfig
-	err = config.DecodeAndValidate(v.AllSettings(), &conf)
+	conf := newDefaultConfig()
+	err = config.DecodeAndValidate(v.AllSettings(), conf)
 	if err != nil {
 		log.Fatal("Config decode failed", zap.Error(err))
 	}
-	return log, conf
+	return conf
 }
 
 func newViper() *viper.Viper {

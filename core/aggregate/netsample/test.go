@@ -5,13 +5,19 @@
 
 package netsample
 
-import "context"
+import (
+	"context"
+
+	"github.com/yandex/pandora/core"
+)
 
 type TestAggregator struct {
 	Samples []*Sample
 }
 
-func (t *TestAggregator) Run(ctx context.Context) error {
+var _ Aggregator = &TestAggregator{}
+
+func (t *TestAggregator) Run(ctx context.Context, _ core.AggregatorDeps) error {
 	<-ctx.Done()
 	return nil
 }
