@@ -39,6 +39,7 @@ func (d *decoder) Decode(line []byte) error {
 	if len(line) == 0 {
 		return errors.New("empty line")
 	}
+	line = bytes.TrimSpace(line)
 	switch line[0] {
 	case '/':
 		return d.decodeURI(line)
