@@ -50,6 +50,18 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/go-playground/locales"
+  packages = [".","currency"]
+  revision = "e4cbcb5d0652150d40ad0646651076b6bd2be4f6"
+  version = "v0.11.2"
+
+[[projects]]
+  name = "github.com/go-playground/universal-translator"
+  packages = ["."]
+  revision = "b32fa301c9fe55953584134cb6853a13c87ec0a1"
+  version = "v0.16.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/hashicorp/hcl"
   packages = [".","hcl/ast","hcl/parser","hcl/scanner","hcl/strconv","hcl/token","json/parser","json/scanner","json/token"]
@@ -189,10 +201,10 @@
   revision = "e19ae1496984b1c655b8044a65c0300a3c878dd3"
 
 [[projects]]
-  name = "gopkg.in/go-playground/validator.v8"
+  name = "gopkg.in/bluesuncorp/validator.v9"
   packages = ["."]
-  revision = "5f1438d3fca68893a817e4a66806cea46a9e4ebf"
-  version = "v8.18.2"
+  revision = "b1f51f36f1c98cc97f777d6fc9d4b05eaa0cabb5"
+  version = "v9.9.1"
 
 [[projects]]
   branch = "v2"
@@ -203,6 +215,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0347870b5907ae7415923aba43d81e90a2223e9fbb96f553eb77440f8b9e4937"
+  inputs-digest = "a41684e385a44450860551bf478c3a9a1dfd6128a7050bfd8dbcb642bdb79970"
   solver-name = "gps-cdcl"
   solver-version = 1

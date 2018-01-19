@@ -19,17 +19,17 @@ import (
 )
 
 type Config struct {
-	Pools []InstancePoolConfig `config:"pools"`
+	Pools []InstancePoolConfig `config:"pools" validate:"required,dive"`
 }
 
 type InstancePoolConfig struct {
 	Id              string
-	Provider        core.Provider                 `config:"ammo"`
-	Aggregator      core.Aggregator               `config:"result"`
-	NewGun          func() (core.Gun, error)      `config:"gun"`
+	Provider        core.Provider                 `config:"ammo" validate:"required"`
+	Aggregator      core.Aggregator               `config:"result" validate:"required"`
+	NewGun          func() (core.Gun, error)      `config:"gun" validate:"required"`
 	RPSPerInstance  bool                          `config:"rps-per-instance"`
-	NewRPSSchedule  func() (core.Schedule, error) `config:"rps"`
-	StartupSchedule core.Schedule                 `config:"startup"`
+	NewRPSSchedule  func() (core.Schedule, error) `config:"rps" validate:"required"`
+	StartupSchedule core.Schedule                 `config:"startup" validate:"required"`
 }
 
 // TODO(skipor): use something github.com/rcrowley/go-metrics based.

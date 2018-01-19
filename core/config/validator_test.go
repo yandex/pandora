@@ -1,6 +1,4 @@
 // Copyright (c) 2016 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
 package config
@@ -64,9 +62,8 @@ func TestNestedError(t *testing.T) {
 }
 
 func TestValidateUnsupported(t *testing.T) {
-	require.Panics(t, func() {
-		Validate(1)
-	})
+	err := Validate(1)
+	assert.Error(t, err)
 }
 
 type D struct {
@@ -77,4 +74,18 @@ func TestValidateInvalidValidatorName(t *testing.T) {
 	require.Panics(t, func() {
 		Validate(&D{"test"})
 	})
+}
+
+func TestCustom(t *testing.T) {
+	defer func() {
+		defaultValidator = newValidator()
+	}()
+	type custom struct{ fail bool }
+	RegisterCustom(func(h ValidateHandle) {
+		if h.Value().(custom).fail {
+			h.ReportError("fail", "should be false")
+		}
+	}, custom{})
+	assert.NoError(t, Validate(&custom{fail: false}))
+	assert.Error(t, Validate(&custom{fail: true}))
 }
