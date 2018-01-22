@@ -43,7 +43,7 @@ type Provider interface {
 	// soon as possible. That means ammo format parsing SHOULD be done in Provider Run goroutine,
 	// but acquire just takes ammo from ready queue.
 	// Ok false means that shooting MUST be stopped because ammo finished or shooting is canceled.
-	// Acquire MAY be called before Run, but MAY block until Run is called.
+	// Acquire MAY be called before Run, but SHOULD block until Run is called.
 	Acquire() (ammo Ammo, ok bool)
 	// Release notifies that ammo usage is finished, and it can be reused.
 	// Instance MUST NOT retain references to released ammo.
@@ -134,7 +134,8 @@ type Aggregator interface {
 	// If Aggregator can't handle Reported Sample without blocking, it SHOULD just drop it.
 	// Reported Samples MAY just be dropped, after context cancel.
 	// Reported Sample MAY be reused for efficiency, so caller MUST NOT retain reference to Sample.
-	// Report MAY be called before Aggregator Run.
+	// Report MAY be called before Aggregator Run. Report MAY be called after Run finish, in case of
+	// Pool Run cancel.
 	// Aggregator SHOULD Return Sample if it implements BorrowedSample.
 	Report(s Sample)
 }

@@ -9,11 +9,13 @@ import (
 	"fmt"
 
 	"go.uber.org/atomic"
+	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/coreutil"
 )
 
-type ChannelReporterConfig struct {
+type ReporterConfig struct {
 	// SampleQueueSize is number maximum number of unhandled samples.
 	// On queue overflow, samples are dropped.
 	SampleQueueSize int `config:"sample-buff-size"`
@@ -26,26 +28,25 @@ const (
 	DefaultSampleQueueSize                 = 2 * samplesInQueueAfterDiskWriteUpperBound
 )
 
-func NewDefaultReporterConfig() ChannelReporterConfig {
-	return ChannelReporterConfig{
+func NewDefaultReporterConfig() ReporterConfig {
+	return ReporterConfig{
 		SampleQueueSize: DefaultSampleQueueSize,
 	}
 }
 
-func NewChannelReporter(conf ChannelReporterConfig) *ChannelReporter {
-	return &ChannelReporter{
+func NewReporter(conf ReporterConfig) *Reporter {
+	return &Reporter{
 		Incomming: make(chan core.Sample, conf.SampleQueueSize),
 	}
 }
 
-type ChannelReporter struct {
-	core.AggregatorDeps
+type Reporter struct {
 	Incomming          chan core.Sample
 	samplesDropped     atomic.Int64
 	lastSampleDropWarn atomic.Int64
 }
 
-func (a *ChannelReporter) DroppedErr() error {
+func (a *Reporter) DroppedErr() error {
 	dropped := a.samplesDropped.Load()
 	if dropped == 0 {
 		return nil
@@ -53,20 +54,21 @@ func (a *ChannelReporter) DroppedErr() error {
 	return &SomeSamplesDropped{dropped}
 }
 
-func (a *ChannelReporter) Report(s core.Sample) {
+func (a *Reporter) Report(s core.Sample) {
 	select {
-	case a.Incomming <- a:
+	case a.Incomming <- s:
 	default:
 		a.dropSample(s)
 	}
 }
 
-func (a *ChannelReporter) dropSample(s core.Sample) {
+func (a *Reporter) dropSample(s core.Sample) {
 	dropped := a.samplesDropped.Inc()
 	if dropped == 1 {
-		a.Log.Warn("First sample is dropped. More information in Run error")
+		// AggregatorDeps may not be passed, because Run was not called.
+		zap.L().Warn("First sample is dropped. More information in Run error")
 	}
-	core.ReturnSampleIfBorrowed(s)
+	coreutil.ReturnSampleIfBorrowed(s)
 }
 
 type SomeSamplesDropped struct {

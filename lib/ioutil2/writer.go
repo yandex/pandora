@@ -26,3 +26,10 @@ type ByteWriter interface {
 
 var _ ByteWriter = &bufio.Writer{}
 var _ ByteWriter = &bytes.Buffer{}
+
+func NewCallbackWriter(w io.Writer, onWrite func()) WriterFunc {
+	return func(p []byte) (n int, err error) {
+		onWrite()
+		return w.Write(p)
+	}
+}

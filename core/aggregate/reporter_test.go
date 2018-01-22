@@ -10,16 +10,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yandex/pandora/lib/testutil2"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/yandex/pandora/core/mocks"
 )
 
-func TestChannelReporter_DroppedErr(t *testing.T) {
+func TestReporter_DroppedErr(t *testing.T) {
 	core, entries := observer.New(zap.DebugLevel)
-	reporter := NewChannelReporter(ChannelReporterConfig{1})
-	reporter.Log = zap.New(core)
+	zap.ReplaceGlobals(zap.New(core))
+	defer testutil2.ReplaceGlobalLogger()
+	reporter := NewReporter(ReporterConfig{1})
 	reporter.Report(1)
 
 	assert.Nil(t, reporter.DroppedErr())
@@ -31,9 +33,8 @@ func TestChannelReporter_DroppedErr(t *testing.T) {
 	assert.Equal(t, 1, entries.Len())
 }
 
-func TestChannelReporter_BorrowedSampleReturnedOnDrop(t *testing.T) {
-	reporter := NewChannelReporter(ChannelReporterConfig{1})
-	reporter.Log = zap.L()
+func TestReporter_BorrowedSampleReturnedOnDrop(t *testing.T) {
+	reporter := NewReporter(ReporterConfig{1})
 
 	reporter.Report(1)
 	borrowed := &coremock.BorrowedSample{}
