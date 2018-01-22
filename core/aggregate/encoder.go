@@ -42,7 +42,7 @@ type SampleEncodeCloser interface {
 }
 
 type EncoderAggregatorConfig struct {
-	Sink           core.DataSink  `config:"sink"`
+	Sink           core.DataSink  `config:"sink" validate:"required"`
 	BufferSize     int            `config:"buffer-size"`
 	FlushInterval  time.Duration  `config:"flush-interval"`
 	ReporterConfig ReporterConfig `config:",squash"`
@@ -109,8 +109,12 @@ func (a *dataSinkAggregator) Run(ctx context.Context, deps core.AggregatorDeps) 
 		err = errutil.Join(err, errors.WithMessage(flushErr, "final flush failed"))
 	}()
 
-	flushTicker := time.NewTicker(a.conf.FlushInterval)
-	defer flushTicker.Stop()
+	var flushTick <-chan time.Time
+	if a.conf.FlushInterval > 0 {
+		flushTicker := time.NewTicker(a.conf.FlushInterval)
+		flushTick = flushTicker.C
+		defer flushTicker.Stop()
+	}
 
 	var previousFlushes int
 HandleLoop:
@@ -121,7 +125,7 @@ HandleLoop:
 			if err != nil {
 				return
 			}
-		case _ = <-flushTicker.C:
+		case _ = <-flushTick:
 			if previousFlushes == flushes {
 				err = encoder.Flush()
 				if err != nil {

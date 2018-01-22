@@ -14,32 +14,32 @@ import (
 	"github.com/yandex/pandora/core"
 )
 
-type FileSinkConfig struct {
-	Path string
+type FileConfig struct {
+	Path string `config:"path" validate:"required"`
 }
 
-func NewFileSink(fs afero.Fs, conf FileSinkConfig) core.DataSink {
+func NewFile(fs afero.Fs, conf FileConfig) core.DataSink {
 	return &fileSink{afero.Afero{fs}, conf}
 }
 
 type fileSink struct {
 	fs   afero.Afero
-	conf FileSinkConfig
+	conf FileConfig
 }
 
 func (s *fileSink) OpenSink() (wc io.WriteCloser, err error) {
 	return s.fs.OpenFile(s.conf.Path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 }
 
-func NewStdoutSink() core.DataSink {
+func NewStdout() core.DataSink {
 	return hideCloseFileSink{os.Stdout}
 }
 
-func NewStderrSink() core.DataSink {
+func NewStderr() core.DataSink {
 	return hideCloseFileSink{os.Stderr}
 }
 
-type hideCloseFileSink struct{ *os.File }
+type hideCloseFileSink struct{ afero.File }
 
 func (f hideCloseFileSink) OpenSink() (wc io.WriteCloser, err error) {
 	return f, nil

@@ -21,7 +21,7 @@ func TestFileSink(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	afero.WriteFile(fs, filename, []byte("should be truncated"), 644)
 
-	wc, err := NewFileSink(fs, FileSinkConfig{Path: filename}).OpenSink()
+	wc, err := NewFile(fs, FileConfig{Path: filename}).OpenSink()
 	require.NoError(t, err)
 
 	const testdata = "abcd"
@@ -37,7 +37,7 @@ func TestFileSink(t *testing.T) {
 
 	assert.Equal(t, testdata, string(data))
 
-	NewFileSink(fs, FileSinkConfig{
+	NewFile(fs, FileConfig{
 		Path: filename,
 	})
 
@@ -54,7 +54,7 @@ func TestStdout(t *testing.T) {
 	os.Stdout = temp
 	const testdata = "abcd"
 
-	wc, err := NewStdoutSink().OpenSink()
+	wc, err := NewStdout().OpenSink()
 	require.NoError(t, err)
 
 	_, err = io.WriteString(wc, testdata)
@@ -79,7 +79,7 @@ func TestStderr(t *testing.T) {
 	os.Stderr = temp
 	const testdata = "abcd"
 
-	wc, err := NewStderrSink().OpenSink()
+	wc, err := NewStderr().OpenSink()
 	require.NoError(t, err)
 
 	_, err = io.WriteString(wc, testdata)

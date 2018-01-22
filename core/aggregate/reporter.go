@@ -18,7 +18,7 @@ import (
 type ReporterConfig struct {
 	// SampleQueueSize is number maximum number of unhandled samples.
 	// On queue overflow, samples are dropped.
-	SampleQueueSize int `config:"sample-buff-size"`
+	SampleQueueSize int `config:"sample-buff-size" validate:"min=1"`
 }
 
 const (
