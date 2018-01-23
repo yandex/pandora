@@ -1,26 +1,32 @@
 package core
 
 import (
+	"context"
+	"os"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/coretest"
+	"github.com/yandex/pandora/core/plugin"
 	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/testutil2"
 )
 
 func TestImport(t *testing.T) {
+	defer resetGlobals()
 	Import(afero.NewOsFs())
 	testutil.RunSuite(t, "Import Suite")
 }
 
 var _ = Describe("plugin decode", func() {
-
 	Context("composite schedule", func() {
 		input := func() map[string]interface{} {
 			return map[string]interface{}{
@@ -51,5 +57,91 @@ var _ = Describe("plugin decode", func() {
 			coretest.ExpectScheduleNexts(sched, 0, 0, time.Second)
 		})
 	})
-
 })
+
+func TestSink(t *testing.T) {
+	defer resetGlobals()
+	fs := afero.NewMemMapFs()
+	const filename = "/xxx"
+	Import(fs)
+
+	tests := []struct {
+		name  string
+		input map[string]interface{}
+	}{
+		{"hooked", testConfig(
+			"stdout", "stdout",
+			"stderr", "stderr",
+			"file", filename,
+		)},
+		{"explicit", testConfig(
+			"stdout", testConfig("type", "stdout"),
+			"stderr", testConfig("type", "stderr"),
+			"file", testConfig(
+				"type", "file",
+				"path", filename,
+			),
+		)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var conf struct {
+				Stdout func() core.DataSink
+				Stderr func() core.DataSink
+				File   core.DataSink
+			}
+			err := config.Decode(test.input, &conf)
+			require.NoError(t, err)
+			coretest.AssertSinkEqualStdStream(t, &os.Stdout, conf.Stdout)
+			coretest.AssertSinkEqualStdStream(t, &os.Stderr, conf.Stderr)
+			coretest.AssertSinkEqualFile(t, fs, filename, conf.File)
+		})
+	}
+}
+
+func TestProviderJSONLine(t *testing.T) {
+	testutil2.ReplaceGlobalLogger()
+	defer resetGlobals()
+	fs := afero.NewMemMapFs()
+	const filename = "/xxx"
+	Import(fs)
+	input := testConfig(
+		"aggregator", testConfig(
+			"type", "jsonlines",
+			"sink", filename,
+		),
+	)
+
+	var conf struct {
+		Aggregator core.Aggregator
+	}
+	err := config.Decode(input, &conf)
+	require.NoError(t, err)
+
+	conf.Aggregator.Report([]int{0, 1, 2})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err = conf.Aggregator.Run(ctx, core.AggregatorDeps{zap.L()})
+	require.NoError(t, err)
+
+	testutil2.AssertFileEqual(t, fs, filename, "[0,1,2]\n")
+}
+
+func testConfig(keyValuePairs ...interface{}) map[string]interface{} {
+	if len(keyValuePairs)%2 != 0 {
+		panic("invalid len")
+	}
+	result := map[string]interface{}{}
+	for i := 0; i < len(keyValuePairs); i += 2 {
+		key := keyValuePairs[i].(string)
+		value := keyValuePairs[i+1]
+		result[key] = value
+	}
+	return result
+}
+
+func resetGlobals() {
+	plugin.SetDefaultRegistry(plugin.NewRegistry())
+	config.SetHooks(config.DefaultHooks())
+	testutil2.ReplaceGlobalLogger()
+}

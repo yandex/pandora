@@ -10,11 +10,12 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coreutil"
+	"github.com/yandex/pandora/lib/errutil"
 	"github.com/yandex/pandora/lib/monitoring"
 )
 
@@ -261,7 +262,7 @@ func (ah *runAwaitHandle) awaitRun() {
 			// TODO(skipor): not wait for provider, to return success result?
 			ah.toWait--
 			ah.log.Debug("Provider awaited", zap.Error(err))
-			if nonCtxErr(ah.runCtx, err) {
+			if errutil.IsNotCtxError(ah.runCtx, err) {
 				ah.onErrAwaited(errors.WithMessage(err, "provider failed"))
 			}
 			if err == nil && !ah.isStartFinished() {
@@ -272,7 +273,7 @@ func (ah *runAwaitHandle) awaitRun() {
 			ah.aggregatorErr = nil
 			ah.toWait--
 			ah.log.Debug("Aggregator awaited", zap.Error(err))
-			if nonCtxErr(ah.runCtx, err) {
+			if errutil.IsNotCtxError(ah.runCtx, err) {
 				ah.onErrAwaited(errors.WithMessage(err, "aggregator failed"))
 			}
 		case res := <-ah.startRes:
@@ -280,7 +281,7 @@ func (ah *runAwaitHandle) awaitRun() {
 			ah.toWait--
 			ah.startedInstances = res.Started
 			ah.log.Debug("Instances start awaited", zap.Int("started", ah.startedInstances), zap.Error(res.Err))
-			if nonCtxErr(ah.instanceStartCtx, res.Err) {
+			if errutil.IsNotCtxError(ah.instanceStartCtx, res.Err) {
 				ah.onErrAwaited(errors.WithMessage(res.Err, "instances start failed"))
 			}
 			ah.checkAllInstancesAreFinished() // There is a race between run and start results.
@@ -289,7 +290,7 @@ func (ah *runAwaitHandle) awaitRun() {
 			if ent := ah.log.Check(zap.DebugLevel, "Instance run awaited"); ent != nil {
 				ent.Write(zap.Int("id", res.Id), zap.Int("awaited", ah.awaitedInstances), zap.Error(res.Err))
 			}
-			if nonCtxErr(ah.runCtx, res.Err) {
+			if errutil.IsNotCtxError(ah.runCtx, res.Err) {
 				ah.onErrAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.Id)))
 			}
 			ah.checkAllInstancesAreFinished()
@@ -419,18 +420,4 @@ type instanceRunResult struct {
 type startResult struct {
 	Started int
 	Err     error
-}
-
-func nonCtxErr(ctx context.Context, err error) bool {
-	if err == nil {
-		return false
-	}
-	select {
-	case <-ctx.Done():
-		if ctx.Err() == errors.Cause(err) { // Support github.com/pkg/errors wrapping
-			return false
-		}
-	default:
-	}
-	return true
 }

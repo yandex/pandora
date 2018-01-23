@@ -10,9 +10,14 @@ import (
 	"reflect"
 )
 
-// DefaultRegistry returns default Registry used for package Registry like functions.
+// DefaultRegistry returns default Registry used for package *Registry methods like functions.
 func DefaultRegistry() *Registry {
 	return defaultRegistry
+}
+
+// SetDefaultRegistry sets default Registry used for package *Registry methods like functions.
+func SetDefaultRegistry(registry *Registry) {
+	defaultRegistry = registry
 }
 
 // Register is DefaultRegistry().Register shortcut.

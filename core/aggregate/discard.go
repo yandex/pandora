@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/coreutil"
 )
 
 // NewDiscard returns Aggregator that just throws reported ammo away.
@@ -23,4 +24,6 @@ func (discard) Run(ctx context.Context, _ core.AggregatorDeps) error {
 	return nil
 }
 
-func (discard) Report(core.Sample) {}
+func (discard) Report(s core.Sample) {
+	coreutil.ReturnSampleIfBorrowed(s)
+}

@@ -375,26 +375,3 @@ var _ = Describe("build instance schedule", func() {
 	})
 
 })
-
-var _ = Describe("nonCtxErr", func() {
-	canceledContext, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	It("nil error", func() {
-		Expect(nonCtxErr(context.Background(), nil)).To(BeFalse())
-	})
-
-	It("context error", func() {
-		Expect(nonCtxErr(canceledContext, context.Canceled)).To(BeFalse())
-	})
-
-	It("caused by context error", func() {
-		Expect(nonCtxErr(canceledContext, errors.Wrap(context.Canceled, "new err"))).To(BeFalse())
-	})
-
-	It("usual error", func() {
-		err := errors.New("new err")
-		Expect(nonCtxErr(canceledContext, err)).To(BeTrue())
-		Expect(nonCtxErr(context.Background(), err)).To(BeTrue())
-	})
-})

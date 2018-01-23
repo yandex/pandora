@@ -29,7 +29,17 @@ func Gun(name string, newGun interface{}, newDefaultConfigOptional ...interface{
 	RegisterPtr(ptr, name, newGun, newDefaultConfigOptional...)
 }
 
-func Aggregator(name string, newResultListener interface{}, newDefaultConfigOptional ...interface{}) {
+func Aggregator(name string, newAggregator interface{}, newDefaultConfigOptional ...interface{}) {
 	var ptr *core.Aggregator
-	RegisterPtr(ptr, name, newResultListener, newDefaultConfigOptional...)
+	RegisterPtr(ptr, name, newAggregator, newDefaultConfigOptional...)
+}
+
+func DataSource(name string, newDataSource interface{}, newDefaultConfigOptional ...interface{}) {
+	var ptr *core.DataSource
+	RegisterPtr(ptr, name, newDataSource, newDefaultConfigOptional...)
+}
+
+func DataSink(name string, newDataSink interface{}, newDefaultConfigOptional ...interface{}) {
+	var ptr *core.DataSink
+	RegisterPtr(ptr, name, newDataSink, newDefaultConfigOptional...)
 }

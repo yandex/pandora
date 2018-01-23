@@ -6,8 +6,6 @@
 package config
 
 import (
-	"sync"
-
 	"github.com/fatih/structs"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
@@ -30,20 +28,6 @@ func DecodeAndValidate(conf interface{}, result interface{}) error {
 		return err
 	}
 	return Validate(result)
-}
-
-type TypeHook mapstructure.DecodeHookFuncType
-type KindHook mapstructure.DecodeHookFuncKind
-
-// Returning value allow do `var _ = AddHookType(xxx)`
-func AddTypeHook(hook TypeHook) (_ struct{}) {
-	addHook(hook)
-	return
-}
-
-func AddKindHook(hook KindHook) (_ struct{}) {
-	addHook(hook)
-	return
 }
 
 // Map maps with overwrite fields from src to dst.
@@ -73,9 +57,7 @@ func Map(dst, src interface{}) {
 }
 
 func newDecoderConfig(result interface{}) *mapstructure.DecoderConfig {
-	compileHookOnce.Do(func() {
-		compiledHook = mapstructure.ComposeDecodeHookFunc(hooks...)
-	})
+	compileHooks()
 	return &mapstructure.DecoderConfig{
 		DecodeHook:       compiledHook,
 		ErrorUnused:      true,
@@ -86,21 +68,57 @@ func newDecoderConfig(result interface{}) *mapstructure.DecoderConfig {
 	}
 }
 
-var hooks = []mapstructure.DecodeHookFunc{
-	DebugHook,
-	TextUnmarshallerHook,
-	mapstructure.StringToTimeDurationHookFunc(),
-	StringToURLHook,
-	StringToIPHook,
-	StringToDataSizeHook,
+type TypeHook mapstructure.DecodeHookFuncType
+type KindHook mapstructure.DecodeHookFuncKind
+
+// Returning value allow do `var _ = AddHookType(xxx)`
+func AddTypeHook(hook TypeHook) (_ struct{}) {
+	addHook(hook)
+	return
 }
 
-var compiledHook mapstructure.DecodeHookFunc
-var compileHookOnce = sync.Once{}
+func AddKindHook(hook KindHook) (_ struct{}) {
+	addHook(hook)
+	return
+}
+
+func DefaultHooks() []mapstructure.DecodeHookFunc {
+	return []mapstructure.DecodeHookFunc{
+		DebugHook,
+		TextUnmarshallerHook,
+		mapstructure.StringToTimeDurationHookFunc(),
+		StringToURLHook,
+		StringToIPHook,
+		StringToDataSizeHook,
+	}
+}
+
+func GetHooks() []mapstructure.DecodeHookFunc {
+	return hooks
+}
+func SetHooks(h []mapstructure.DecodeHookFunc) {
+	hooks = h
+	onHooksModify()
+}
+
+var (
+	hooks            = DefaultHooks()
+	hooksNeedCompile = true
+	compiledHook     mapstructure.DecodeHookFunc
+)
 
 func addHook(hook mapstructure.DecodeHookFunc) {
-	if compiledHook != nil {
-		panic("all hooks should be added before first decode")
-	}
 	hooks = append(hooks, hook)
+	onHooksModify()
+}
+
+func onHooksModify() {
+	hooksNeedCompile = true
+}
+
+func compileHooks() {
+	if hooksNeedCompile {
+		compiledHook = mapstructure.ComposeDecodeHookFunc(hooks...)
+		hooksNeedCompile = false
+	}
 }
