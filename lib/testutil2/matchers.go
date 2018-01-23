@@ -25,12 +25,12 @@ type flakyT struct {
 var _ TestingT = &flakyT{}
 
 func (ff *flakyT) Logf(format string, args ...interface{}) {
-	ff.t.Helper()
+	getHelper(ff.t).Helper()
 	ff.Logf(format, args)
 }
 
 func (ff *flakyT) Errorf(format string, args ...interface{}) {
-	ff.t.Helper()
+	getHelper(ff.t).Helper()
 	ff.t.Logf(format, args)
 	ff.failed.Store(true)
 }
@@ -68,4 +68,21 @@ func RunFlaky(t *testing.T, test func(t TestingT)) {
 			}
 		})
 	}
+}
+
+// getHelper allows to call t.Helper() without breaking compatibility with go version < 1.9
+func getHelper(t *testing.T) helper {
+	var tInterface interface{} = t
+	if h, ok := tInterface.(helper); ok {
+		return h
+	}
+	return nopHelper{}
+}
+
+type nopHelper struct{}
+
+func (nopHelper) Helper() {}
+
+type helper interface {
+	Helper()
 }
