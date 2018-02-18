@@ -34,9 +34,9 @@ type JSONIterConfig struct {
 	SortMapKeys bool `config:"sort-map-keys"`
 }
 
-func NewDefaultJSONLinesAggregatorConfig() JSONLineAggregatorConfig {
+func DefaultJSONLinesAggregatorConfig() JSONLineAggregatorConfig {
 	return JSONLineAggregatorConfig{
-		EncoderAggregatorConfig: NewDefaultEncoderAggregatorConfig(),
+		EncoderAggregatorConfig: DefaultEncoderAggregatorConfig(),
 	}
 }
 

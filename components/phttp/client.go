@@ -32,10 +32,10 @@ type ClientConfig struct {
 	Transport TransportConfig `config:",squash"`
 }
 
-func NewDefaultClientConfig() ClientConfig {
+func DefaultClientConfig() ClientConfig {
 	return ClientConfig{
-		Transport: NewDefaultTransportConfig(),
-		Dialer:    NewDefaultDialerConfig(),
+		Transport: DefaultTransportConfig(),
+		Dialer:    DefaultDialerConfig(),
 		Redirect:  false,
 	}
 }
@@ -54,7 +54,7 @@ type DialerConfig struct {
 	KeepAlive     time.Duration `config:"keep-alive"`
 }
 
-func NewDefaultDialerConfig() DialerConfig {
+func DefaultDialerConfig() DialerConfig {
 	return DialerConfig{
 		DNSCache:  true,
 		DualStack: true,
@@ -85,7 +85,7 @@ type TransportConfig struct {
 	ExpectContinueTimeout time.Duration `config:"expect-continue-timeout"`
 }
 
-func NewDefaultTransportConfig() TransportConfig {
+func DefaultTransportConfig() TransportConfig {
 	return TransportConfig{
 		MaxIdleConns:          0, // No limit.
 		IdleConnTimeout:       90 * time.Second,

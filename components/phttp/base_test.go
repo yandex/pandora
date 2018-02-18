@@ -40,7 +40,7 @@ var _ = Describe("BaseGun", func() {
 		ammo *ammomock.Ammo
 	)
 	BeforeEach(func() {
-		base = BaseGun{Config: NewDefaultBaseGunConfig()}
+		base = BaseGun{Config: DefaultBaseGunConfig()}
 		ammo = &ammomock.Ammo{}
 	})
 

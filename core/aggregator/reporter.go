@@ -28,7 +28,7 @@ const (
 	DefaultSampleQueueSize                 = 2 * samplesInQueueAfterDiskWriteUpperBound
 )
 
-func NewDefaultReporterConfig() ReporterConfig {
+func DefaultReporterConfig() ReporterConfig {
 	return ReporterConfig{
 		SampleQueueSize: DefaultSampleQueueSize,
 	}

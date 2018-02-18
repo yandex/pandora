@@ -58,7 +58,7 @@ var _ = Describe("connect", func() {
 			req, err := http.NewRequest("GET", origin.URL, nil)
 			Expect(err).To(BeNil())
 
-			conf := NewDefaultConnectGunConfig()
+			conf := DefaultConnectGunConfig()
 			conf.ConnectSSL = tunnelSSL
 			scheme := "http://"
 			if tunnelSSL {
@@ -85,7 +85,7 @@ var _ = Describe("connect", func() {
 		proxy := httptest.NewServer(tunnelHandler(origin.URL))
 		defer proxy.Close()
 
-		conf := NewDefaultConnectGunConfig()
+		conf := DefaultConnectGunConfig()
 		conf.Target = proxy.Listener.Addr().String()
 		connectGun := NewConnectGun(conf)
 

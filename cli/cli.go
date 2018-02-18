@@ -51,7 +51,7 @@ func newLogger(conf logConfig) *zap.Logger {
 	return log
 }
 
-func newDefaultConfig() *cliConfig {
+func defaultConfig() *cliConfig {
 	return &cliConfig{
 		Log: logConfig{
 			Level: zap.InfoLevel,
@@ -134,7 +134,7 @@ func readConfig() *cliConfig {
 	if err != nil {
 		log.Fatal("Config read failed", zap.Error(err))
 	}
-	conf := newDefaultConfig()
+	conf := defaultConfig()
 	err = config.DecodeAndValidate(v.AllSettings(), conf)
 	if err != nil {
 		log.Fatal("Config decode failed", zap.Error(err))

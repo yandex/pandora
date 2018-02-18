@@ -49,7 +49,7 @@ type ProviderConfig struct {
 	AmmoLimit int `config:"limit"`
 }
 
-func NewDefaultProviderConfig() ProviderConfig {
+func DefaultProviderConfig() ProviderConfig {
 	return ProviderConfig{AmmoLimit: 16}
 }
 

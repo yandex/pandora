@@ -30,7 +30,7 @@ func TestNewJSONLinesAggregator(t *testing.T) {
 		{"C", 3},
 	}
 
-	conf := NewDefaultJSONLinesAggregatorConfig()
+	conf := DefaultJSONLinesAggregatorConfig()
 	sink := &datasink.Buffer{}
 	conf.Sink = sink
 	testee := NewJSONLinesAggregator(conf)

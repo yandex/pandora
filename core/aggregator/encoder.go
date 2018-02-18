@@ -48,10 +48,10 @@ type EncoderAggregatorConfig struct {
 	ReporterConfig ReporterConfig `config:",squash"`
 }
 
-func NewDefaultEncoderAggregatorConfig() EncoderAggregatorConfig {
+func DefaultEncoderAggregatorConfig() EncoderAggregatorConfig {
 	return EncoderAggregatorConfig{
 		FlushInterval:  time.Second,
-		ReporterConfig: NewDefaultReporterConfig(),
+		ReporterConfig: DefaultReporterConfig(),
 	}
 }
 

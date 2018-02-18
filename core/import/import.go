@@ -52,7 +52,7 @@ func Import(fs afero.Fs) {
 		a, err := netsample.NewPhout(fs, conf)
 		return netsample.WrapAggregator(a), err
 	})
-	register.Aggregator("jsonlines", aggregator.NewJSONLinesAggregator, aggregator.NewDefaultJSONLinesAggregatorConfig)
+	register.Aggregator("jsonlines", aggregator.NewJSONLinesAggregator, aggregator.DefaultJSONLinesAggregatorConfig)
 	register.Aggregator("log", aggregator.NewLog)
 	register.Aggregator("discard", aggregator.NewDiscard)
 

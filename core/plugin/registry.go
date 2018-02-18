@@ -48,7 +48,7 @@ func (r *Registry) Register(
 	pluginType reflect.Type,
 	name string,
 	constructor interface{},
-	newDefaultConfigOptional ...interface{}, // default config factory, or nothing.
+	defaultConfigOptional ...interface{}, // default config factory, or nothing.
 ) {
 	expect(pluginType.Kind() == reflect.Interface, "plugin type should be interface, but have: %T", pluginType)
 	expect(name != "", "empty name")
@@ -59,8 +59,8 @@ func (r *Registry) Register(
 	}
 	_, ok := nameReg[name]
 	expect(!ok, "plugin %s with name %q had been already registered", pluginType, name)
-	newDefaultConfig := getNewDefaultConfig(newDefaultConfigOptional)
-	nameReg[name] = newNameRegistryEntry(pluginType, constructor, newDefaultConfig)
+	defaultConfig := getNewDefaultConfig(defaultConfigOptional)
+	nameReg[name] = newNameRegistryEntry(pluginType, constructor, defaultConfig)
 }
 
 // Lookup returns true if any plugin constructor has been registered for given
@@ -127,10 +127,10 @@ func (r *Registry) NewFactory(factoryType reflect.Type, name string, fillConfOpt
 	return registered.constructor.NewFactory(factoryType, getMaybeConfig)
 }
 
-func newNameRegistryEntry(pluginType reflect.Type, constructor interface{}, newDefaultConfig interface{}) nameRegistryEntry {
+func newNameRegistryEntry(pluginType reflect.Type, constructor interface{}, defaultConfig interface{}) nameRegistryEntry {
 	implConstructor := newImplConstructor(pluginType, constructor)
-	defaultConfig := newDefaultConfigContainer(reflect.TypeOf(constructor), newDefaultConfig)
-	return nameRegistryEntry{implConstructor, defaultConfig}
+	defaultConfigContainer := newDefaultConfigContainer(reflect.TypeOf(constructor), defaultConfig)
+	return nameRegistryEntry{implConstructor, defaultConfigContainer}
 }
 
 func (r *Registry) get(pluginType reflect.Type, name string) (factory nameRegistryEntry, err error) {
@@ -154,9 +154,9 @@ type defaultConfigContainer struct {
 	newValue reflect.Value
 }
 
-func newDefaultConfigContainer(constructorType reflect.Type, newDefaultConfig interface{}) defaultConfigContainer {
+func newDefaultConfigContainer(constructorType reflect.Type, defaultConfig interface{}) defaultConfigContainer {
 	if constructorType.NumIn() == 0 {
-		expect(newDefaultConfig == nil, "constructor accept no config, but newDefaultConfig passed")
+		expect(defaultConfig == nil, "constructor accept no config, but defaultConfig passed")
 		return defaultConfigContainer{}
 	}
 	expect(constructorType.NumIn() == 1, "constructor should accept zero or one argument")
@@ -165,7 +165,7 @@ func newDefaultConfigContainer(constructorType reflect.Type, newDefaultConfig in
 		configType.Kind() == reflect.Ptr && configType.Elem().Kind() == reflect.Struct,
 		"unexpected config kind: %s; should be struct or struct pointer")
 	newDefaultConfigType := reflect.FuncOf(nil, []reflect.Type{configType}, false)
-	if newDefaultConfig == nil {
+	if defaultConfig == nil {
 		value := reflect.MakeFunc(newDefaultConfigType,
 			func(_ []reflect.Value) (results []reflect.Value) {
 				// OPTIMIZE: create addressable.
@@ -173,9 +173,9 @@ func newDefaultConfigContainer(constructorType reflect.Type, newDefaultConfig in
 			})
 		return defaultConfigContainer{value}
 	}
-	value := reflect.ValueOf(newDefaultConfig)
+	value := reflect.ValueOf(defaultConfig)
 	expect(value.Type() == newDefaultConfigType,
-		"newDefaultConfig should be func that accepts nothing, and returns constructor argument, but have type %T", newDefaultConfig)
+		"defaultConfig should be func that accepts nothing, and returns constructor argument, but have type %T", defaultConfig)
 	return defaultConfigContainer{value}
 }
 
