@@ -21,7 +21,7 @@ import (
 
 	"github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate/netsample"
+	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coretest"
 	"github.com/yandex/pandora/lib/ginkgoutil"
 )

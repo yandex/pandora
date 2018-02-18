@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
-package aggregate
+package aggregator
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate/mocks"
+	"github.com/yandex/pandora/core/aggregator/mocks"
 	"github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/lib/ioutil2/mocks"
 	"github.com/yandex/pandora/lib/testutil"

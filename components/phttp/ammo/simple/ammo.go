@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/yandex/pandora/components/phttp"
-	"github.com/yandex/pandora/core/aggregate/netsample"
+	"github.com/yandex/pandora/core/aggregator/netsample"
 )
 
 type Ammo struct {

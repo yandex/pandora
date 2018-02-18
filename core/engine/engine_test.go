@@ -12,7 +12,7 @@ import (
 	"go.uber.org/atomic"
 
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate"
+	"github.com/yandex/pandora/core/aggregator"
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/core/provider"
@@ -45,7 +45,7 @@ func newTestPoolConf() (InstancePoolConfig, *coremock.Gun) {
 	gun.On("Shoot", mock.Anything)
 	conf := InstancePoolConfig{
 		Provider:   provider.NewNum(-1),
-		Aggregator: aggregate.NewTest(),
+		Aggregator: aggregator.NewTest(),
 		NewGun: func() (core.Gun, error) {
 			return gun, nil
 		},

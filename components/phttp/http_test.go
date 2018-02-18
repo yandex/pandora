@@ -19,7 +19,7 @@ import (
 	"golang.org/x/net/http2"
 
 	"github.com/yandex/pandora/components/phttp/mocks"
-	"github.com/yandex/pandora/core/aggregate/netsample"
+	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/config"
 )
 

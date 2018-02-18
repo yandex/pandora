@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate/netsample"
+	"github.com/yandex/pandora/core/aggregator/netsample"
 )
 
 //go:generate mockery -name=Ammo -case=underscore -outpkg=ammomock
