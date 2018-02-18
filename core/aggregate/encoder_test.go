@@ -23,11 +23,11 @@ import (
 	"github.com/yandex/pandora/core/aggregate/mocks"
 	"github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/lib/ioutil2/mocks"
-	"github.com/yandex/pandora/lib/testutil2"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 type EncoderAggregatorTester struct {
-	t          testutil2.TestingT
+	t          testutil.TestingT
 	wc         *iomock.WriteCloser
 	sink       *coremock.DataSink
 	enc        *aggregatemock.SampleEncoder
@@ -51,8 +51,8 @@ func (tr *EncoderAggregatorTester) AssertExpectations() {
 	tr.sink.AssertExpectations(t)
 }
 
-func NewEncoderAggregatorTester(t testutil2.TestingT) *EncoderAggregatorTester {
-	testutil2.ReplaceGlobalLogger()
+func NewEncoderAggregatorTester(t testutil.TestingT) *EncoderAggregatorTester {
+	testutil.ReplaceGlobalLogger()
 	tr := &EncoderAggregatorTester{t: t}
 	tr.wc = &iomock.WriteCloser{}
 	tr.sink = &coremock.DataSink{}
@@ -182,7 +182,7 @@ func TestEncoderAggregator_EverythingFailed(t *testing.T) {
 }
 
 func TestEncoderAggregator_AutoFlush(t *testing.T) {
-	testutil2.RunFlaky(t, func(t testutil2.TestingT) {
+	testutil.RunFlaky(t, func(t testutil.TestingT) {
 		tr := NewEncoderAggregatorTester(t)
 		const flushInterval = 20 * time.Millisecond
 		tr.conf.FlushInterval = flushInterval
@@ -204,7 +204,7 @@ func TestEncoderAggregator_AutoFlush(t *testing.T) {
 }
 
 func TestEncoderAggregator_ManualFlush(t *testing.T) {
-	testutil2.RunFlaky(t, func(t testutil2.TestingT) {
+	testutil.RunFlaky(t, func(t testutil.TestingT) {
 		tr := NewEncoderAggregatorTester(t)
 		const autoFlushInterval = 15 * time.Millisecond
 		tr.conf.FlushInterval = autoFlushInterval

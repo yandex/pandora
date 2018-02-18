@@ -17,7 +17,7 @@ import (
 	"github.com/yandex/pandora/core/coretest"
 	"github.com/yandex/pandora/core/plugin"
 	"github.com/yandex/pandora/lib/ginkgoutil"
-	"github.com/yandex/pandora/lib/testutil2"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestImport(t *testing.T) {
@@ -100,7 +100,7 @@ func TestSink(t *testing.T) {
 }
 
 func TestProviderJSONLine(t *testing.T) {
-	testutil2.ReplaceGlobalLogger()
+	testutil.ReplaceGlobalLogger()
 	defer resetGlobals()
 	fs := afero.NewMemMapFs()
 	const filename = "/xxx"
@@ -124,7 +124,7 @@ func TestProviderJSONLine(t *testing.T) {
 	err = conf.Aggregator.Run(ctx, core.AggregatorDeps{zap.L()})
 	require.NoError(t, err)
 
-	testutil2.AssertFileEqual(t, fs, filename, "[0,1,2]\n")
+	testutil.AssertFileEqual(t, fs, filename, "[0,1,2]\n")
 }
 
 func testConfig(keyValuePairs ...interface{}) map[string]interface{} {
@@ -143,5 +143,5 @@ func testConfig(keyValuePairs ...interface{}) map[string]interface{} {
 func resetGlobals() {
 	plugin.SetDefaultRegistry(plugin.NewRegistry())
 	config.SetHooks(config.DefaultHooks())
-	testutil2.ReplaceGlobalLogger()
+	testutil.ReplaceGlobalLogger()
 }

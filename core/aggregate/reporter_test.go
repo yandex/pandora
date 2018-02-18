@@ -10,17 +10,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/yandex/pandora/lib/testutil2"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/yandex/pandora/core/mocks"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestReporter_DroppedErr(t *testing.T) {
 	core, entries := observer.New(zap.DebugLevel)
 	zap.ReplaceGlobals(zap.New(core))
-	defer testutil2.ReplaceGlobalLogger()
+	defer testutil.ReplaceGlobalLogger()
 	reporter := NewReporter(ReporterConfig{1})
 	reporter.Report(1)
 

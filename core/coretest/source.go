@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/lib/testutil2"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 func AssertSourceEqualStdStream(t *testing.T, expectedPtr **os.File, getSource func() core.DataSource) {
@@ -50,7 +50,7 @@ func AssertSourceEqualFile(t *testing.T, fs afero.Fs, filename string, source co
 	rc, err := source.OpenSource()
 	require.NoError(t, err)
 
-	data := testutil2.ReadString(t, rc)
+	data := testutil.ReadString(t, rc)
 	err = rc.Close()
 	require.NoError(t, err)
 
