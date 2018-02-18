@@ -10,12 +10,12 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/pkg/errors"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 	"github.com/yandex/pandora/lib/netutil/mocks"
-	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestNetutil(t *testing.T) {
-	testutil.RunSuite(t, "Netutil Suite")
+	ginkgoutil.RunSuite(t, "Netutil Suite")
 }
 
 var _ = Describe("DNS", func() {
@@ -69,7 +69,7 @@ var _ = Describe("DNS", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(conn).To(Equal(mockConn))
 
-		testutil.AssertExpectations(mockConn, cache, dialer)
+		ginkgoutil.AssertExpectations(mockConn, cache, dialer)
 	})
 
 	It("Dialer cache hit", func() {
@@ -85,7 +85,7 @@ var _ = Describe("DNS", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(conn).To(Equal(mockConn))
 
-		testutil.AssertExpectations(mockConn, cache, dialer)
+		ginkgoutil.AssertExpectations(mockConn, cache, dialer)
 	})
 
 	It("Dialer cache miss err", func() {
@@ -101,7 +101,7 @@ var _ = Describe("DNS", func() {
 		Expect(err).To(Equal(expectedErr))
 		Expect(conn).To(BeNil())
 
-		testutil.AssertExpectations(cache, dialer)
+		ginkgoutil.AssertExpectations(cache, dialer)
 	})
 
 })

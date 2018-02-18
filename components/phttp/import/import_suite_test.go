@@ -10,11 +10,11 @@ import (
 	"github.com/spf13/afero"
 
 	. "github.com/yandex/pandora/components/phttp"
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestImport(t *testing.T) {
-	testutil.RunSuite(t, "phttp Import Suite")
+	ginkgoutil.RunSuite(t, "phttp Import Suite")
 }
 
 var _ = Describe("import", func() {

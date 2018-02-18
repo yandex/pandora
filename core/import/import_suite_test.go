@@ -16,14 +16,14 @@ import (
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/coretest"
 	"github.com/yandex/pandora/core/plugin"
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 	"github.com/yandex/pandora/lib/testutil2"
 )
 
 func TestImport(t *testing.T) {
 	defer resetGlobals()
 	Import(afero.NewOsFs())
-	testutil.RunSuite(t, "Import Suite")
+	ginkgoutil.RunSuite(t, "Import Suite")
 }
 
 var _ = Describe("plugin decode", func() {

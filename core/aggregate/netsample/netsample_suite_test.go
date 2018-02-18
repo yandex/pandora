@@ -3,9 +3,9 @@ package netsample
 import (
 	"testing"
 
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestNetsample(t *testing.T) {
-	testutil.RunSuite(t, "Netsample Suite")
+	ginkgoutil.RunSuite(t, "Netsample Suite")
 }

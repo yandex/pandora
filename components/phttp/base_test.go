@@ -23,12 +23,12 @@ import (
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregate/netsample"
 	"github.com/yandex/pandora/core/coretest"
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func testDeps() core.GunDeps {
 	return core.GunDeps{
-		Log: testutil.NewLogger(),
+		Log: ginkgoutil.NewLogger(),
 		Ctx: context.Background(),
 	}
 }

@@ -7,12 +7,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
-
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestErrutil(t *testing.T) {
-	testutil.RunSuite(t, "Errutil Suite")
+	ginkgoutil.RunSuite(t, "Errutil Suite")
 }
 
 var _ = Describe("Iscoreutil.IsNotCtxErroror", func() {

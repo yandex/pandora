@@ -5,12 +5,11 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestImport(t *testing.T) {
-	testutil.RunSuite(t, "Import Suite")
+	ginkgoutil.RunSuite(t, "Import Suite")
 }
 
 var _ = Describe("import", func() {

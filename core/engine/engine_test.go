@@ -17,7 +17,7 @@ import (
 	"github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/core/provider"
 	"github.com/yandex/pandora/core/schedule"
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 var _ = Describe("config validation", func() {
@@ -85,14 +85,14 @@ var _ = Describe("instance pool", func() {
 
 	JustBeforeEach(func() {
 		metrics := newTestMetrics()
-		p = newPool(testutil.NewLogger(), metrics, onWaitDone, conf)
+		p = newPool(ginkgoutil.NewLogger(), metrics, onWaitDone, conf)
 	})
 
 	Context("shoot ok", func() {
 		It("", func() {
 			err := p.Run(ctx)
 			Expect(err).To(BeNil())
-			testutil.AssertExpectations(gun)
+			ginkgoutil.AssertExpectations(gun)
 			Expect(waitDoneCalled.Load()).To(BeTrue())
 		}, 1)
 	})
@@ -119,7 +119,7 @@ var _ = Describe("instance pool", func() {
 		It("", func() {
 			err := p.Run(ctx)
 			Expect(err).To(Equal(context.Canceled))
-			testutil.AssertNotCalled(gun, "Shoot")
+			ginkgoutil.AssertNotCalled(gun, "Shoot")
 			Expect(waitDoneCalled.Load()).To(BeFalse())
 			blockShoot.Done()
 			Eventually(waitDoneCalled.Load).Should(BeTrue())
@@ -155,7 +155,7 @@ var _ = Describe("instance pool", func() {
 			err := p.Run(ctx)
 			Expect(err).ToNot(BeNil())
 			Expect(err.Error()).To(ContainSubstring(failErr.Error()))
-			testutil.AssertNotCalled(gun, "Shoot")
+			ginkgoutil.AssertNotCalled(gun, "Shoot")
 			Consistently(waitDoneCalled.Load, 0.1).Should(BeFalse())
 			blockShootAndAggr.Done()
 			Eventually(waitDoneCalled.Load).Should(BeTrue())
@@ -205,7 +205,7 @@ var _ = Describe("multiple instance", func() {
 			schedule.NewOnce(2),
 			schedule.NewConst(1, 5*time.Second),
 		)
-		pool := newPool(testutil.NewLogger(), newTestMetrics(), nil, conf)
+		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
 		ctx := context.Background()
 
 		err := pool.Run(ctx)
@@ -222,7 +222,7 @@ var _ = Describe("multiple instance", func() {
 			schedule.NewOnce(2),
 			schedule.NewConst(1, 2*time.Second),
 		)
-		pool := newPool(testutil.NewLogger(), newTestMetrics(), nil, conf)
+		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
 		ctx := context.Background()
 
 		err := pool.Run(ctx)
@@ -252,14 +252,14 @@ var _ = Describe("engine", func() {
 
 	JustBeforeEach(func() {
 		metrics := newTestMetrics()
-		engine = New(testutil.NewLogger(), metrics, Config{confs})
+		engine = New(ginkgoutil.NewLogger(), metrics, Config{confs})
 	})
 
 	Context("shoot ok", func() {
 		It("", func() {
 			err := engine.Run(ctx)
 			Expect(err).To(BeNil())
-			testutil.AssertExpectations(gun1, gun2)
+			ginkgoutil.AssertExpectations(gun1, gun2)
 		})
 	})
 
@@ -325,12 +325,12 @@ var _ = Describe("build instance schedule", func() {
 	It("per instance schedule ", func() {
 		conf, _ := newTestPoolConf()
 		conf.RPSPerInstance = true
-		pool := newPool(testutil.NewLogger(), newTestMetrics(), nil, conf)
+		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
 		newInstanceSchedule, err := pool.buildNewInstanceSchedule(context.Background(), func() {
 			Fail("should not be called")
 		})
 		Expect(err).NotTo(HaveOccurred())
-		testutil.ExpectFuncsEqual(newInstanceSchedule, conf.NewRPSSchedule)
+		ginkgoutil.ExpectFuncsEqual(newInstanceSchedule, conf.NewRPSSchedule)
 	})
 
 	It("shared schedule create failed", func() {
@@ -339,7 +339,7 @@ var _ = Describe("build instance schedule", func() {
 		conf.NewRPSSchedule = func() (core.Schedule, error) {
 			return nil, scheduleCreateErr
 		}
-		pool := newPool(testutil.NewLogger(), newTestMetrics(), nil, conf)
+		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
 		newInstanceSchedule, err := pool.buildNewInstanceSchedule(context.Background(), func() {
 			Fail("should not be called")
 		})
@@ -355,7 +355,7 @@ var _ = Describe("build instance schedule", func() {
 			newScheduleCalled = true
 			return schedule.NewOnce(1), nil
 		}
-		pool := newPool(testutil.NewLogger(), newTestMetrics(), nil, conf)
+		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
 		ctx, cancel := context.WithCancel(context.Background())
 		newInstanceSchedule, err := pool.buildNewInstanceSchedule(context.Background(), cancel)
 		Expect(err).NotTo(HaveOccurred())

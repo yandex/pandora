@@ -8,9 +8,9 @@ package zaputil
 import (
 	"testing"
 
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestZaputilSuite(t *testing.T) {
-	testutil.RunSuite(t, "Zaputil Suite")
+	ginkgoutil.RunSuite(t, "Zaputil Suite")
 }

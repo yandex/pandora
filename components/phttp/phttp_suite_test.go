@@ -8,9 +8,9 @@ package phttp
 import (
 	"testing"
 
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestPhttp(t *testing.T) {
-	testutil.RunSuite(t, "HTTP Suite")
+	ginkgoutil.RunSuite(t, "HTTP Suite")
 }

@@ -3,9 +3,9 @@ package raw
 import (
 	"testing"
 
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestRaw(t *testing.T) {
-	testutil.RunSuite(t, "Raw Suite")
+	ginkgoutil.RunSuite(t, "Raw Suite")
 }

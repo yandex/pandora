@@ -8,9 +8,9 @@ package plugin
 import (
 	"testing"
 
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestPlugin(t *testing.T) {
-	testutil.RunSuite(t, "Plugin Suite")
+	ginkgoutil.RunSuite(t, "Plugin Suite")
 }

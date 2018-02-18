@@ -20,11 +20,11 @@ import (
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestJsonline(t *testing.T) {
-	testutil.RunSuite(t, "Jsonline Suite")
+	ginkgoutil.RunSuite(t, "Jsonline Suite")
 }
 
 const testFile = "./ammo.jsonline"

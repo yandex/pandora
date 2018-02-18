@@ -12,7 +12,7 @@ import (
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/core/schedule"
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 var _ = Describe("Instance", func() {
@@ -56,7 +56,7 @@ var _ = Describe("Instance", func() {
 				metrics,
 			},
 		}
-		ins, insCreateErr = newInstance(ctx, testutil.NewLogger(), 0, deps)
+		ins, insCreateErr = newInstance(ctx, ginkgoutil.NewLogger(), 0, deps)
 	})
 
 	AfterEach(func() {
@@ -87,7 +87,7 @@ var _ = Describe("Instance", func() {
 		It("start ok", func() {
 			err := ins.Run(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			testutil.AssertExpectations(gun, provider)
+			ginkgoutil.AssertExpectations(gun, provider)
 		}, 2)
 
 		Context("gun implements io.Closer", func() {
@@ -102,10 +102,10 @@ var _ = Describe("Instance", func() {
 			It("close called on instance close", func() {
 				err := ins.Run(ctx)
 				Expect(err).NotTo(HaveOccurred())
-				testutil.AssertNotCalled(closeGun, "Close")
+				ginkgoutil.AssertNotCalled(closeGun, "Close")
 				err = ins.Close()
 				Expect(err).NotTo(HaveOccurred())
-				testutil.AssertExpectations(closeGun, provider)
+				ginkgoutil.AssertExpectations(closeGun, provider)
 			})
 
 		})
@@ -123,7 +123,7 @@ var _ = Describe("Instance", func() {
 		It("start fail", func() {
 			err := ins.Run(ctx)
 			Expect(err).To(Equal(context.DeadlineExceeded))
-			testutil.AssertExpectations(gun, provider)
+			ginkgoutil.AssertExpectations(gun, provider)
 		}, 2)
 
 	})
@@ -138,7 +138,7 @@ var _ = Describe("Instance", func() {
 		It("nothing acquired and schedule not started", func() {
 			err := ins.Run(ctx)
 			Expect(err).To(Equal(context.Canceled))
-			testutil.AssertExpectations(gun, provider)
+			ginkgoutil.AssertExpectations(gun, provider)
 		}, 2)
 
 	})
