@@ -15,9 +15,23 @@ import (
 	"github.com/yandex/pandora/lib/ioutil2"
 )
 
+// NewJSONProvider returns generic core.Provider that reads JSON data from source and decodes it
+// into ammo returned from newAmmo.
 func NewJSONProvider(newAmmo func() core.Ammo, conf JSONProviderConfig) core.Provider {
+	return NewCustomJSONProvider(nil, newAmmo, conf)
+}
+
+// NewCustomJSONProvider is like NewJSONProvider, but also allows to wrap JSON decoder, to
+// decode data into intermediate struct, but then transform in into desired ammo.
+// For example, decode {"body":"some data"} into struct { Data string }, and transform it to
+// http.Request.
+func NewCustomJSONProvider(wrapDecoder func(decoder AmmoDecoder) AmmoDecoder, newAmmo func() core.Ammo, conf JSONProviderConfig) core.Provider {
 	var newDecoder NewAmmoDecoder = func(deps core.ProviderDeps, source io.Reader) (AmmoDecoder, error) {
-		return NewJSONAmmoDecoder(source, conf.Buffer.BufferSizeOrDefault()), nil
+		decoder := NewJSONAmmoDecoder(source, conf.Buffer.BufferSizeOrDefault())
+		if wrapDecoder != nil {
+			decoder = wrapDecoder(decoder)
+		}
+		return decoder, nil
 	}
 	return NewDecodeProvider(newAmmo, newDecoder, conf.Decode)
 }

@@ -55,7 +55,39 @@ func TestDecodeProviderPasses(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestDecodeProvider(t *testing.T) {
+func TestCustomJSONProvider(t *testing.T) {
+	input := strings.NewReader(` {"data":"first"}`)
+	conf := DefaultJSONProviderConfig()
+	conf.Decode.Source = datasource.NewReader(input)
+	conf.Decode.Limit = 1
+	newAmmo := func() core.Ammo {
+		return &testJSONAmmo{}
+	}
+	wrapDecoder := func(decoder AmmoDecoder) AmmoDecoder {
+		return AmmoDecoderFunc(func(ammo core.Ammo) error {
+			err := decoder.Decode(ammo)
+			if err != nil {
+				return err
+			}
+			ammo.(*testJSONAmmo).Data += " transformed"
+			return nil
+		})
+	}
+	provider := NewCustomJSONProvider(wrapDecoder, newAmmo, conf)
+	err := provider.Run(context.Background(), testDeps())
+	require.NoError(t, err)
+	expected := func(data string) *testJSONAmmo {
+		return &testJSONAmmo{Data: data}
+	}
+	ammo, ok := provider.Acquire()
+	require.True(t, ok)
+	assert.Equal(t, expected("first transformed"), ammo)
+
+	_, ok = provider.Acquire()
+	assert.False(t, ok)
+}
+
+func TestJSONProvider(t *testing.T) {
 	input := strings.NewReader(` {"data":"first"}
 {"data":"second"} `)
 	conf := DefaultJSONProviderConfig()

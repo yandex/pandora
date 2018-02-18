@@ -31,6 +31,10 @@ type AmmoDecoder interface {
 	Decode(ammo core.Ammo) error
 }
 
+type AmmoDecoderFunc func(ammo core.Ammo) error
+
+func (f AmmoDecoderFunc) Decode(ammo core.Ammo) error { return f(ammo) }
+
 // TODO(skipor): test
 
 func NewDecodeProvider(newAmmo func() core.Ammo, newDecoder NewAmmoDecoder, conf DecodeProviderConfig) *DecodeProvider {
