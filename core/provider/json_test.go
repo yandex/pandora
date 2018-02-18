@@ -63,7 +63,7 @@ func TestCustomJSONProvider(t *testing.T) {
 	newAmmo := func() core.Ammo {
 		return &testJSONAmmo{}
 	}
-	wrapDecoder := func(decoder AmmoDecoder) AmmoDecoder {
+	wrapDecoder := func(_ core.ProviderDeps, decoder AmmoDecoder) AmmoDecoder {
 		return AmmoDecoderFunc(func(ammo core.Ammo) error {
 			err := decoder.Decode(ammo)
 			if err != nil {

@@ -25,11 +25,11 @@ func NewJSONProvider(newAmmo func() core.Ammo, conf JSONProviderConfig) core.Pro
 // decode data into intermediate struct, but then transform in into desired ammo.
 // For example, decode {"body":"some data"} into struct { Data string }, and transform it to
 // http.Request.
-func NewCustomJSONProvider(wrapDecoder func(decoder AmmoDecoder) AmmoDecoder, newAmmo func() core.Ammo, conf JSONProviderConfig) core.Provider {
+func NewCustomJSONProvider(wrapDecoder func(deps core.ProviderDeps, decoder AmmoDecoder) AmmoDecoder, newAmmo func() core.Ammo, conf JSONProviderConfig) core.Provider {
 	var newDecoder NewAmmoDecoder = func(deps core.ProviderDeps, source io.Reader) (AmmoDecoder, error) {
 		decoder := NewJSONAmmoDecoder(source, conf.Buffer.BufferSizeOrDefault())
 		if wrapDecoder != nil {
-			decoder = wrapDecoder(decoder)
+			decoder = wrapDecoder(deps, decoder)
 		}
 		return decoder, nil
 	}
