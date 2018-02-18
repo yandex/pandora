@@ -3,9 +3,9 @@ package uri
 import (
 	"testing"
 
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestUri(t *testing.T) {
-	testutil.RunSuite(t, "Uri Suite")
+	ginkgoutil.RunSuite(t, "Uri Suite")
 }

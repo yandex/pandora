@@ -61,11 +61,11 @@ func (g *ConnectGun) Do(req *http.Request) (*http.Response, error) {
 	return g.client.Do(req)
 }
 
-func NewDefaultConnectGunConfig() ConnectGunConfig {
+func DefaultConnectGunConfig() ConnectGunConfig {
 	return ConnectGunConfig{
 		SSL:        false,
 		ConnectSSL: false,
-		Client:     NewDefaultClientConfig(),
+		Client:     DefaultClientConfig(),
 	}
 }
 

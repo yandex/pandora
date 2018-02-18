@@ -10,36 +10,36 @@ import (
 	"github.com/yandex/pandora/core/plugin"
 )
 
-func RegisterPtr(ptr interface{}, name string, newPlugin interface{}, newDefaultConfigOptional ...interface{}) {
-	plugin.Register(plugin.PtrType(ptr), name, newPlugin, newDefaultConfigOptional...)
+func RegisterPtr(ptr interface{}, name string, newPlugin interface{}, defaultConfigOptional ...interface{}) {
+	plugin.Register(plugin.PtrType(ptr), name, newPlugin, defaultConfigOptional...)
 }
 
-func Provider(name string, newProvider interface{}, newDefaultConfigOptional ...interface{}) {
+func Provider(name string, newProvider interface{}, defaultConfigOptional ...interface{}) {
 	var ptr *core.Provider
-	RegisterPtr(ptr, name, newProvider, newDefaultConfigOptional...)
+	RegisterPtr(ptr, name, newProvider, defaultConfigOptional...)
 }
 
-func Limiter(name string, newLimiter interface{}, newDefaultConfigOptional ...interface{}) {
+func Limiter(name string, newLimiter interface{}, defaultConfigOptional ...interface{}) {
 	var ptr *core.Schedule
-	RegisterPtr(ptr, name, newLimiter, newDefaultConfigOptional...)
+	RegisterPtr(ptr, name, newLimiter, defaultConfigOptional...)
 }
 
-func Gun(name string, newGun interface{}, newDefaultConfigOptional ...interface{}) {
+func Gun(name string, newGun interface{}, defaultConfigOptional ...interface{}) {
 	var ptr *core.Gun
-	RegisterPtr(ptr, name, newGun, newDefaultConfigOptional...)
+	RegisterPtr(ptr, name, newGun, defaultConfigOptional...)
 }
 
-func Aggregator(name string, newAggregator interface{}, newDefaultConfigOptional ...interface{}) {
+func Aggregator(name string, newAggregator interface{}, defaultConfigOptional ...interface{}) {
 	var ptr *core.Aggregator
-	RegisterPtr(ptr, name, newAggregator, newDefaultConfigOptional...)
+	RegisterPtr(ptr, name, newAggregator, defaultConfigOptional...)
 }
 
-func DataSource(name string, newDataSource interface{}, newDefaultConfigOptional ...interface{}) {
+func DataSource(name string, newDataSource interface{}, defaultConfigOptional ...interface{}) {
 	var ptr *core.DataSource
-	RegisterPtr(ptr, name, newDataSource, newDefaultConfigOptional...)
+	RegisterPtr(ptr, name, newDataSource, defaultConfigOptional...)
 }
 
-func DataSink(name string, newDataSink interface{}, newDefaultConfigOptional ...interface{}) {
+func DataSink(name string, newDataSink interface{}, defaultConfigOptional ...interface{}) {
 	var ptr *core.DataSink
-	RegisterPtr(ptr, name, newDataSink, newDefaultConfigOptional...)
+	RegisterPtr(ptr, name, newDataSink, defaultConfigOptional...)
 }

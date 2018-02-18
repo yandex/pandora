@@ -9,13 +9,13 @@ import (
 	"reflect"
 
 	"github.com/spf13/afero"
+	"github.com/yandex/pandora/core/aggregator"
 	"github.com/yandex/pandora/core/datasink"
 	"github.com/yandex/pandora/lib/tag"
 	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate"
-	"github.com/yandex/pandora/core/aggregate/netsample"
+	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/plugin"
 	"github.com/yandex/pandora/core/plugin/pluginconfig"
@@ -52,9 +52,9 @@ func Import(fs afero.Fs) {
 		a, err := netsample.NewPhout(fs, conf)
 		return netsample.WrapAggregator(a), err
 	})
-	register.Aggregator("jsonlines", aggregate.NewJSONLinesAggregator, aggregate.NewDefaultJSONLinesAggregatorConfig)
-	register.Aggregator("log", aggregate.NewLog)
-	register.Aggregator("discard", aggregate.NewDiscard)
+	register.Aggregator("jsonlines", aggregator.NewJSONLinesAggregator, aggregator.DefaultJSONLinesAggregatorConfig)
+	register.Aggregator("log", aggregator.NewLog)
+	register.Aggregator("discard", aggregator.NewDiscard)
 
 	register.Limiter("line", schedule.NewLineConf)
 	register.Limiter("const", schedule.NewConstConf)

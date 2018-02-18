@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
-package aggregate
+package aggregator
 
 import (
 	"context"
@@ -48,10 +48,10 @@ type EncoderAggregatorConfig struct {
 	ReporterConfig ReporterConfig `config:",squash"`
 }
 
-func NewDefaultEncoderAggregatorConfig() EncoderAggregatorConfig {
+func DefaultEncoderAggregatorConfig() EncoderAggregatorConfig {
 	return EncoderAggregatorConfig{
 		FlushInterval:  time.Second,
-		ReporterConfig: NewDefaultReporterConfig(),
+		ReporterConfig: DefaultReporterConfig(),
 	}
 }
 

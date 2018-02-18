@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
-package aggregate
+package aggregator
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ import (
 type ReporterConfig struct {
 	// SampleQueueSize is number maximum number of unhandled samples.
 	// On queue overflow, samples are dropped.
-	SampleQueueSize int `config:"sample-buff-size" validate:"min=1"`
+	SampleQueueSize int `config:"sample-queue-size" validate:"min=1"`
 }
 
 const (
@@ -28,7 +28,7 @@ const (
 	DefaultSampleQueueSize                 = 2 * samplesInQueueAfterDiskWriteUpperBound
 )
 
-func NewDefaultReporterConfig() ReporterConfig {
+func DefaultReporterConfig() ReporterConfig {
 	return ReporterConfig{
 		SampleQueueSize: DefaultSampleQueueSize,
 	}

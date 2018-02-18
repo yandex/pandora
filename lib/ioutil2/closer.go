@@ -3,14 +3,9 @@
 // license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
-package zaputil
+package ioutil2
 
-import (
-	"testing"
+// NopCloser may be embedded to any struct to implement io.Closer doing nothing on closer.
+type NopCloser struct{}
 
-	"github.com/yandex/pandora/lib/ginkgoutil"
-)
-
-func TestZaputilSuite(t *testing.T) {
-	ginkgoutil.RunSuite(t, "Zaputil Suite")
-}
+func (NopCloser) Close() error { return nil }

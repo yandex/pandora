@@ -8,11 +8,11 @@ package coretest
 import (
 	"github.com/onsi/gomega"
 	"github.com/yandex/pandora/core/config"
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func Decode(data string, result interface{}) {
-	conf := testutil.ParseYAML(data)
+	conf := ginkgoutil.ParseYAML(data)
 	err := config.Decode(conf, result)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }

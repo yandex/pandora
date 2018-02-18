@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
-package aggregate
+package aggregator
 
 import (
 	"context"
@@ -30,7 +30,7 @@ func TestNewJSONLinesAggregator(t *testing.T) {
 		{"C", 3},
 	}
 
-	conf := NewDefaultJSONLinesAggregatorConfig()
+	conf := DefaultJSONLinesAggregatorConfig()
 	sink := &datasink.Buffer{}
 	conf.Sink = sink
 	testee := NewJSONLinesAggregator(conf)

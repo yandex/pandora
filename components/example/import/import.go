@@ -11,6 +11,6 @@ import (
 )
 
 func Import() {
-	register.Provider("example", NewProvider, NewDefaultProviderConfig)
+	register.Provider("example", NewProvider, DefaultProviderConfig)
 	register.Gun("example", NewGun)
 }

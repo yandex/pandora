@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
-package aggregate
+package aggregator
 
 import (
 	"io"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/config"
+	"github.com/yandex/pandora/core/coreutil"
 )
 
 type JSONLineAggregatorConfig struct {
@@ -21,8 +22,8 @@ type JSONLineAggregatorConfig struct {
 }
 
 type JSONLineEncoderConfig struct {
-	JSONIterConfig   `config:",squash"`
-	BufferSizeConfig `config:",squash"`
+	JSONIterConfig            `config:",squash"`
+	coreutil.BufferSizeConfig `config:",squash"`
 }
 
 // JSONIterConfig is subset of jsoniter.Config that may be useful to configure.
@@ -33,9 +34,9 @@ type JSONIterConfig struct {
 	SortMapKeys bool `config:"sort-map-keys"`
 }
 
-func NewDefaultJSONLinesAggregatorConfig() JSONLineAggregatorConfig {
+func DefaultJSONLinesAggregatorConfig() JSONLineAggregatorConfig {
 	return JSONLineAggregatorConfig{
-		EncoderAggregatorConfig: NewDefaultEncoderAggregatorConfig(),
+		EncoderAggregatorConfig: DefaultEncoderAggregatorConfig(),
 	}
 }
 

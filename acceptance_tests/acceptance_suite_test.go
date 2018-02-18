@@ -16,14 +16,14 @@ import (
 	"github.com/onsi/gomega/gexec"
 	"go.uber.org/zap"
 
+	"github.com/yandex/pandora/lib/ginkgoutil"
 	"github.com/yandex/pandora/lib/tag"
-	"github.com/yandex/pandora/lib/testutil"
 )
 
 var pandoraBin string
 
 func TestAcceptanceTests(t *testing.T) {
-	testutil.SetupSuite()
+	ginkgoutil.SetupSuite()
 	var args []string
 	if tag.Race {
 		zap.L().Debug("Building with race detector")

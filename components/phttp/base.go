@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate/netsample"
+	"github.com/yandex/pandora/core/aggregator/netsample"
 )
 
 const (
@@ -35,7 +35,7 @@ type AutoTagConfig struct {
 	NoTagOnly   bool `config:"no-tag-only"`                   // When true, autotagged only ammo that has no tag before.
 }
 
-func NewDefaultBaseGunConfig() BaseGunConfig {
+func DefaultBaseGunConfig() BaseGunConfig {
 	return BaseGunConfig{
 		AutoTagConfig{
 			Enabled:     false,

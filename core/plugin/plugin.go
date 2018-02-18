@@ -25,9 +25,9 @@ func Register(
 	pluginType reflect.Type,
 	name string,
 	newPluginImpl interface{},
-	newDefaultConfigOptional ...interface{},
+	defaultConfigOptional ...interface{},
 ) {
-	DefaultRegistry().Register(pluginType, name, newPluginImpl, newDefaultConfigOptional...)
+	DefaultRegistry().Register(pluginType, name, newPluginImpl, defaultConfigOptional...)
 }
 
 // Lookup is DefaultRegistry().Lookup shortcut.

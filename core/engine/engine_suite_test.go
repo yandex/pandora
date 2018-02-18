@@ -3,12 +3,12 @@ package engine
 import (
 	"testing"
 
+	"github.com/yandex/pandora/lib/ginkgoutil"
 	"github.com/yandex/pandora/lib/monitoring"
-	"github.com/yandex/pandora/lib/testutil"
 )
 
 func TestEngine(t *testing.T) {
-	testutil.RunSuite(t, "Engine Suite")
+	ginkgoutil.RunSuite(t, "Engine Suite")
 }
 
 func newTestMetrics() Metrics {

@@ -21,14 +21,14 @@ import (
 
 	"github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregate/netsample"
+	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coretest"
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func testDeps() core.GunDeps {
 	return core.GunDeps{
-		Log: testutil.NewLogger(),
+		Log: ginkgoutil.NewLogger(),
 		Ctx: context.Background(),
 	}
 }
@@ -40,7 +40,7 @@ var _ = Describe("BaseGun", func() {
 		ammo *ammomock.Ammo
 	)
 	BeforeEach(func() {
-		base = BaseGun{Config: NewDefaultBaseGunConfig()}
+		base = BaseGun{Config: DefaultBaseGunConfig()}
 		ammo = &ammomock.Ammo{}
 	})
 

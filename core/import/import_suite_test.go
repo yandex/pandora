@@ -16,14 +16,14 @@ import (
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/coretest"
 	"github.com/yandex/pandora/core/plugin"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 	"github.com/yandex/pandora/lib/testutil"
-	"github.com/yandex/pandora/lib/testutil2"
 )
 
 func TestImport(t *testing.T) {
 	defer resetGlobals()
 	Import(afero.NewOsFs())
-	testutil.RunSuite(t, "Import Suite")
+	ginkgoutil.RunSuite(t, "Import Suite")
 }
 
 var _ = Describe("plugin decode", func() {
@@ -100,7 +100,7 @@ func TestSink(t *testing.T) {
 }
 
 func TestProviderJSONLine(t *testing.T) {
-	testutil2.ReplaceGlobalLogger()
+	testutil.ReplaceGlobalLogger()
 	defer resetGlobals()
 	fs := afero.NewMemMapFs()
 	const filename = "/xxx"
@@ -124,7 +124,7 @@ func TestProviderJSONLine(t *testing.T) {
 	err = conf.Aggregator.Run(ctx, core.AggregatorDeps{zap.L()})
 	require.NoError(t, err)
 
-	testutil2.AssertFileEqual(t, fs, filename, "[0,1,2]\n")
+	testutil.AssertFileEqual(t, fs, filename, "[0,1,2]\n")
 }
 
 func testConfig(keyValuePairs ...interface{}) map[string]interface{} {
@@ -143,5 +143,5 @@ func testConfig(keyValuePairs ...interface{}) map[string]interface{} {
 func resetGlobals() {
 	plugin.SetDefaultRegistry(plugin.NewRegistry())
 	config.SetHooks(config.DefaultHooks())
-	testutil2.ReplaceGlobalLogger()
+	testutil.ReplaceGlobalLogger()
 }

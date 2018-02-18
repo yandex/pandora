@@ -84,25 +84,25 @@ func (g *HTTPGun) Do(req *http.Request) (*http.Response, error) {
 	return g.client.Do(req)
 }
 
-func NewDefaultHTTPGunConfig() HTTPGunConfig {
+func DefaultHTTPGunConfig() HTTPGunConfig {
 	return HTTPGunConfig{
-		Gun:    NewDefaultClientGunConfig(),
-		Client: NewDefaultClientConfig(),
+		Gun:    DefaultClientGunConfig(),
+		Client: DefaultClientConfig(),
 	}
 }
 
-func NewDefaultHTTP2GunConfig() HTTP2GunConfig {
+func DefaultHTTP2GunConfig() HTTP2GunConfig {
 	conf := HTTP2GunConfig{
-		Client: NewDefaultClientConfig(),
-		Gun:    NewDefaultClientGunConfig(),
+		Client: DefaultClientConfig(),
+		Gun:    DefaultClientGunConfig(),
 	}
 	conf.Gun.SSL = true
 	return conf
 }
 
-func NewDefaultClientGunConfig() ClientGunConfig {
+func DefaultClientGunConfig() ClientGunConfig {
 	return ClientGunConfig{
 		SSL:  false,
-		Base: NewDefaultBaseGunConfig(),
+		Base: DefaultBaseGunConfig(),
 	}
 }

@@ -36,7 +36,7 @@ func Import(fs afero.Fs) {
 	register.Gun("http", func(conf HTTPGunConfig) func() core.Gun {
 		preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
 		return func() core.Gun { return WrapGun(NewHTTPGun(conf)) }
-	}, NewDefaultHTTPGunConfig)
+	}, DefaultHTTPGunConfig)
 
 	register.Gun("http2", func(conf HTTP2GunConfig) func() (core.Gun, error) {
 		preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
@@ -44,14 +44,14 @@ func Import(fs afero.Fs) {
 			gun, err := NewHTTP2Gun(conf)
 			return WrapGun(gun), err
 		}
-	}, NewDefaultHTTP2GunConfig)
+	}, DefaultHTTP2GunConfig)
 
 	register.Gun("connect", func(conf ConnectGunConfig) func() core.Gun {
 		preResolveTargetAddr(&conf.Client, &conf.Target)
 		return func() core.Gun {
 			return WrapGun(NewConnectGun(conf))
 		}
-	}, NewDefaultConnectGunConfig)
+	}, DefaultConnectGunConfig)
 }
 
 // DNS resolve optimisation.

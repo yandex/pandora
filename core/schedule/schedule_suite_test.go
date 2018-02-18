@@ -10,11 +10,11 @@ import (
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coretest"
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestSchedule(t *testing.T) {
-	testutil.RunSuite(t, "Schedule Suite")
+	ginkgoutil.RunSuite(t, "Schedule Suite")
 }
 
 var _ = Describe("unlimited", func() {
