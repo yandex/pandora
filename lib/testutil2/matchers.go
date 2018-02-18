@@ -71,7 +71,7 @@ func RunFlaky(t *testing.T, test func(t TestingT)) {
 }
 
 // getHelper allows to call t.Helper() without breaking compatibility with go version < 1.9
-func getHelper(t *testing.T) helper {
+func getHelper(t TestingT) helper {
 	var tInterface interface{} = t
 	if h, ok := tInterface.(helper); ok {
 		return h
