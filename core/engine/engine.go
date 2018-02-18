@@ -56,7 +56,7 @@ type Engine struct {
 
 // Run runs all instance pools. Run blocks until fail happen, or all pools
 // subroutines are successfully finished.
-// Ctx will be ancestor to Contexts passed to Provider, Gun and Aggregator.
+// Ctx will be ancestor to Contexts passed to AmmoQueue, Gun and Aggregator.
 // That's ctx cancel cancels shooting and it's Context values can be used for communication between plugins.
 func (e *Engine) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
@@ -124,10 +124,10 @@ type instancePool struct {
 
 // Run start instance pool. Run blocks until fail happen, or all instances finish.
 // What's going on:
-// Provider and Aggregator are started in separate goroutines.
+// AmmoQueue and Aggregator are started in separate goroutines.
 // Instances create due to schedule is started in separate goroutine.
 // Every new instance started in separate goroutine.
-// When all instances are finished, Aggregator and Provider contexts are canceled,
+// When all instances are finished, Aggregator and AmmoQueue contexts are canceled,
 // and their execution results are awaited.
 // If error happen or Run context has been canceled, Run returns non-nil error immediately,
 // remaining results awaiting goroutine in background, that will call onWaitDone callback,
@@ -243,7 +243,7 @@ type runAwaitHandle struct {
 
 func (p *instancePool) newAwaitRunHandle(runHandle *poolAsyncRunHandle) (*runAwaitHandle, <-chan error) {
 	awaitErr := make(chan error)
-	const resultsToWait = 4 // Provider, Aggregator, instance start, instance run.
+	const resultsToWait = 4 // AmmoQueue, Aggregator, instance start, instance run.
 	awaitHandle := &runAwaitHandle{
 		log:                p.log,
 		poolAsyncRunHandle: *runHandle,
@@ -261,7 +261,7 @@ func (ah *runAwaitHandle) awaitRun() {
 			ah.providerErr = nil
 			// TODO(skipor): not wait for provider, to return success result?
 			ah.toWait--
-			ah.log.Debug("Provider awaited", zap.Error(err))
+			ah.log.Debug("AmmoQueue awaited", zap.Error(err))
 			if errutil.IsNotCtxError(ah.runCtx, err) {
 				ah.onErrAwaited(errors.WithMessage(err, "provider failed"))
 			}

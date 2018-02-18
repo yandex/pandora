@@ -14,7 +14,8 @@ import (
 	"github.com/yandex/pandora/core"
 )
 
-// TODO(skipor): auto unzip
+// TODO(skipor): auto unzip with option to turn this behaviour off.
+
 type FileConfig struct {
 	Path string `config:"path" validate:"required"`
 }

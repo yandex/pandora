@@ -27,6 +27,15 @@ import (
 // Information common for all shoots SHOULD be passed via Provider configuration.
 type Ammo interface{}
 
+// ResettableAmmo is ammo that can be efficiently reset before reuse.
+// Generic Provider (Provider that accepts undefined type of Ammo) SHOULD Reset Ammo before reuse
+// if it implements ResettableAmmo.
+// Ammo that is not going to be used with generic Providers don't need to implement ResettableAmmo.
+type ResettableAmmo interface {
+	Ammo
+	Reset()
+}
+
 //go:generate mockery -name=Provider -case=underscore -outpkg=coremock
 
 // Provider is routine that generates ammo for Instance shoots.
@@ -108,6 +117,7 @@ type Sample interface{}
 // BorrowedSample is Sample that was borrowed from pool, and SHOULD be returned by Aggregator,
 // after it will handle Sample.
 type BorrowedSample interface {
+	Sample
 	Return()
 }
 

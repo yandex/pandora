@@ -14,6 +14,8 @@ import (
 	"github.com/yandex/pandora/core"
 )
 
+// TODO(skipor): gzip on flag
+
 type FileConfig struct {
 	Path string `config:"path" validate:"required"`
 }

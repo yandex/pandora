@@ -37,6 +37,9 @@ type logConfig struct {
 	File  string        `config:"file"`
 }
 
+// TODO(skipor): log sampling with WARN when first message is dropped, and WARN at finish with all
+// filtered out entries num. Message is filtered out when zapcore.CoreEnable returns true but
+// zapcore.Core.Check return nil.
 func newLogger(conf logConfig) *zap.Logger {
 	zapConf := zap.NewDevelopmentConfig()
 	zapConf.OutputPaths = []string{conf.File}

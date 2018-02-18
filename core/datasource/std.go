@@ -29,7 +29,7 @@ func (b buffer) OpenSource() (wc io.ReadCloser, err error) {
 
 // NewReader returns dummy core.DataSource that returns it on OpenSource call, wrapping it
 // ioutil.NopCloser if r is not io.Closer.
-// NONE(skipor): such wrapping hide
+// NOTE(skipor): such wrapping hides Seek and other methods that can be used.
 func NewReader(r io.Reader) core.DataSource {
 	return &reader{r}
 }
@@ -42,5 +42,15 @@ func (r *reader) OpenSource() (rc io.ReadCloser, err error) {
 	if rc, ok := r.source.(io.ReadCloser); ok {
 		return rc, nil
 	}
+	// Need to add io.Closer, but don't want to hide seeker.
+	rs, ok := r.source.(io.ReadSeeker)
+	if ok {
+		return &struct {
+			io.ReadSeeker
+			ioutil2.NopCloser
+		}{ReadSeeker: rs}, nil
+	}
 	return ioutil.NopCloser(r.source), nil
 }
+
+// TODO(skipor): InMemory DataSource, that reads all nested source data in open to buffer.
