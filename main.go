@@ -18,12 +18,9 @@ func main() {
 	// CLI don't know anything about components initially.
 	// All extpoints constructors and default configurations should be registered, before CLI run.
 	fs := afero.NewOsFs()
-	core.Import(fs)
-
-	// Components should not write anything to files.
-	readOnlyFs := afero.NewReadOnlyFs(fs)
+	coreimport.Import(fs)
+	phttp.Import(fs)
 	example.Import()
-	phttp.Import(readOnlyFs)
 
 	cli.Run()
 }

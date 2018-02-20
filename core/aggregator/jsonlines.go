@@ -29,7 +29,7 @@ type JSONLineEncoderConfig struct {
 // JSONIterConfig is subset of jsoniter.Config that may be useful to configure.
 type JSONIterConfig struct {
 	// MarshalFloatWith6Digits makes float marshalling faster.
-	MarshalFloatWith6Digits bool
+	MarshalFloatWith6Digits bool `config:"marshal-float-with-6-digits"`
 	// SortMapKeys useful, when sample contains map object, and you want to see them in same order.
 	SortMapKeys bool `config:"sort-map-keys"`
 }
