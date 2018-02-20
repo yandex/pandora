@@ -1,4 +1,4 @@
-package core
+package coreimport
 
 import (
 	"context"
@@ -126,6 +126,8 @@ func TestProviderJSONLine(t *testing.T) {
 
 	testutil.AssertFileEqual(t, fs, filename, "[0,1,2]\n")
 }
+
+// TODO(skipor): test datasources
 
 func testConfig(keyValuePairs ...interface{}) map[string]interface{} {
 	if len(keyValuePairs)%2 != 0 {

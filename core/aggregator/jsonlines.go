@@ -6,6 +6,7 @@
 package aggregator
 
 import (
+	"bufio"
 	"io"
 
 	"github.com/json-iterator/go"
@@ -29,7 +30,7 @@ type JSONLineEncoderConfig struct {
 // JSONIterConfig is subset of jsoniter.Config that may be useful to configure.
 type JSONIterConfig struct {
 	// MarshalFloatWith6Digits makes float marshalling faster.
-	MarshalFloatWith6Digits bool
+	MarshalFloatWith6Digits bool `config:"marshal-float-with-6-digits"`
 	// SortMapKeys useful, when sample contains map object, and you want to see them in same order.
 	SortMapKeys bool `config:"sort-map-keys"`
 }
@@ -54,16 +55,26 @@ func NewJSONEncoder(w io.Writer, conf JSONLineEncoderConfig) SampleEncoder {
 	var apiConfig jsoniter.Config
 	config.Map(&apiConfig, conf.JSONIterConfig)
 	api := apiConfig.Froze()
-	stream := jsoniter.NewStream(api, w, conf.BufferSizeOrDefault())
-	return jsonEncoder{stream}
+	// NOTE(skipor): internal buffering is not working really. Don't know why
+	// OPTIMIZE(skipor): don't wrap into buffer, if already ioutil2.ByteWriter
+	buf := bufio.NewWriterSize(w, conf.BufferSizeOrDefault())
+	stream := jsoniter.NewStream(api, buf, conf.BufferSizeOrDefault())
+	return &jsonEncoder{stream, buf}
 }
 
 type jsonEncoder struct {
 	*jsoniter.Stream
+	buf *bufio.Writer
 }
 
-func (e jsonEncoder) Encode(s core.Sample) error {
+func (e *jsonEncoder) Encode(s core.Sample) error {
 	e.WriteVal(s)
 	e.WriteRaw("\n")
 	return e.Error
+}
+
+func (e *jsonEncoder) Flush() error {
+	err := e.Stream.Flush()
+	e.buf.Flush()
+	return err
 }

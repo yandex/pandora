@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"strings"
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/lib/ioutil2"
@@ -31,14 +32,14 @@ func (b buffer) OpenSource() (wc io.ReadCloser, err error) {
 // ioutil.NopCloser if r is not io.Closer.
 // NOTE(skipor): such wrapping hides Seek and other methods that can be used.
 func NewReader(r io.Reader) core.DataSource {
-	return &reader{r}
+	return &readerSource{r}
 }
 
-type reader struct {
+type readerSource struct {
 	source io.Reader
 }
 
-func (r *reader) OpenSource() (rc io.ReadCloser, err error) {
+func (r *readerSource) OpenSource() (rc io.ReadCloser, err error) {
 	if rc, ok := r.source.(io.ReadCloser); ok {
 		return rc, nil
 	}
@@ -51,6 +52,27 @@ func (r *reader) OpenSource() (rc io.ReadCloser, err error) {
 		}{ReadSeeker: rs}, nil
 	}
 	return ioutil.NopCloser(r.source), nil
+}
+
+func NewString(s string) core.DataSource {
+	return &stringSource{Reader: strings.NewReader(s)}
+}
+
+type stringSource struct {
+	*strings.Reader
+	ioutil2.NopCloser
+}
+
+func (s stringSource) OpenSource() (rc io.ReadCloser, err error) {
+	return s, nil
+}
+
+type InlineConfig struct {
+	Data string `validate:"required"`
+}
+
+func NewInline(conf InlineConfig) core.DataSource {
+	return NewString(conf.Data)
 }
 
 // TODO(skipor): InMemory DataSource, that reads all nested source data in open to buffer.
