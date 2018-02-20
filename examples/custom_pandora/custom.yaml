@@ -13,7 +13,7 @@ pools:
 
   result:
     type: json
-    sink: stderr # Just for interactivity print result to stderr. Usually file user.
+    sink: stdout # Just for interactivity print result to stdout. Usually file used here.
 
   rps:
     - {duration: 2s, type: line,  from: 1, to: 5}
