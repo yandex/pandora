@@ -72,7 +72,7 @@ func Import(fs afero.Fs) {
 	register.Aggregator("phout", func(conf netsample.PhoutConfig) (core.Aggregator, error) {
 		a, err := netsample.NewPhout(fs, conf)
 		return netsample.WrapAggregator(a), err
-	})
+	}, netsample.DefaultPhoutConfig)
 	register.Aggregator("jsonlines", aggregator.NewJSONLinesAggregator, aggregator.DefaultJSONLinesAggregatorConfig)
 	register.Aggregator("json", aggregator.NewJSONLinesAggregator, aggregator.DefaultJSONLinesAggregatorConfig) // TODO(skipor): should be done via alias, but we don't have them yet
 	register.Aggregator("log", aggregator.NewLog)

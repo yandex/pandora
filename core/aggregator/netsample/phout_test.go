@@ -30,7 +30,8 @@ var _ = Describe("Phout", func() {
 
 	BeforeEach(func() {
 		fs = afero.NewMemMapFs()
-		conf = PhoutConfig{Destination: fileName}
+		conf = DefaultPhoutConfig()
+		conf.Destination = fileName
 		ctx, cancel = context.WithCancel(context.Background())
 	})
 	JustBeforeEach(func() {

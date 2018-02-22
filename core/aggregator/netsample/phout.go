@@ -8,15 +8,30 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/c2h5oh/datasize"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 
 	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/coreutil"
 )
 
 type PhoutConfig struct {
-	Destination string // Destination file name
-	Id          bool   // Print ammo ids if true.
+	Destination     string                    // Destination file name
+	Id              bool                      // Print ammo ids if true.
+	FlushTime       time.Duration             `config:"flush-time"`
+	SampleQueueSize int                       `config:"sample-queue-size"`
+	Buffer          coreutil.BufferSizeConfig `config:",squash"`
+}
+
+func DefaultPhoutConfig() PhoutConfig {
+	return PhoutConfig{
+		FlushTime:       time.Second,
+		SampleQueueSize: 256 * 1024,
+		Buffer: coreutil.BufferSizeConfig{
+			BufferSize: 8 * datasize.MB,
+		},
+	}
 }
 
 func NewPhout(fs afero.Fs, conf PhoutConfig) (a Aggregator, err error) {
@@ -31,8 +46,8 @@ func NewPhout(fs afero.Fs, conf PhoutConfig) (a Aggregator, err error) {
 	}
 	a = &phoutAggregator{
 		config: conf,
-		sink:   make(chan *Sample, 32*1024),
-		writer: bufio.NewWriterSize(file, 512*1024),
+		sink:   make(chan *Sample, conf.SampleQueueSize),
+		writer: bufio.NewWriterSize(file, conf.Buffer.BufferSizeOrDefault()),
 		buf:    make([]byte, 0, 1024),
 		file:   file,
 	}

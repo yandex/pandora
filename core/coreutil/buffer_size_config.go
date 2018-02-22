@@ -9,7 +9,7 @@ import (
 	"github.com/c2h5oh/datasize"
 )
 
-const DefaultBufferSize = 256 * 1024
+const DefaultBufferSize = 512 * 1024
 const MinimalBufferSize = 4 * 1024
 
 // BufferSizeConfig SHOULD be used to configure buffer size.
