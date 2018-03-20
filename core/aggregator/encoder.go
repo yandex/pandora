@@ -67,11 +67,6 @@ func NewEncoderAggregator(
 		newEncoder: newEncoder,
 		conf:       conf,
 	}
-	return &dataSinkAggregator{
-		Reporter:   *NewReporter(conf.ReporterConfig),
-		newEncoder: newEncoder,
-		conf:       conf,
-	}
 }
 
 type dataSinkAggregator struct {
