@@ -33,3 +33,5 @@ pandora.iml
 out/
 
 vendor/
+
+docs/_*

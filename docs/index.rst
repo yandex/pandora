@@ -6,6 +6,8 @@
 Welcome to Pandora's documentation!
 ===================================
 
+Pandora is a high-performance load generator in Go language. It has built-in HTTP(S) and HTTP/2 support and you can write your own load scenarios in Go, compiling them just before your test.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
@@ -16,17 +18,3 @@ Welcome to Pandora's documentation!
    custom
    performance
    architecture
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
-Introduction
-============
-
-Pandora is a high-performance load generator in Go language. It has built-in HTTP(S) and HTTP/2 support and you can write your own load scenarios in Go, compiling them just before your test.
-
