@@ -35,3 +35,4 @@ out/
 vendor/
 
 docs/_*
+.DS_Store

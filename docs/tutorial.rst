@@ -12,28 +12,26 @@ Pandora supports config files in `YAML`_ format. Create a new file named ``load.
 .. code-block:: yaml
 
   pools:
-    - id: HTTP pool                    # Pool name
+    - id: HTTP pool                    # pool name (for your choice)
       gun:
-        type: http                     # Gun type
-        target: example.com:80         # Gun target
+        type: http                     # gun type
+        target: example.com:80         # gun target
       ammo:
-        type: uri                      # Ammo format                        
-        file: ./ammo.uri               # Ammo File
+        type: uri                      # ammo format                        
+        file: ./ammo.uri               # ammo File
       result:
-        type: phout                    # Report format (phout is for Yandex.Tank)
-        destination: ./phout.log       # Report file name
+        type: phout                    # report format (phout is compatible with Yandex.Tank)
+        destination: ./phout.log       # report file name
 
-      rps:                             # RPS Schedule
-        type: periodic                 # shoot periodically
-        period: 0.1s                   # ten batches each second
-        max: 30                        # thirty batches total
-        batch: 2                       # in batches of two shoots
+      rps:                             # shooting schedule
+        type: line                     # linear growth
+        from: 1                        # from 1 response per second
+        to: 5                          # to 5 responses per second
+        duration: 60s                  # for 60 seconds
 
-      startup:                         # Startup Schedule
-        type: periodic                 # start Instances periodically
-        period: 0.5s                   # every 0.5 seconds
-        batch: 1                       # one Instance at a time
-        max: 5                         # five Instances total
+      startup:                         # instances startup schedule
+        type: once                     # start 10 instances
+        times: 10
 
 `ammo.uri`:
 

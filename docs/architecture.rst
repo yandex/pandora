@@ -37,6 +37,9 @@ It can control Instances startup times, RPS amount (requests per second) or othe
 By combining two types of Schedulers, RPS Scheduler and Instance Startup Scheduler, you can simulate different types of load.
 Instace Startup Scheduler controls the level of parallelism and RPS Scheduler controls throughput.
 
+RPS Scheduler can limit throughput of a whole instances pool, i.e. 10 RPS on 10 instances means 10 RPS overall, or
+limit throughput of each instance in a pool individually, i.e. 10 RPS on each of 10 instances means 100 RPS overall.
+
 If you set RPS Scheduler to 'unlimited' and then gradually raise the number of Instances in your system by using Instance
 Startup Scheduler, you'll be able to study the `scalability <http://www.perfdynamics.com/Manifesto/USLscalability.html>`_
 of your service. 
@@ -45,8 +48,7 @@ If you set Instances count to a big, unchanged value (you can estimate the neede
 `Little's Law <https://en.wikipedia.org/wiki/Little%27s_law>`_) and then gradually raise the RPS by using RPS Scheduler,
 you'll be able to simulate Internet and push your service to its limits.
 
-You can also combine two methods mentioned above. And, one more thing, RPS Scheduler can control a whole Instances Pool or
-each Instance individually.
+You can also combine two methods mentioned above.
 
 Instances and Guns
 ++++++++++++++++++
