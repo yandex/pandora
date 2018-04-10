@@ -1,7 +1,7 @@
 Pandora's performance
 =====================
 
-We made some performance tests for the gun itself. Here are the results.
+`Alexander Ivanov`_ made some performance tests for the gun itself. Here are the results.
 
 * Server: NGinx, 32 cores, 64G RAM.
 * Tank: 32 cores, 128G RAM.
@@ -102,3 +102,6 @@ to do this.
 .. image:: screenshot/scn_cases.png
     :align: center
     :alt: scenario steps
+
+
+.. _Alexander Ivanov: ival.net@yandex.ru
