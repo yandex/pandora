@@ -1,3 +1,6 @@
+Custom guns
+===========
+
 You can create you own Golang-based gun with `pandora`.
 
 There is an example of custom gun shooting via gRPC.
