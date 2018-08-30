@@ -204,30 +204,25 @@ Now its time to create ```load.yaml```:
 
 .. code-block:: yaml
 
-  pandora:
-      enabled: true
-      package: yandextank.plugins.Pandora
-      pandora_cmd: ./my_custom_gun  # your binary executable shooter here
-      config_content:
-          pools:
-              - id: HTTP pool
-                  gun:
-                      type: My_custom_gun_name   # custom gun name specified
-                      target: "your_grpc_host:your_grpc_port"
-                  ammo:
-                      type: custom_provider
-                      source:
-                          type: file
-                          path: ./json.ammo
-                  result:
-                      type: phout
-                      destination: ./phout.log
-                  rps: {duration: 30s, type: line,  from: 1, to: 2}
-                  startup:
-                      type: once
-                      times: 10
-          log:
-              level: error
+    pools:
+        - id: HTTP pool
+            gun:
+                type: My_custom_gun_name   # custom gun name specified
+                target: "your_grpc_host:your_grpc_port"
+            ammo:
+                type: custom_provider
+                source:
+                    type: file
+                    path: ./json.ammo
+            result:
+                type: phout
+                destination: ./phout.log
+            rps: {duration: 30s, type: line,  from: 1, to: 2}
+            startup:
+                type: once
+                times: 10
+            log:
+                level: error
 
 And create ammofile ```./json.ammo```:
 
