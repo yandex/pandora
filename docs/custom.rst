@@ -1,6 +1,9 @@
 You can create you own Golang-based gun with `pandora`.
+
 There is an example of custom gun shooting via gRPC.
+
 We create a new gun and define ```shoot``` method for it w/ our test logic.
+
 
 .. code-block:: go
 
@@ -47,8 +50,8 @@ We create a new gun and define ```shoot``` method for it w/ our test logic.
   }
 
   type Gun struct {
-      // Configured on construction.
-      client grpc.ClientConn
+	  // Configured on construction.
+	  client grpc.ClientConn
 	  conf   GunConfig
 	  // Configured on Bind, before shooting
 	  aggr core.Aggregator // May be your custom Aggregator.
@@ -60,8 +63,8 @@ We create a new gun and define ```shoot``` method for it w/ our test logic.
   }
 
   func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
-      // create gRPC stub at gun initialization
-      conn, err := grpc.Dial(
+	  // create gRPC stub at gun initialization
+	  conn, err := grpc.Dial(
  		  g.conf.Target,
  		  grpc.WithInsecure(),
 		  grpc.WithTimeout(time.Second),
