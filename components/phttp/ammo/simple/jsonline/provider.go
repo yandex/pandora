@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"strings"
 )
 
 func NewProvider(fs afero.Fs, conf Config) *Provider {
@@ -80,7 +81,7 @@ func decodeAmmo(jsonDoc []byte, am *simple.Ammo) (*simple.Ammo, error) {
 
 func (d *data) ToRequest() (req *http.Request, err error) {
 	uri := "http://" + d.Host + d.Uri
-	req, err = http.NewRequest(d.Method, uri, nil)
+	req, err = http.NewRequest(d.Method, uri, strings.NewReader(d.Body))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

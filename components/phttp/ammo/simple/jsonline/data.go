@@ -13,4 +13,6 @@ type data struct {
 	// NOTE: Host header will be silently ignored.
 	Headers map[string]string `json:"headers"`
 	Tag     string            `json:"tag"`
+	//Body must be string
+	Body	string	`json:"body"`
 }
