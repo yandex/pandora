@@ -66,4 +66,13 @@ var _ = Describe("Decoder", func() {
 		}
 		Expect(bout.String()).To(Equal("foobar"))
 	})
+	It("should return error on bad urls", func() {
+		raw := "GET ../../../../etc/passwd HTTP/1.1\r\n" +
+			"Host: foo.com\r\n" +
+			"Content-Length: 0\r\n" +
+			"\r\n"
+		req, err := decodeRequest([]byte(raw))
+		Expect(err).ToNot(BeNil())
+		Expect(req).To(BeNil())
+	})
 })
