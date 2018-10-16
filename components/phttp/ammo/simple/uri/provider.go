@@ -8,6 +8,7 @@ package uri
 import (
 	"bufio"
 	"context"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
@@ -17,6 +18,7 @@ import (
 
 type Config struct {
 	File string `validate:"required"`
+	URIHeaders string `config:"uri-headers"`
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
 	// Passes limits ammo file passes. Unlimited if zero.
@@ -40,8 +42,26 @@ type Provider struct {
 	decoder *decoder // Initialized on start.
 }
 
+
+func (p *Provider) reloadUriHeaders() error {
+        for _, header := range strings.Split(p.Config.URIHeaders, "]") {
+                if len(header) >= 5 {
+                        err := p.decoder.decodeHeader([]byte(strings.TrimSpace(header) + "]"))
+                        if err != nil {
+                                return errors.Wrapf(err, "failed to decode header %v]", header)
+                        }
+                }
+        }
+	return nil
+}
+
+
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	p.decoder = newDecoder(ctx, p.Sink, &p.Pool)
+
+
+	p.reloadUriHeaders()
+
 	var passNum int
 	for {
 		passNum++
@@ -64,6 +84,7 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		}
 		ammoFile.Seek(0, 0)
 		p.decoder.ResetHeader()
+		p.reloadUriHeaders()
 	}
 	return nil
 }
