@@ -30,11 +30,7 @@ type ClientConfig struct {
 	Redirect  bool            // When true, follow HTTP redirects.
 	Dialer    DialerConfig    `config:"dial"`
 	Transport TransportConfig `config:",squash"`
-<<<<<<< HEAD
 	Timeout   time.Duration   `config:"timeout"`
-=======
-    Timeout   time.Duration   `config:"timeout"`
->>>>>>> 09f044f... Added client timeout. Current timeout renamed to conect-timeout.
 }
 
 func DefaultClientConfig() ClientConfig {
