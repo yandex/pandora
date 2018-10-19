@@ -98,19 +98,63 @@ func Run() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go handleSignals(log, cancel)
+	errs := make(chan error)
+	go runEngine(ctx, pandora, errs)
 
-	err := pandora.Run(ctx)
-	if err != nil {
-		const awaitTimeout = 3 * time.Second
-		log.Error("Engine run failed. Awaiting started tasks.", zap.Error(err), zap.Duration("timeout", awaitTimeout))
-		time.AfterFunc(awaitTimeout, func() {
-			log.Fatal("Engine tasks timeout exceeded.")
-		})
-		pandora.Wait()
-		os.Exit(1)
+	sigs := make(chan os.Signal, 2)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	// waiting for signal or error message from engine
+	select {
+	case sig := <-sigs:
+		switch sig {
+		case syscall.SIGINT:
+			const interruptTimeout = 5 * time.Second
+			log.Info("SIGINT received. Trying to stop gracefully.", zap.Duration("timeout", interruptTimeout))
+			cancel()
+			select {
+			case <-time.After(interruptTimeout):
+				log.Fatal("Interrupt timeout exceeded")
+				os.Exit(1)
+			case sig := <-sigs:
+				log.Fatal("Another signal received. Quiting.", zap.Stringer("signal", sig))
+				os.Exit(1)
+			case err := <-errs:
+				log.Info("Engine interrupted", zap.Error(err))
+				os.Exit(1)
+			}
+		case syscall.SIGTERM:
+			log.Info("SIGTERM received. Quiting.")
+			os.Exit(1)
+		default:
+			log.Info("Unexpected signal received. Quiting.", zap.Stringer("signal", sig))
+			os.Exit(1)
+		}
+	case err := <-errs:
+		switch err {
+		case nil:
+			log.Info("Pandora engine successfully finished it's work")
+		case err:
+			const awaitTimeout= 3 * time.Second
+			log.Error("Engine run failed. Awaiting started tasks.", zap.Error(err), zap.Duration("timeout", awaitTimeout))
+			cancel()
+			time.AfterFunc(awaitTimeout, func() {
+				log.Fatal("Engine tasks timeout exceeded.")
+				os.Exit(1)
+			})
+			pandora.Wait()
+			os.Exit(1)
+		}
 	}
 	log.Info("Engine run successfully finished")
+}
+
+func runEngine(ctx context.Context, engine *engine.Engine, errs chan error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer func() {
+		cancel()
+	}()
+	errs <- engine.Run(ctx)
 }
 
 func readConfig() *cliConfig {
@@ -149,35 +193,6 @@ func newViper() *viper.Viper {
 		v.AddConfigPath(dir)
 	}
 	return v
-}
-
-func handleSignals(log *zap.Logger, interrupt func()) {
-	sigs := make(chan os.Signal, 2)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	select {
-	case sig := <-sigs:
-		switch sig {
-		case syscall.SIGINT:
-			const interruptTimeout = 5 * time.Second
-			log.Info("SIGINT received. Trying to stop gracefully.", zap.Duration("timeout", interruptTimeout))
-			interrupt()
-			select {
-			case <-time.After(interruptTimeout):
-				log.Fatal("Interrupt timeout exceeded")
-				os.Exit(1)
-
-			case sig := <-sigs:
-				log.Fatal("Another signal received. Quiting.", zap.Stringer("signal", sig))
-				os.Exit(1)
-			}
-		case syscall.SIGTERM:
-			log.Info("SIGTERM received. Quiting.")
-			os.Exit(1)
-		default:
-			log.Info("Unexpected signal received. Quiting.", zap.Stringer("signal", sig))
-			os.Exit(1)
-		}
-	}
 }
 
 type monitoringConfig struct {
@@ -226,3 +241,4 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 	}
 	return
 }
+
