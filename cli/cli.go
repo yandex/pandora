@@ -164,13 +164,18 @@ func handleSignals(log *zap.Logger, interrupt func()) {
 			select {
 			case <-time.After(interruptTimeout):
 				log.Fatal("Interrupt timeout exceeded")
+				os.Exit(1)
+
 			case sig := <-sigs:
 				log.Fatal("Another signal received. Quiting.", zap.Stringer("signal", sig))
+				os.Exit(1)
 			}
 		case syscall.SIGTERM:
 			log.Info("SIGTERM received. Quiting.")
+			os.Exit(1)
 		default:
 			log.Info("Unexpected signal received. Quiting.", zap.Stringer("signal", sig))
+			os.Exit(1)
 		}
 	}
 }
