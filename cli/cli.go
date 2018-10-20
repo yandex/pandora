@@ -115,20 +115,15 @@ func Run() {
 			select {
 			case <-time.After(interruptTimeout):
 				log.Fatal("Interrupt timeout exceeded")
-				os.Exit(1)
 			case sig := <-sigs:
 				log.Fatal("Another signal received. Quiting.", zap.Stringer("signal", sig))
-				os.Exit(1)
 			case err := <-errs:
-				log.Info("Engine interrupted", zap.Error(err))
-				os.Exit(1)
+				log.Fatal("Engine interrupted", zap.Error(err))
 			}
 		case syscall.SIGTERM:
-			log.Info("SIGTERM received. Quiting.")
-			os.Exit(1)
+			log.Fatal("SIGTERM received. Quiting.")
 		default:
-			log.Info("Unexpected signal received. Quiting.", zap.Stringer("signal", sig))
-			os.Exit(1)
+			log.Fatal("Unexpected signal received. Quiting.", zap.Stringer("signal", sig))
 		}
 	case err := <-errs:
 		switch err {
@@ -140,10 +135,9 @@ func Run() {
 			cancel()
 			time.AfterFunc(awaitTimeout, func() {
 				log.Fatal("Engine tasks timeout exceeded.")
-				os.Exit(1)
 			})
 			pandora.Wait()
-			os.Exit(1)
+			log.Fatal("Engine run failed. Pandora graceful shutdown successfully finished")
 		}
 	}
 	log.Info("Engine run successfully finished")
@@ -151,9 +145,7 @@ func Run() {
 
 func runEngine(ctx context.Context, engine *engine.Engine, errs chan error) {
 	ctx, cancel := context.WithCancel(ctx)
-	defer func() {
-		cancel()
-	}()
+	defer cancel()
 	errs <- engine.Run(ctx)
 }
 
