@@ -1,8 +1,7 @@
 language: go
-go: 
-  - 1.9.2
-  - 1.8.3
-  - tip
+go:
+  - 1.10.4
+  - 1.11.1
 
 go_import_path: github.com/yandex/pandora
 
