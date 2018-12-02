@@ -8,15 +8,14 @@ package jsonline
 import (
 	"context"
 	"encoding/json"
-	"net/http"
-	"sync"
-	"testing"
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
+	"net/http"
+	"sync"
+	"testing"
+	"time"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 	"github.com/yandex/pandora/core"
@@ -83,7 +82,6 @@ var _ = Describe("data", func() {
 			"Proto":      Equal("HTTP/1.1"),
 			"ProtoMajor": Equal(1),
 			"ProtoMinor": Equal(1),
-			"Body":       BeNil(),
 			"URL": PointTo(MatchFields(IgnoreExtras, Fields{
 				"Scheme": Equal("http"),
 				"Host":   Equal(data.Host),
@@ -171,7 +169,19 @@ var _ = Describe("provider decode", func() {
 			Expect(err).To(BeNil())
 			ammo := ammos[i]
 			req, ss := ammo.Request()
-			Expect(req).To(Equal(expectedReq))
+			Expect(*req).To(MatchFields(IgnoreExtras, Fields{
+				"Proto":      Equal(expectedReq.Proto),
+				"ProtoMajor": Equal(expectedReq.ProtoMajor),
+				"ProtoMinor": Equal(expectedReq.ProtoMinor),
+				"URL": PointTo(MatchFields(IgnoreExtras, Fields{
+					"Scheme": Equal(expectedReq.URL.Scheme),
+					"Host":   Equal(expectedReq.URL.Host),
+					"Path":   Equal(expectedReq.URL.Path),
+				})),
+				"Header": Equal(expectedReq.Header),
+				"Method": Equal(expectedReq.Method),
+				"Body": Equal(expectedReq.Body),
+			}))
 			Expect(ss.Tags()).To(Equal(expectedData.Tag))
 		}
 	})
