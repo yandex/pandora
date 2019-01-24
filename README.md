@@ -19,7 +19,7 @@ Run this binary with your .json config (see [examples](https://github.com/yandex
 ```
 ./pandora myconfig.json
 ```
-Or let [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/configuration.html#pandora) make it easy for you.
+Or let [Yandex.Tank](https://yandextank.readthedocs.io/en/latest/core_and_modules.html#pandora) make it easy for you.
 
 
 ## Extension points
