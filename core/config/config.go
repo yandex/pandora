@@ -13,7 +13,7 @@ import (
 
 const TagName = "config"
 
-// Decodes conf to result. Doesn't zero fields.
+// Decode decodes conf to result. Doesn't zero fields.
 func Decode(conf interface{}, result interface{}) error {
 	decoder, err := mapstructure.NewDecoder(newDecoderConfig(result))
 	if err != nil {

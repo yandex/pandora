@@ -27,7 +27,7 @@ func ExpectScheduleNexts(sched core.Schedule, nexts ...time.Duration) {
 
 const drainLimit = 1000000
 
-// DrainSchedule starts schedule and takes all tokens from it.
+// DrainScheduleDuration starts schedule and takes all tokens from it.
 // Returns all tokens and finish time relative to start
 func DrainScheduleDuration(sched core.Schedule, startAt time.Time) []time.Duration {
 	nexts := DrainSchedule(sched)
