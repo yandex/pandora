@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/yandex/pandora/components/phttp/mocks"
+	ammomock "github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coretest"

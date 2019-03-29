@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 
-	"github.com/yandex/pandora/components/phttp/mocks"
+	ammomock "github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/config"
 )

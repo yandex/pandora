@@ -8,14 +8,15 @@ package jsonline
 import (
 	"context"
 	"encoding/json"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
-	"github.com/spf13/afero"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	"github.com/spf13/afero"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 	"github.com/yandex/pandora/core"

@@ -30,7 +30,8 @@ checkfmt:
 
 fmt:
 	@echo "$(OK_COLOR)Check fmt$(NO_COLOR)"
-	@go fmt ./...
+	@echo "FIXME go fmt does not format imports, should be fixed"
+	@go fmt
 
 tools:
 	@echo "$(OK_COLOR)Install tools$(NO_COLOR)"

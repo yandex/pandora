@@ -8,7 +8,7 @@ package provider
 import (
 	"io"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coreutil"

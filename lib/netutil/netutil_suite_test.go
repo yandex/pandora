@@ -11,7 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/lib/ginkgoutil"
-	"github.com/yandex/pandora/lib/netutil/mocks"
+	netmock "github.com/yandex/pandora/lib/netutil/mocks"
 )
 
 func TestNetutil(t *testing.T) {
