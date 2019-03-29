@@ -130,7 +130,7 @@ func Run() {
 		case nil:
 			log.Info("Pandora engine successfully finished it's work")
 		case err:
-			const awaitTimeout= 3 * time.Second
+			const awaitTimeout = 3 * time.Second
 			log.Error("Engine run failed. Awaiting started tasks.", zap.Error(err), zap.Duration("timeout", awaitTimeout))
 			cancel()
 			time.AfterFunc(awaitTimeout, func() {
