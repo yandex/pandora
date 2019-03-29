@@ -1,14 +1,17 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 	"syscall"
 	"time"
 
@@ -23,6 +26,7 @@ import (
 
 const Version = "0.2.0"
 const defaultConfigFile = "load"
+const stdinConfig = "-"
 
 var configSearchDirs = []string{"./", "./config", "/etc/pandora"}
 
@@ -163,12 +167,26 @@ func readConfig() *cliConfig {
 		if len(flag.Args()) > 1 {
 			zap.L().Fatal("Too many command line arguments", zap.Strings("args", flag.Args()))
 		}
-		v.SetConfigFile(flag.Args()[0])
-	}
-	err = v.ReadInConfig()
-	log.Info("Reading config", zap.String("file", v.ConfigFileUsed()))
-	if err != nil {
-		log.Fatal("Config read failed", zap.Error(err))
+		configFileName := flag.Args()[0]
+		if configFileName == stdinConfig {
+			log.Info("Reading YAML config from standard input")
+			v.SetConfigType("yaml")
+			configBuffer, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
+			if err != nil {
+				log.Fatal("Cannot read from standard input", zap.Error(err))
+			}
+			err = v.ReadConfig(strings.NewReader(string(configBuffer)))
+			if err != nil {
+				log.Fatal("Config parsing failed", zap.Error(err))
+			}
+		} else {
+			v.SetConfigFile(configFileName)
+			err = v.ReadInConfig()
+			log.Info("Reading config", zap.String("file", v.ConfigFileUsed()))
+			if err != nil {
+				log.Fatal("Config read failed", zap.Error(err))
+			}
+		}
 	}
 	conf := defaultConfig()
 	err = config.DecodeAndValidate(v.AllSettings(), conf)

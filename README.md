@@ -27,7 +27,7 @@ GOOS=linux GOARCH=amd64 go build
 ```
 
 ### Running your tests
-Run the binary with your config (see config examples at [examples](https://github.com/yandex/pandora/tree/master/cli/config)):
+Run the binary with your config (see config examples at [examples](https://github.com/yandex/pandora/tree/develop/examples)):
 
 ```bash
 # $GOBIN should be added to $PATH
