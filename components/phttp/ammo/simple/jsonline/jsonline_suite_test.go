@@ -180,7 +180,7 @@ var _ = Describe("provider decode", func() {
 				})),
 				"Header": Equal(expectedReq.Header),
 				"Method": Equal(expectedReq.Method),
-				"Body": Equal(expectedReq.Body),
+				"Body":   Equal(expectedReq.Body),
 			}))
 			Expect(ss.Tags()).To(Equal(expectedData.Tag))
 		}
