@@ -163,31 +163,29 @@ func readConfig() *cliConfig {
 	zap.RedirectStdLog(log)
 
 	v := newViper()
-	if len(flag.Args()) > 0 {
-		if len(flag.Args()) > 1 {
-			zap.L().Fatal("Too many command line arguments", zap.Strings("args", flag.Args()))
+	configFileName := cliArgsCheck()
+
+	switch configFileName {
+	case stdinConfig:
+		log.Info("Reading YAML config from standard input")
+		v.SetConfigType("yaml")
+		configBuffer, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
+		if err != nil {
+			log.Fatal("Cannot read from standard input", zap.Error(err))
 		}
-		configFileName := flag.Args()[0]
-		if configFileName == stdinConfig {
-			log.Info("Reading YAML config from standard input")
-			v.SetConfigType("yaml")
-			configBuffer, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
-			if err != nil {
-				log.Fatal("Cannot read from standard input", zap.Error(err))
-			}
-			err = v.ReadConfig(strings.NewReader(string(configBuffer)))
-			if err != nil {
-				log.Fatal("Config parsing failed", zap.Error(err))
-			}
-		} else {
-			v.SetConfigFile(configFileName)
-			err = v.ReadInConfig()
-			log.Info("Reading config", zap.String("file", v.ConfigFileUsed()))
-			if err != nil {
-				log.Fatal("Config read failed", zap.Error(err))
-			}
+		err = v.ReadConfig(strings.NewReader(string(configBuffer)))
+		if err != nil {
+			log.Fatal("Config parsing failed", zap.Error(err))
+		}
+	default:
+		v.SetConfigFile(configFileName)
+		err = v.ReadInConfig()
+		log.Info("Reading config", zap.String("file", v.ConfigFileUsed()))
+		if err != nil {
+			log.Fatal("Config read failed", zap.Error(err))
 		}
 	}
+
 	conf := defaultConfig()
 	err = config.DecodeAndValidate(v.AllSettings(), conf)
 	if err != nil {
@@ -250,4 +248,14 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 		}
 	}
 	return
+}
+
+func cliArgsCheck() string {
+	if len(flag.Args()) > 0 {
+		if len(flag.Args()) > 1 {
+			zap.L().Fatal("Too many command line arguments", zap.Strings("args", flag.Args()))
+		}
+		return flag.Args()[0]
+	}
+	return ""
 }
