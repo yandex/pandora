@@ -5,6 +5,7 @@ go:
 env:
   - GO111MODULE=on
 
+
 go_import_path: github.com/yandex/pandora
 
 before_install:
