@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 
-	"github.com/yandex/pandora/core/mocks"
+	coremock "github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/lib/testutil"
 )
 

@@ -13,9 +13,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/cli"
-	"github.com/yandex/pandora/components/phttp/import"
+	phttp "github.com/yandex/pandora/components/phttp/import"
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/import"
+	coreimport "github.com/yandex/pandora/core/import"
 	"github.com/yandex/pandora/core/register"
 )
 

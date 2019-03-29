@@ -13,12 +13,11 @@ Pandora is a high-performance load generator in Go language. It has built-in HTT
 [Download](https://github.com/yandex/pandora/releases) available.
 
 ### Building from sources
-We use [dep](https://github.com/golang/dep) for package management. Install it before compiling Pandora
-Compile a binary with go tool (use go >= 1.8.3):
+We use go 1.11 modules.
+If you build pandora inside $GOPATH, please make sure you have env variable `GO111MODULE` set to `on`.
 ```bash
-go get github.com/yandex/pandora
-cd $GOPATH/src/github.com/yandex/pandora
-dep ensure
+git clone https://github.com/yandex/pandora.git
+make deps
 go install
 ```
 

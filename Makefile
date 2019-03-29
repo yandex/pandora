@@ -1,9 +1,10 @@
-.PHONY: all test lint vet fmt travis coverage checkfmt prepare updep
+.PHONY: all test lint vet fmt travis coverage checkfmt prepare deps
 
-NO_COLOR:=\033[0m
-OK_COLOR:=\033[32;01m
-ERROR_COLOR:=\033[31;01m
-WARN_COLOR:=\033[33;01m
+NO_COLOR=\033[0m
+OK_COLOR=\033[32;01m
+ERROR_COLOR=\033[31;01m
+WARN_COLOR=\033[33;01m
+
 
 all: test vet checkfmt
 
@@ -24,22 +25,23 @@ vet:
 	@echo "$(OK_COLOR)Run vet$(NO_COLOR)"
 	@go vet ./...
 
-
 checkfmt:
 	@echo "$(OK_COLOR)Check formats$(NO_COLOR)"
 	@./script/checkfmt.sh .
 
 fmt:
-	@go fmt ./...
+	@echo "$(OK_COLOR)Check fmt$(NO_COLOR)"
+	@echo "FIXME go fmt does not format imports, should be fixed"
+	@go fmt
 
 tools:
 	@echo "$(OK_COLOR)Install tools$(NO_COLOR)"
-	go get golang.org/x/tools/cmd/goimports
+	go install golang.org/x/tools/cmd/goimports
 	go get golang.org/x/tools/cmd/cover
 	go get github.com/modocache/gover
 	go get github.com/mattn/goveralls
 
-updep:
-	@echo "$(OK_COLOR)Update dependencies$(NO_COLOR)"
-	@dep ensure -update
-
+deps:
+	$(info #Install dependencies...)
+	go mod tidy
+	go mod download

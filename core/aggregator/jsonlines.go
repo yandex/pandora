@@ -9,7 +9,7 @@ import (
 	"bufio"
 	"io"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/yandex/pandora/lib/ioutil2"
 
 	"github.com/yandex/pandora/core"

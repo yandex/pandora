@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/yandex/pandora/components/phttp/mocks"
+	ammomock "github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coretest"
@@ -37,11 +37,9 @@ var _ = Describe("BaseGun", func() {
 
 	var (
 		base BaseGun
-		ammo *ammomock.Ammo
 	)
 	BeforeEach(func() {
 		base = BaseGun{Config: DefaultBaseGunConfig()}
-		ammo = &ammomock.Ammo{}
 	})
 
 	Context("BindResultTo", func() {
@@ -79,7 +77,6 @@ var _ = Describe("BaseGun", func() {
 		var (
 			body io.ReadCloser
 
-			ctx      context.Context
 			am       *ammomock.Ammo
 			req      *http.Request
 			tag      string
@@ -89,7 +86,6 @@ var _ = Describe("BaseGun", func() {
 			shootErr error
 		)
 		BeforeEach(func() {
-			ctx = context.Background()
 			am = &ammomock.Ammo{}
 			req = httptest.NewRequest("GET", "/1/2/3/4", nil)
 			tag = ""

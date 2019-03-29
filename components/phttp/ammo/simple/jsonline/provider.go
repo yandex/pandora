@@ -8,11 +8,12 @@ package jsonline
 import (
 	"bufio"
 	"context"
+	"net/http"
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
-	"net/http"
-	"strings"
 )
 
 func NewProvider(fs afero.Fs, conf Config) *Provider {
