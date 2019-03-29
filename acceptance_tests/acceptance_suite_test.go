@@ -2,8 +2,8 @@ package acceptance
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -143,7 +143,6 @@ func NewTester(conf *TestConfig) *PandoraTester {
 	command := exec.Command(pandoraBin, conf.CmdArgs...)
 	command.Dir = testDir
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-	fmt.Printf("Eror:%+v", err)
 	Expect(err).ToNot(HaveOccurred())
 
 	tt := &PandoraTester{
@@ -164,5 +163,5 @@ func (pt *PandoraTester) ExitCode() int {
 
 func (pt *PandoraTester) Close() {
 	pt.Terminate()
-	//	os.RemoveAll(pt.TestDir)
+	os.RemoveAll(pt.TestDir)
 }
