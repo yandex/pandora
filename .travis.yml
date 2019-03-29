@@ -8,6 +8,9 @@ env:
 go_import_path: github.com/yandex/pandora
 
 before_install:
+  - mkdir $HOME/tools
+  - GOPATH=$HOME/tools make tools
+  - export PATH=$HOME/tools/bin:$PATH
   - make deps
 
 script: make travis
