@@ -1,13 +1,13 @@
 package acceptance
 
 import (
+	"golang.org/x/net/http2"
 	"net/http"
-	"net/http/httptest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/atomic"
-	"golang.org/x/net/http2"
+	"net/http/httptest"
 )
 
 var _ = Describe("http", func() {
