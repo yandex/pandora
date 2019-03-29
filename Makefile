@@ -1,4 +1,4 @@
-.PHONY: all test lint vet fmt travis coverage checkfmt prepare updep
+.PHONY: all test lint vet fmt travis coverage checkfmt prepare deps
 
 NO_COLOR=\033[0m
 OK_COLOR=\033[32;01m
@@ -51,7 +51,7 @@ tools:
 	go get github.com/modocache/gover
 	go get github.com/mattn/goveralls
 
-updep:
-	@echo "$(OK_COLOR)Update dependencies$(NO_COLOR)"
-	@dep ensure -update
-
+deps:
+	$(info #Install dependencies...)
+	go mod tidy
+	go mod download
