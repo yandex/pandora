@@ -26,8 +26,9 @@ import (
 
 const Version = "0.2.0"
 const defaultConfigFile = "load"
-const stdinConfig = "-"
+const stdinConfigSelector = "-"
 
+var useStdinConfig = false
 var configSearchDirs = []string{"./", "./config", "/etc/pandora"}
 
 type cliConfig struct {
@@ -163,11 +164,21 @@ func readConfig() *cliConfig {
 	zap.RedirectStdLog(log)
 
 	v := newViper()
-	configFileName := cliArgsCheck()
 
-	switch configFileName {
-	case stdinConfig:
-		log.Info("Reading YAML config from standard input")
+	args := flag.Args()
+	if len(args) > 0 {
+		switch {
+		case len(args) > 1:
+			zap.L().Fatal("Too many command line arguments", zap.Strings("args", flag.Args()))
+		case args[0] == stdinConfigSelector:
+			log.Info("Reading config from standard input")
+			useStdinConfig = true
+		default:
+			v.SetConfigFile(args[0])
+		}
+	}
+
+	if useStdinConfig {
 		v.SetConfigType("yaml")
 		configBuffer, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
 		if err != nil {
@@ -177,8 +188,7 @@ func readConfig() *cliConfig {
 		if err != nil {
 			log.Fatal("Config parsing failed", zap.Error(err))
 		}
-	default:
-		v.SetConfigFile(configFileName)
+	} else {
 		err = v.ReadInConfig()
 		log.Info("Reading config", zap.String("file", v.ConfigFileUsed()))
 		if err != nil {
@@ -248,14 +258,4 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 		}
 	}
 	return
-}
-
-func cliArgsCheck() string {
-	if len(flag.Args()) > 0 {
-		if len(flag.Args()) > 1 {
-			zap.L().Fatal("Too many command line arguments", zap.Strings("args", flag.Args()))
-		}
-		return flag.Args()[0]
-	}
-	return ""
 }
