@@ -75,4 +75,14 @@ var _ = Describe("Decoder", func() {
 		Expect(err).ToNot(BeNil())
 		Expect(req).To(BeNil())
 	})
+	It("should replace header Host for URL if specified", func() {
+		raw := "GET /etc/passwd HTTP/1.1\r\n" +
+			"Host: hostname.tld\r\n" +
+			"Content-Length: 0\r\n" +
+			"\r\n"
+		req, err := decodeRequest([]byte(raw))
+		Expect(err).To(BeNil())
+		Expect(req.Host).To(Equal("hostname.tld"))
+		Expect(req.URL.Host).To(Equal("hostname.tld"))
+	})
 })

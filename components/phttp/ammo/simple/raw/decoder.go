@@ -22,6 +22,9 @@ func decodeRequest(reqString []byte) (req *http.Request, err error) {
 	if err != nil {
 		return
 	}
+	if req.Host != "" {
+		req.URL.Host = req.Host
+	}
 	req.RequestURI = ""
 	return
 }
