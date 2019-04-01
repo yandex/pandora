@@ -17,6 +17,7 @@ We use go 1.11 modules.
 If you build pandora inside $GOPATH, please make sure you have env variable `GO111MODULE` set to `on`.
 ```bash
 git clone https://github.com/yandex/pandora.git
+cd pandora
 make deps
 go install
 ```
