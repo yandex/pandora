@@ -19,4 +19,13 @@ pools:
     startup:
       type: once
       times: 5
-
+log:
+  level: debug
+monitoring:
+  expvar:
+    enabled: true
+    port: 1234
+  cpuprofile:
+    enabled: false
+  memprofile:
+    enabled: false

@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"runtime"
 	"runtime/pprof"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -32,9 +33,9 @@ var useStdinConfig = false
 var configSearchDirs = []string{"./", "./config", "/etc/pandora"}
 
 type cliConfig struct {
-	Engine engine.Config `config:",squash"`
-	Log    logConfig     `config:"log"`
-	// TODO(skipor): monitoring
+	Engine     engine.Config    `config:",squash"`
+	Log        logConfig        `config:"log"`
+	Monitoring monitoringConfig `config:"monitoring"`
 }
 
 type logConfig struct {
@@ -62,6 +63,20 @@ func defaultConfig() *cliConfig {
 			Level: zap.InfoLevel,
 			File:  "stdout",
 		},
+		Monitoring: monitoringConfig{
+			Expvar: &expvarConfig{
+				Enabled: false,
+				Port:    1234,
+			},
+			CPUProfile: &cpuprofileConfig{
+				Enabled: false,
+				File:    "cpuprofile.log",
+			},
+			MemProfile: &memprofileConfig{
+				Enabled: false,
+				File:    "memprofile.log",
+			},
+		},
 	}
 }
 
@@ -74,13 +89,9 @@ func Run() {
 		flag.PrintDefaults()
 	}
 	var (
-		example    bool
-		monitoring monitoringConfig
+		example bool
 	)
 	flag.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
-	flag.StringVar(&monitoring.CPUProfile, "cpuprofile", "", "write cpu profile to file")
-	flag.StringVar(&monitoring.MemProfile, "memprofile", "", "write memory profile to this file")
-	flag.BoolVar(&monitoring.Expvar, "expvar", false, "start HTTP server with monitoring variables")
 	flag.Parse()
 
 	if example {
@@ -93,7 +104,7 @@ func Run() {
 	zap.ReplaceGlobals(log)
 	zap.RedirectStdLog(log)
 
-	closeMonitoring := startMonitoring(monitoring)
+	closeMonitoring := startMonitoring(conf.Monitoring)
 	defer closeMonitoring()
 	m := newEngineMetrics()
 	startReport(m)
@@ -214,22 +225,39 @@ func newViper() *viper.Viper {
 }
 
 type monitoringConfig struct {
-	Expvar     bool   // TODO: struct { Enabled bool; Port string }
-	CPUProfile string // TODO: struct { Enabled bool; File string }
-	MemProfile string // TODO: struct { Enabled bool; File string }
+	Expvar     *expvarConfig
+	CPUProfile *cpuprofileConfig
+	MemProfile *memprofileConfig
+}
+
+type expvarConfig struct {
+	Enabled bool `config:"enabled"`
+	Port    int  `config:"port" validate:"required"`
+}
+
+type cpuprofileConfig struct {
+	Enabled bool   `config:"enabled"`
+	File    string `config:"file"`
+}
+
+type memprofileConfig struct {
+	Enabled bool   `config:"enabled"`
+	File    string `config:"file"`
 }
 
 func startMonitoring(conf monitoringConfig) (stop func()) {
 	zap.L().Debug("Start monitoring", zap.Reflect("conf", conf))
-	if conf.Expvar {
-		go func() {
-			err := http.ListenAndServe(":1234", nil)
-			zap.L().Fatal("Monitoring server failed", zap.Error(err))
-		}()
+	if conf.Expvar != nil {
+		if conf.Expvar.Enabled {
+			go func() {
+				err := http.ListenAndServe(":"+strconv.Itoa(conf.Expvar.Port), nil)
+				zap.L().Fatal("Monitoring server failed", zap.Error(err))
+			}()
+		}
 	}
 	var stops []func()
-	if conf.CPUProfile != "" {
-		f, err := os.Create(conf.CPUProfile)
+	if conf.CPUProfile.Enabled {
+		f, err := os.Create(conf.CPUProfile.File)
 		if err != nil {
 			zap.L().Fatal("CPU profile file create fail", zap.Error(err))
 		}
@@ -240,8 +268,8 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 			f.Close()
 		})
 	}
-	if conf.MemProfile != "" {
-		f, err := os.Create(conf.MemProfile)
+	if conf.MemProfile.Enabled {
+		f, err := os.Create(conf.MemProfile.File)
 		if err != nil {
 			zap.L().Fatal("Memory profile file create fail", zap.Error(err))
 		}

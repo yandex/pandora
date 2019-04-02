@@ -1,0 +1,31 @@
+pools:
+- id: HTTP pool
+  gun:
+    type: http
+    target: example.com:80
+    dial:
+      timeout: 1s
+  ammo:
+    type: http/json
+    file: ./examples/http.jsonline
+  result:
+    type: phout
+    destination: ./http_phout.log
+  rps:
+    type: line
+    from: 1
+    to: 5
+    duration: 2s
+  startup:
+    type: once
+    times: 5
+log:
+  level: debug
+monitoring:
+  expvar:
+    enabled: true
+    port: 1234
+  cpuprofile:
+    enabled: true
+  memprofile:
+    enabled: true

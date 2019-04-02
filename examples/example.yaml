@@ -15,4 +15,5 @@ pools:
     startup:
       type: once
       times: 5
-
+log:
+  level: debug
