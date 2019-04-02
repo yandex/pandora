@@ -65,13 +65,35 @@ func NewTestConfig() *TestConfig {
 // PandoraConfig will be encoded to file via github.com/ghodss/yaml that supports json tags.
 // Or it can be encoded as JSON too, to test pandora JSON support.
 type PandoraConfig struct {
-	Pool      []*InstancePoolConfig `json:"pools"`
-	LogConfig `json:"log,omitempty"`
+	Pool             []*InstancePoolConfig `json:"pools"`
+	LogConfig        `json:"log,omitempty"`
+	MonitoringConfig `json:"monitoring,omitempty"`
 }
 
 type LogConfig struct {
 	Level string `json:"level,omitempty"`
 	File  string `json:"file,omitempty"`
+}
+
+type MonitoringConfig struct {
+	Expvar     *expvarConfig
+	CPUProfile *cpuprofileConfig
+	MemProfile *memprofileConfig
+}
+
+type expvarConfig struct {
+	Enabled bool `json:"enabled"`
+	Port    int  `json:"port"`
+}
+
+type cpuprofileConfig struct {
+	Enabled bool   `json:"enabled"`
+	File    string `json:"file"`
+}
+
+type memprofileConfig struct {
+	Enabled bool   `json:"enabled"`
+	File    string `json:"file"`
 }
 
 func (pc *PandoraConfig) Append(ipc *InstancePoolConfig) {
