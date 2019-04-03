@@ -8,10 +8,8 @@ package uri
 import (
 	"bufio"
 	"context"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
 
@@ -19,6 +17,8 @@ type Config struct {
 	File string `validate:"required"`
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
+	// Redefine HTTP headers
+	Headers []string
 	// Passes limits ammo file passes. Unlimited if zero.
 	Passes int `validate:"min=0"`
 }
@@ -42,6 +42,7 @@ type Provider struct {
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	p.decoder = newDecoder(ctx, p.Sink, &p.Pool)
+
 	var passNum int
 	for {
 		passNum++
@@ -55,6 +56,11 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to decode ammo at line: %v; data: %q", line, data)
 			}
+			// redefine Headers from config file
+			for _, header := range p.Config.Headers {
+				p.decoder.decodeHeader([]byte(header))
+			}
+
 		}
 		if p.decoder.ammoNum == 0 {
 			return errors.New("no ammo in file")

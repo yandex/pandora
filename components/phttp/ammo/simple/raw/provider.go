@@ -50,6 +50,8 @@ type Config struct {
 	File string `validate:"required"`
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
+	// Redefine HTTP headers
+	Headers []string
 	// Passes limits ammo file passes. Unlimited if zero.
 	Passes int `validate:"min=0"`
 }
@@ -100,6 +102,11 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to decode ammo at position: %v; data: %q", filePosition(ammoFile), buff)
 			}
+			// redefine Headers from config file
+			for _, header := range p.Config.Headers {
+				decodeConfigHeader(req, []byte(header))
+			}
+
 			sh := p.Pool.Get().(*simple.Ammo)
 			sh.Reset(req, tag)
 

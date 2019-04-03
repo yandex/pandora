@@ -85,4 +85,26 @@ var _ = Describe("Decoder", func() {
 		Expect(req.Host).To(Equal("hostname.tld"))
 		Expect(req.URL.Host).To(Equal("hostname.tld"))
 	})
+	It("should replace header Host from config", func() {
+		const host = "hostname.tld"
+		const newhost = "newhostname.tld"
+
+		raw := "GET / HTTP/1.1\r\n" +
+			"Host: " + host + "\r\n" +
+			"Content-Length: 0\r\n" +
+			"\r\n"
+		req, err := decodeRequest([]byte(raw))
+		Expect(err).To(BeNil())
+		Expect(req.Host).To(Equal(host))
+		Expect(req.URL.Host).To(Equal(host))
+		configHeaders := []string{
+			"[Host: " + newhost + "]",
+			"[SomeTestKey: sometestvalue]",
+		}
+		for _, header := range configHeaders {
+			decodeConfigHeader(req, []byte(header))
+		}
+		Expect(req.URL.Host).To(Equal(newhost))
+		Expect(req.Header.Get("SomeTestKey")).To(Equal("sometestvalue"))
+	})
 })
