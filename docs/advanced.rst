@@ -1,9 +1,9 @@
 Ammo providers
 ==============
 
-Ammo provider is a source of test data: it makes ammo object. There are different types of ammo providers.
+Ammo provider is a source of test data: it makes ammo object.
 
-There is a common rule for any provider: data supplied by ammo provider is a records that will be pushed via established connection w/ external host (defined in pandora config via `pool.gun.target` option). Thus, you cannot define to which `physical` host machine your ammo will be send using ammofile.
+There is a common rule for any (built-in) provider: data supplied by ammo provider is a records that will be pushed via established connection w/ external host (defined in pandora config via `pool.gun.target` option). Thus, you cannot define to which `physical` host machine your ammo will be send using ammofile.
 
 
 http/json
@@ -11,7 +11,9 @@ http/json
 
 jsonline format, 1 row - 1 ammo.
 
-Please pay attention to special header `Host` defined ``outside`` of Headers dictionary. `Host` inside Headers section will be silently ignored.
+Pay attention to special header `Host` defined ``outside`` of Headers dictionary.
+
+`Host` inside Headers section will be silently ignored.
 
 Ammofile sample:
 ::
@@ -33,7 +35,8 @@ raw (request-style)
 
 Raw HTTP request format. If you like to use `telnet` firing HTTP requests, you'll love this.
 Also known as phantom's `request-style`.
-This is a size-prefixed HTTP ammo files. Each ammo is prefixed with a header line (delimited with \n), which consists of
+
+File contains size-prefixed HTTP requests. Each ammo is prefixed with a header line (delimited with \n), which consists of
 two fields delimited by a space: ammo size and tag. Ammo size is in bytes (integer, including special characters like CR, LF).
 Tag is a string.
 You can read about this format (with detailed instructions) at
