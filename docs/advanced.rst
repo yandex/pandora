@@ -70,7 +70,7 @@ Config sample:
         type: raw                      # ammo format
         file: ./ammofile               # ammo file path
 
-You can redefine any headers (without regeneration ammofile) using special config option `headers`. Format: list of strings.
+You can redefine any headers using special config option `headers`. Format: list of strings.
 
 Example:
 
@@ -111,7 +111,7 @@ Config sample:
         file: ./ammofile               # ammo file path
 
 
-You can redefine any headers (without regeneration ammofile) using special config option `headers`. Format: list of strings.
+You can redefine any headers using special config option `headers`. Format: list of strings.
 
 Example:
 
