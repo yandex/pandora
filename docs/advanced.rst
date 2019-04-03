@@ -2,6 +2,7 @@ Ammo providers
 ==============
 
 Ammo provider is a source of test data: it makes ammo object. There are different types of ammo providers.
+
 There is a common rule for any provider: data supplied by ammo provider is a records that will be pushed via established connection w/ external host (defined in pandora config via `pool.gun.target` option). Thus, you cannot define to which `physical` host machine your ammo will be send using ammofile.
 
 
@@ -9,6 +10,7 @@ http/json
 ---------
 
 jsonline format, 1 row - 1 ammo.
+
 Please pay attention to special header `Host` defined ``outside`` of Headers dictionary. `Host` inside Headers section will be silently ignored.
 
 Ammofile sample:
@@ -17,6 +19,7 @@ Ammofile sample:
   {"uri": "/", "method": "GET", "headers": {"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "User-Agent": "Pandora"}, "host": "example.com"}
 
 Config sample:
+
 .. code-block:: yaml
 
   pools:
@@ -56,6 +59,7 @@ Ammofile sample:
 
 
 Config sample:
+
 .. code-block:: yaml
 
   pools:
@@ -66,6 +70,7 @@ Config sample:
 You can redefine any headers (without regeneration ammofile) using special config option `headers`. Format: list of strings.
 
 Example:
+
 .. code-block:: yaml
 
   pools:
@@ -94,6 +99,7 @@ Ammofile sample:
   /buy/?rt=0&station_to=7&station_from=9
 
 Config sample:
+
 .. code-block:: yaml
 
   pools:
@@ -105,6 +111,7 @@ Config sample:
 You can redefine any headers (without regeneration ammofile) using special config option `headers`. Format: list of strings.
 
 Example:
+
 .. code-block:: yaml
 
   pools:
