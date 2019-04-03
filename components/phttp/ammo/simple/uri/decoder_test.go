@@ -143,6 +143,16 @@ var _ = Describe("Decoder", func() {
 				"C": []string{""},
 			}))
 		})
+		It("overwrite by config", func() {
+			configHeaders := []string{
+				"[Host: youhost.tld]",
+				"[SomeHeader: somevalue]",
+			}
+			for _, header := range configHeaders {
+				decoder.decodeHeader([]byte(header))
+			}
+			Expect(decoder.header.Get("SomeHeader")).To(Equal("somevalue"))
+		})
 	})
 	It("Reset", func() {
 		decoder.header.Set("a", "b")
