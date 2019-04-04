@@ -3,13 +3,13 @@ Ammo providers
 
 Ammo provider is a source of test data: it makes ammo object.
 
-There is a common rule for any (built-in) provider: data supplied by ammo provider is a records that will be pushed via established connection w/ external host (defined in pandora config via `pool.gun.target` option). Thus, you cannot define to which `physical` host machine your ammo will be send using ammofile.
+There is a common rule for any (built-in) provider: data supplied by ammo provider are records that will be pushed via established connection to external host (defined in pandora config via `pool.gun.target` option). Thus, you cannot define in the ammofile to which `physical` host your ammo will be sent.
 
 
 http/json
 ---------
 
-jsonline format, 1 row - 1 ammo.
+jsonline format, 1 row — 1 json-encoded ammo.
 
 Pay attention to special header `Host` defined ``outside`` of Headers dictionary.
 
