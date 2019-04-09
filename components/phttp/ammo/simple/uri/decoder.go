@@ -24,6 +24,12 @@ type decoder struct {
 
 	ammoNum int
 	header  http.Header
+	configHeaders []ConfigHeader
+}
+
+type ConfigHeader struct {
+	key string
+	value string
 }
 
 func newDecoder(ctx context.Context, sink chan<- *simple.Ammo, pool *sync.Pool) *decoder {
@@ -71,6 +77,15 @@ func (d *decoder) decodeURI(line []byte) error {
 			req.Header[k] = v
 		}
 	}
+	// redefine request Headers from config
+	for _, configHeader := range d.configHeaders {
+		if configHeader.key == "Host" {
+			req.Host = configHeader.value
+			req.URL.Host = configHeader.value
+		} else {
+			req.Header.Set(configHeader.key, configHeader.value)
+		}
+	}
 
 	sh := d.pool.Get().(*simple.Ammo)
 	sh.Reset(req, tag)
@@ -105,4 +120,24 @@ func (d *decoder) ResetHeader() {
 	for k := range d.header {
 		delete(d.header, k)
 	}
+}
+
+func decodeHTTPConfigHeaders(headers []string) (configHTTPHeaders []ConfigHeader, err error) {
+	for _, header := range headers {
+		line := []byte(header)
+		if len(line) < 3 || line[0] != '[' || line[len(line)-1] != ']' {
+			return nil, errors.New("header line should be like '[key: value]")
+		}
+		line = line[1 : len(line)-1]
+		colonIdx := bytes.IndexByte(line, ':')
+		if colonIdx < 0 {
+			return nil, errors.New("missing colon")
+		}
+		preparedHeader := ConfigHeader{
+			string(bytes.TrimSpace(line[:colonIdx])),
+			string(bytes.TrimSpace(line[colonIdx+1:])),
+		}
+		configHTTPHeaders = append(configHTTPHeaders, preparedHeader)
+	}
+	return
 }

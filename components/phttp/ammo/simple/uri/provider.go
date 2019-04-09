@@ -44,6 +44,12 @@ type Provider struct {
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	p.decoder = newDecoder(ctx, p.Sink, &p.Pool)
+	// parse and prepare Headers from config
+	decodedConfigHeaders, err := decodeHTTPConfigHeaders(p.Config.Headers)
+	if err != nil {
+		return err
+	}
+	p.decoder.configHeaders = decodedConfigHeaders
 	var passNum int
 	for {
 		passNum++
