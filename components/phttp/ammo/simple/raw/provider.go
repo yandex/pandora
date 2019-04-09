@@ -73,6 +73,11 @@ type Provider struct {
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	var passNum int
 	var ammoNum int
+	// parse and prepare Headers from config
+	decodedConfigHeaders, err := decodeHTTPConfigHeaders(p.Config.Headers)
+	if err != nil {
+		return err
+	}
 	for {
 		passNum++
 		reader := bufio.NewReader(ammoFile)
@@ -102,9 +107,15 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to decode ammo at position: %v; data: %q", filePosition(ammoFile), buff)
 			}
-			// redefine Headers from config file
-			for _, header := range p.Config.Headers {
-				decodeConfigHeader(req, []byte(header))
+
+			// redefine request Headers from config
+			for _, header := range decodedConfigHeaders {
+				// special behavior for `Host` header
+				if header.key == "Host" {
+					req.URL.Host = header.value
+				} else {
+					req.Header.Set(header.key, header.value)
+				}
 			}
 
 			sh := p.Pool.Get().(*simple.Ammo)

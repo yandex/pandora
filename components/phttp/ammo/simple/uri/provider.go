@@ -44,7 +44,6 @@ type Provider struct {
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	p.decoder = newDecoder(ctx, p.Sink, &p.Pool)
-
 	var passNum int
 	for {
 		passNum++
@@ -52,17 +51,12 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		for line := 1; scanner.Scan() && (p.Limit == 0 || p.decoder.ammoNum < p.Limit); line++ {
 			data := scanner.Bytes()
 			if len(data) == 0 {
-				continue
+				continue // skip empty lines
 			}
 			err := p.decoder.Decode(data)
 			if err != nil {
 				return errors.Wrapf(err, "failed to decode ammo at line: %v; data: %q", line, data)
 			}
-			// redefine Headers from config file
-			for _, header := range p.Config.Headers {
-				p.decoder.decodeHeader([]byte(header))
-			}
-
 		}
 		if p.decoder.ammoNum == 0 {
 			return errors.New("no ammo in file")

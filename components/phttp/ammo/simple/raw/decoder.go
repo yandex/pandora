@@ -10,6 +10,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Header struct {
+	key string
+	value string
+}
+
 func decodeHeader(headerString []byte) (reqSize int, tag string, err error) {
 	parts := strings.SplitN(string(headerString), " ", 2)
 	reqSize, err = strconv.Atoi(parts[0])
@@ -31,23 +36,22 @@ func decodeRequest(reqString []byte) (req *http.Request, err error) {
 	return
 }
 
-func decodeConfigHeader(req *http.Request, line []byte) error {
-	if len(line) < 3 || line[0] != '[' || line[len(line)-1] != ']' {
-		return errors.New("header line should be like '[key: value]")
+func decodeHTTPConfigHeaders(headers []string) (configHTTPHeaders []Header, err error) {
+	for _, header := range headers {
+		line := []byte(header)
+		if len(line) < 3 || line[0] != '[' || line[len(line)-1] != ']' {
+			return nil, errors.New("header line should be like '[key: value]")
+		}
+		line = line[1 : len(line)-1]
+		colonIdx := bytes.IndexByte(line, ':')
+		if colonIdx < 0 {
+			return nil, errors.New("missing colon")
+		}
+		preparedHeader := Header{
+			string(bytes.TrimSpace(line[:colonIdx])),
+			string(bytes.TrimSpace(line[colonIdx+1:])),
+		}
+		configHTTPHeaders = append(configHTTPHeaders, preparedHeader)
 	}
-	line = line[1 : len(line)-1]
-	colonIdx := bytes.IndexByte(line, ':')
-	if colonIdx < 0 {
-		return errors.New("missing colon")
-	}
-	key := string(bytes.TrimSpace(line[:colonIdx]))
-	val := string(bytes.TrimSpace(line[colonIdx+1:]))
-	if key == "" {
-		return errors.New("missing header key")
-	}
-	if strings.ToLower(key) == "host" {
-		req.URL.Host = val
-	}
-	req.Header.Set(key, val)
-	return nil
+	return
 }

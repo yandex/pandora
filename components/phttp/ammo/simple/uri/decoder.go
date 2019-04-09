@@ -36,6 +36,8 @@ func newDecoder(ctx context.Context, sink chan<- *simple.Ammo, pool *sync.Pool) 
 }
 
 func (d *decoder) Decode(line []byte) error {
+	// FIXME: rewrite decoder
+	// OPTIMIZE: reuse *http.Request, http.Header. Benchmark both variants.
 	if len(line) == 0 {
 		return errors.New("empty line")
 	}
@@ -50,7 +52,6 @@ func (d *decoder) Decode(line []byte) error {
 }
 
 func (d *decoder) decodeURI(line []byte) error {
-	// OPTIMIZE: reuse *http.Request, http.Header. Benchmark both variants.
 	parts := strings.SplitN(string(line), " ", 2)
 	url := parts[0]
 	var tag string
@@ -62,14 +63,15 @@ func (d *decoder) decodeURI(line []byte) error {
 		return errors.Wrap(err, "uri decode")
 	}
 	for k, v := range d.header {
-		// http.Request.Write sends Host header based on Host or URL.Host.
+		// http.Request.Write sends Host header based on req.URL.Host
 		if k == "Host" {
-			req.URL.Host = v[0]
 			req.Host = v[0]
+			req.URL.Host = v[0]
 		} else {
 			req.Header[k] = v
 		}
 	}
+
 	sh := d.pool.Get().(*simple.Ammo)
 	sh.Reset(req, tag)
 	select {

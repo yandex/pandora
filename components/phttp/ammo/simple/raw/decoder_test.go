@@ -93,16 +93,22 @@ var _ = Describe("Decoder", func() {
 			"Host: " + host + "\r\n" +
 			"Content-Length: 0\r\n" +
 			"\r\n"
+		configHeaders := []string {
+			"[Host: "+newhost+"]",
+			"[SomeTestKey: sometestvalue]",
+		}
 		req, err := decodeRequest([]byte(raw))
 		Expect(err).To(BeNil())
 		Expect(req.Host).To(Equal(host))
 		Expect(req.URL.Host).To(Equal(host))
-		configHeaders := []string{
-			"[Host: " + newhost + "]",
-			"[SomeTestKey: sometestvalue]",
-		}
-		for _, header := range configHeaders {
-			decodeConfigHeader(req, []byte(header))
+		decodedConfigHeaders, _ := decodeHTTPConfigHeaders(configHeaders)
+		for _, header := range decodedConfigHeaders {
+			// special behavior for `Host` header
+			if header.key == "Host" {
+				req.URL.Host = header.value
+			} else {
+				req.Header.Set(header.key, header.value)
+			}
 		}
 		Expect(req.URL.Host).To(Equal(newhost))
 		Expect(req.Header.Get("SomeTestKey")).To(Equal("sometestvalue"))
