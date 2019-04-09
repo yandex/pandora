@@ -47,11 +47,12 @@ func decodeHTTPConfigHeaders(headers []string) (configHTTPHeaders []Header, err 
 		if colonIdx < 0 {
 			return nil, errors.New("missing colon")
 		}
-		preparedHeader := Header{
-			string(bytes.TrimSpace(line[:colonIdx])),
-			string(bytes.TrimSpace(line[colonIdx+1:])),
-		}
-		configHTTPHeaders = append(configHTTPHeaders, preparedHeader)
+		configHTTPHeaders = append(
+			configHTTPHeaders,
+			Header{
+				string(bytes.TrimSpace(line[:colonIdx])),
+				string(bytes.TrimSpace(line[colonIdx+1:])),
+			})
 	}
 	return
 }
