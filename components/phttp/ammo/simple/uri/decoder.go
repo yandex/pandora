@@ -22,13 +22,13 @@ type decoder struct {
 	sink chan<- *simple.Ammo
 	pool *sync.Pool
 
-	ammoNum int
-	header  http.Header
+	ammoNum       int
+	header        http.Header
 	configHeaders []ConfigHeader
 }
 
 type ConfigHeader struct {
-	key string
+	key   string
 	value string
 }
 

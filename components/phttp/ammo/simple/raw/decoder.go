@@ -11,7 +11,7 @@ import (
 )
 
 type Header struct {
-	key string
+	key   string
 	value string
 }
 

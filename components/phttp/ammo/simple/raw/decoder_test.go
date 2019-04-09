@@ -93,8 +93,8 @@ var _ = Describe("Decoder", func() {
 			"Host: " + host + "\r\n" +
 			"Content-Length: 0\r\n" +
 			"\r\n"
-		configHeaders := []string {
-			"[Host: "+newhost+"]",
+		configHeaders := []string{
+			"[Host: " + newhost + "]",
 			"[SomeTestKey: sometestvalue]",
 		}
 		req, err := decodeRequest([]byte(raw))
