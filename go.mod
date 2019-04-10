@@ -38,7 +38,6 @@ require (
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.7.1
 	golang.org/x/net v0.0.0-20190311183353-d8887717615a
-	golang.org/x/tools v0.0.0-20190328211700-ab21143f2384 // indirect
 	gopkg.in/bluesuncorp/validator.v9 v9.10.0
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
