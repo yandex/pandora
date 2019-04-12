@@ -57,6 +57,7 @@ gRPC
 ----
 
 .. code-block:: go
+
   // create a package
   package main
 
@@ -254,6 +255,7 @@ Websockets
 ----------
 
 .. code-block:: go
+
     package main
 
     import (
