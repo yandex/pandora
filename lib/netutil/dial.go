@@ -55,7 +55,7 @@ var DefaultDNSCache = &SimpleDNSCache{}
 // LookupReachable tries to resolve addr via connecting to it.
 // This method has much more overhead, but get guaranteed reachable resolved addr.
 // Example: host is resolved to IPv4 and IPv6, but IPv4 is not working on machine.
-// LookupAccessible will return IPv6 in that case.
+// LookupReachable will return IPv6 in that case.
 func LookupReachable(addr string) (string, error) {
 	d := net.Dialer{DualStack: true}
 	conn, err := d.Dial("tcp", addr)
