@@ -28,3 +28,11 @@ _testmain.go
 .goxc.local.json
 .idea/
 pandora.iml
+*.log
+*.out
+out/
+
+vendor/
+
+docs/_*
+.DS_Store

@@ -1,17 +1,17 @@
 language: go
-go: 
-  - 1.5.2
-  - tip
+
+go:
+  - 1.11.x
+
+env:
+  - GO111MODULE=on
+
+go_import_path: github.com/yandex/pandora
 
 before_install:
-  - go get github.com/amahi/spdy
-  - go get golang.org/x/net/context
-  - go get github.com/amahi/spdy
-  - go get github.com/stretchr/testify
-  - go get github.com/SlyMarbo/spdy
-  - go get github.com/davecgh/go-spew/spew
-  - go get github.com/pquerna/ffjson
-
-install: make tools
+  - mkdir $HOME/tools
+  - GOPATH=$HOME/tools make tools
+  - export PATH=$HOME/tools/bin:$PATH
+  - make deps
 
 script: make travis

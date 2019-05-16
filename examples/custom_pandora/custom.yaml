@@ -1,0 +1,27 @@
+pools:
+- gun:
+    type: my-custom-gun-name
+    target: example.com:80
+
+  ammo:
+    type: my-custom-provider-name
+    source: # You may just write file path here. Or stdin.
+      type: inline
+      data: |
+        {"url": "url1", "queryParam": "query1"}
+        {"url": "url2", "queryParam": "query2"}
+
+  result:
+    type: json
+    sink: stdout # Just for interactivity print result to stdout. Usually file used here.
+
+  rps:
+    - {duration: 2s, type: line,  from: 1, to: 5}
+    - {duration: 3s, type: const, ops: 5}
+    - {duration: 2s, type: line,  from: 5, to: 1}
+  startup:
+    type: once
+    times: 5
+
+log:
+  level: debug

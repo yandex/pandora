@@ -1,0 +1,23 @@
+pools:
+  - gun:
+      type: connect
+      target: localhost:3000 # some secure proxy address
+      ssl: true
+      connect-ssl: false
+    ammo:
+      type: http/json
+      file: ./http.jsonline
+    result:
+      type: phout
+      destination: ./http_phout.log
+    rps-per-instance: true
+    rps:
+      type: line
+      from: 1
+      to: 5
+      duration: 2s
+    startup:
+      type: once
+      times: 5
+log:
+  level: debug
