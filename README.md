@@ -22,6 +22,13 @@ make deps
 go install
 ```
 
+Or let [Yandex.Tank](https://yandextank.readthedocs.io/en/latest/core_and_modules.html#pandora) make it easy for you.
+
+
+## Extension points
+
+You can write plugins with the next [extension points](https://github.com/progrium/go-extpoints):
+
 You can also cross-compile for other arch/os:
 ```
 GOOS=linux GOARCH=amd64 go build
