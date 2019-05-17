@@ -90,13 +90,20 @@ func Run() {
 	}
 	var (
 		example bool
+		printVersion bool
 	)
 	flag.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
+	flag.BoolVar(&printVersion, "version", false, "print version and exit")
 	flag.Parse()
 
 	if example {
-		panic("Not implemented yet")
-		// TODO: print example config file content
+		fmt.Fprintf(os.Stderr, "Not implemented yet\n")
+		os.Exit(0)
+	}
+
+	if printVersion {
+		fmt.Fprintf(os.Stderr, "Pandora version: %+v\n", Version)
+		os.Exit(0)
 	}
 
 	conf := readConfig()
