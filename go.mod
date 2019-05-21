@@ -29,7 +29,7 @@ require (
 	github.com/spf13/afero v1.0.2
 	github.com/spf13/cast v1.2.0 // indirect
 	github.com/spf13/jwalterweatherman v0.0.0-20180109140146-7c0cea34c8ec // indirect
-	github.com/spf13/pflag v1.0.0 // indirect
+	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/spf13/viper v1.0.0
 	github.com/stretchr/objx v0.1.0 // indirect
 	github.com/stretchr/testify v1.2.1

@@ -100,6 +100,7 @@ func NewTransport(conf TransportConfig, dial netutil.DialerFunc) *http.Transport
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,                 // We should not spend time for this stuff.
 		NextProtos:         []string{"http/1.1"}, // Disable HTTP/2. Use HTTP/2 transport explicitly, if needed.
+		ServerName:         "somehost.tld",
 	}
 	config.Map(tr, conf)
 	tr.DialContext = dial
