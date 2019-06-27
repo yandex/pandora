@@ -23,3 +23,5 @@
 {"uri": "/22", "method": "GET", "headers": {"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "User-Agent": "Pandora/0.0.1"}, "host": "localhost:3000"}
 {"uri": "/23", "method": "GET", "headers": {"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "User-Agent": "Pandora/0.0.1"}, "host": "localhost:3000"}
 {"tag": "hello", "uri": "/24", "method": "GET", "headers": {"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "User-Agent": "Pandora/0.0.1"}, "host": "localhost:3000"}
+{"uri": "/25", "method": "POST", "headers": {"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "User-Agent": "Pandora/0.0.1"}, "host": "localhost:3000", "body": "some_plaintext_body"}
+{"uri": "/26", "method": "GET", "headers": {"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "User-Agent": "Pandora/0.0.1"}, "host": "localhost:3000", "body": "{\"areaId\":10770}"}

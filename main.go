@@ -9,9 +9,9 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/yandex/pandora/cli"
-	"github.com/yandex/pandora/components/example/import"
-	"github.com/yandex/pandora/components/phttp/import"
-	"github.com/yandex/pandora/core/import"
+	example "github.com/yandex/pandora/components/example/import"
+	phttp "github.com/yandex/pandora/components/phttp/import"
+	coreimport "github.com/yandex/pandora/core/import"
 )
 
 func main() {

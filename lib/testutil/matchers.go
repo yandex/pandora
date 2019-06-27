@@ -26,12 +26,12 @@ var _ TestingT = &flakyT{}
 
 func (ff *flakyT) Logf(format string, args ...interface{}) {
 	getHelper(ff.t).Helper()
-	ff.Logf(format, args)
+	ff.Logf(format, args...)
 }
 
 func (ff *flakyT) Errorf(format string, args ...interface{}) {
 	getHelper(ff.t).Helper()
-	ff.t.Logf(format, args)
+	ff.t.Logf(format, args...)
 	ff.failed.Store(true)
 }
 

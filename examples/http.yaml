@@ -3,9 +3,11 @@ pools:
     gun:
       type: http
       target: example.com:80
+      dial:
+        timeout: 1s
     ammo:
       type: http/json
-      file: ./example/http.jsonline
+      file: ./examples/http.jsonline
     result:
       type: phout
       destination: ./http_phout.log
@@ -17,4 +19,13 @@ pools:
     startup:
       type: once
       times: 5
-
+log:
+  level: debug
+monitoring:
+  expvar:
+    enabled: true
+    port: 1234
+  cpuprofile:
+    enabled: false
+  memprofile:
+    enabled: false

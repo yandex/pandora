@@ -1,24 +1,17 @@
 language: go
-go: 
-  - 1.9.2
-  - 1.8.3
-  - tip
+
+go:
+  - 1.11.x
+
+env:
+  - GO111MODULE=on
 
 go_import_path: github.com/yandex/pandora
 
 before_install:
-  # Build go tools in separate $GOPATH.
-  # That allows to keep main $GOPATH clean and be sure that only vendored deps used.
   - mkdir $HOME/tools
   - GOPATH=$HOME/tools make tools
-  # Remove this, when dep will be merged into official toolchain.
-  # go get install is easier, but can break our builds because of bugs in tip and CLI breaking changes.
-  - wget -O $HOME/tools/bin/dep https://github.com/golang/dep/releases/download/v0.3.2/dep-linux-amd64
-  - chmod +x $HOME/tools/bin/dep
-
   - export PATH=$HOME/tools/bin:$PATH
-
-install:
-  - dep ensure
+  - make deps
 
 script: make travis

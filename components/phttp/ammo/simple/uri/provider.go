@@ -19,6 +19,8 @@ type Config struct {
 	File string `validate:"required"`
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
+	// Redefine HTTP headers
+	Headers []string
 	// Passes limits ammo file passes. Unlimited if zero.
 	Passes int `validate:"min=0"`
 }
@@ -42,6 +44,12 @@ type Provider struct {
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	p.decoder = newDecoder(ctx, p.Sink, &p.Pool)
+	// parse and prepare Headers from config
+	decodedConfigHeaders, err := decodeHTTPConfigHeaders(p.Config.Headers)
+	if err != nil {
+		return err
+	}
+	p.decoder.configHeaders = decodedConfigHeaders
 	var passNum int
 	for {
 		passNum++
@@ -49,7 +57,7 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		for line := 1; scanner.Scan() && (p.Limit == 0 || p.decoder.ammoNum < p.Limit); line++ {
 			data := scanner.Bytes()
 			if len(data) == 0 {
-				continue
+				continue // skip empty lines
 			}
 			err := p.decoder.Decode(data)
 			if err != nil {

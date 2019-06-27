@@ -50,6 +50,8 @@ type Config struct {
 	File string `validate:"required"`
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
+	// Redefine HTTP headers
+	Headers []string
 	// Passes limits ammo file passes. Unlimited if zero.
 	Passes int `validate:"min=0"`
 }
@@ -71,6 +73,11 @@ type Provider struct {
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	var passNum int
 	var ammoNum int
+	// parse and prepare Headers from config
+	decodedConfigHeaders, err := decodeHTTPConfigHeaders(p.Config.Headers)
+	if err != nil {
+		return err
+	}
 	for {
 		passNum++
 		reader := bufio.NewReader(ammoFile)
@@ -100,6 +107,17 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to decode ammo at position: %v; data: %q", filePosition(ammoFile), buff)
 			}
+
+			// redefine request Headers from config
+			for _, header := range decodedConfigHeaders {
+				// special behavior for `Host` header
+				if header.key == "Host" {
+					req.URL.Host = header.value
+				} else {
+					req.Header.Set(header.key, header.value)
+				}
+			}
+
 			sh := p.Pool.Get().(*simple.Ammo)
 			sh.Reset(req, tag)
 

@@ -1,14 +1,18 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
 	"runtime/pprof"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -21,15 +25,17 @@ import (
 	"github.com/yandex/pandora/lib/zaputil"
 )
 
-const Version = "0.2.0"
+const Version = "0.3.0"
 const defaultConfigFile = "load"
+const stdinConfigSelector = "-"
 
+var useStdinConfig = false
 var configSearchDirs = []string{"./", "./config", "/etc/pandora"}
 
 type cliConfig struct {
-	Engine engine.Config `config:",squash"`
-	Log    logConfig     `config:"log"`
-	// TODO(skipor): monitoring
+	Engine     engine.Config    `config:",squash"`
+	Log        logConfig        `config:"log"`
+	Monitoring monitoringConfig `config:"monitoring"`
 }
 
 type logConfig struct {
@@ -57,6 +63,20 @@ func defaultConfig() *cliConfig {
 			Level: zap.InfoLevel,
 			File:  "stdout",
 		},
+		Monitoring: monitoringConfig{
+			Expvar: &expvarConfig{
+				Enabled: false,
+				Port:    1234,
+			},
+			CPUProfile: &cpuprofileConfig{
+				Enabled: false,
+				File:    "cpuprofile.log",
+			},
+			MemProfile: &memprofileConfig{
+				Enabled: false,
+				File:    "memprofile.log",
+			},
+		},
 	}
 }
 
@@ -69,13 +89,9 @@ func Run() {
 		flag.PrintDefaults()
 	}
 	var (
-		example    bool
-		monitoring monitoringConfig
+		example bool
 	)
 	flag.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
-	flag.StringVar(&monitoring.CPUProfile, "cpuprofile", "", "write cpu profile to file")
-	flag.StringVar(&monitoring.MemProfile, "memprofile", "", "write memory profile to this file")
-	flag.BoolVar(&monitoring.Expvar, "expvar", false, "start HTTP server with monitoring variables")
 	flag.Parse()
 
 	if example {
@@ -88,7 +104,7 @@ func Run() {
 	zap.ReplaceGlobals(log)
 	zap.RedirectStdLog(log)
 
-	closeMonitoring := startMonitoring(monitoring)
+	closeMonitoring := startMonitoring(conf.Monitoring)
 	defer closeMonitoring()
 	m := newEngineMetrics()
 	startReport(m)
@@ -98,19 +114,55 @@ func Run() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go handleSignals(log, cancel)
+	errs := make(chan error)
+	go runEngine(ctx, pandora, errs)
 
-	err := pandora.Run(ctx)
-	if err != nil {
-		const awaitTimeout = 3 * time.Second
-		log.Error("Engine run failed. Awaiting started tasks.", zap.Error(err), zap.Duration("timeout", awaitTimeout))
-		time.AfterFunc(awaitTimeout, func() {
-			log.Fatal("Engine tasks timeout exceeded.")
-		})
-		pandora.Wait()
-		os.Exit(1)
+	sigs := make(chan os.Signal, 2)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	// waiting for signal or error message from engine
+	select {
+	case sig := <-sigs:
+		switch sig {
+		case syscall.SIGINT:
+			const interruptTimeout = 5 * time.Second
+			log.Info("SIGINT received. Trying to stop gracefully.", zap.Duration("timeout", interruptTimeout))
+			cancel()
+			select {
+			case <-time.After(interruptTimeout):
+				log.Fatal("Interrupt timeout exceeded")
+			case sig := <-sigs:
+				log.Fatal("Another signal received. Quiting.", zap.Stringer("signal", sig))
+			case err := <-errs:
+				log.Fatal("Engine interrupted", zap.Error(err))
+			}
+		case syscall.SIGTERM:
+			log.Fatal("SIGTERM received. Quiting.")
+		default:
+			log.Fatal("Unexpected signal received. Quiting.", zap.Stringer("signal", sig))
+		}
+	case err := <-errs:
+		switch err {
+		case nil:
+			log.Info("Pandora engine successfully finished it's work")
+		case err:
+			const awaitTimeout = 3 * time.Second
+			log.Error("Engine run failed. Awaiting started tasks.", zap.Error(err), zap.Duration("timeout", awaitTimeout))
+			cancel()
+			time.AfterFunc(awaitTimeout, func() {
+				log.Fatal("Engine tasks timeout exceeded.")
+			})
+			pandora.Wait()
+			log.Fatal("Engine run failed. Pandora graceful shutdown successfully finished")
+		}
 	}
 	log.Info("Engine run successfully finished")
+}
+
+func runEngine(ctx context.Context, engine *engine.Engine, errs chan error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	errs <- engine.Run(ctx)
 }
 
 func readConfig() *cliConfig {
@@ -123,17 +175,38 @@ func readConfig() *cliConfig {
 	zap.RedirectStdLog(log)
 
 	v := newViper()
-	if len(flag.Args()) > 0 {
-		if len(flag.Args()) > 1 {
+
+	args := flag.Args()
+	if len(args) > 0 {
+		switch {
+		case len(args) > 1:
 			zap.L().Fatal("Too many command line arguments", zap.Strings("args", flag.Args()))
+		case args[0] == stdinConfigSelector:
+			log.Info("Reading config from standard input")
+			useStdinConfig = true
+		default:
+			v.SetConfigFile(args[0])
 		}
-		v.SetConfigFile(flag.Args()[0])
 	}
-	err = v.ReadInConfig()
-	log.Info("Reading config", zap.String("file", v.ConfigFileUsed()))
-	if err != nil {
-		log.Fatal("Config read failed", zap.Error(err))
+
+	if useStdinConfig {
+		v.SetConfigType("yaml")
+		configBuffer, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
+		if err != nil {
+			log.Fatal("Cannot read from standard input", zap.Error(err))
+		}
+		err = v.ReadConfig(strings.NewReader(string(configBuffer)))
+		if err != nil {
+			log.Fatal("Config parsing failed", zap.Error(err))
+		}
+	} else {
+		err = v.ReadInConfig()
+		log.Info("Reading config", zap.String("file", v.ConfigFileUsed()))
+		if err != nil {
+			log.Fatal("Config read failed", zap.Error(err))
+		}
 	}
+
 	conf := defaultConfig()
 	err = config.DecodeAndValidate(v.AllSettings(), conf)
 	if err != nil {
@@ -151,47 +224,40 @@ func newViper() *viper.Viper {
 	return v
 }
 
-func handleSignals(log *zap.Logger, interrupt func()) {
-	sigs := make(chan os.Signal, 2)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	select {
-	case sig := <-sigs:
-		switch sig {
-		case syscall.SIGINT:
-			const interruptTimeout = 5 * time.Second
-			log.Info("SIGINT received. Trying to stop gracefully.", zap.Duration("timeout", interruptTimeout))
-			interrupt()
-			select {
-			case <-time.After(interruptTimeout):
-				log.Fatal("Interrupt timeout exceeded")
-			case sig := <-sigs:
-				log.Fatal("Another signal received. Quiting.", zap.Stringer("signal", sig))
-			}
-		case syscall.SIGTERM:
-			log.Info("SIGTERM received. Quiting.")
-		default:
-			log.Info("Unexpected signal received. Quiting.", zap.Stringer("signal", sig))
-		}
-	}
+type monitoringConfig struct {
+	Expvar     *expvarConfig
+	CPUProfile *cpuprofileConfig
+	MemProfile *memprofileConfig
 }
 
-type monitoringConfig struct {
-	Expvar     bool   // TODO: struct { Enabled bool; Port string }
-	CPUProfile string // TODO: struct { Enabled bool; File string }
-	MemProfile string // TODO: struct { Enabled bool; File string }
+type expvarConfig struct {
+	Enabled bool `config:"enabled"`
+	Port    int  `config:"port" validate:"required"`
+}
+
+type cpuprofileConfig struct {
+	Enabled bool   `config:"enabled"`
+	File    string `config:"file"`
+}
+
+type memprofileConfig struct {
+	Enabled bool   `config:"enabled"`
+	File    string `config:"file"`
 }
 
 func startMonitoring(conf monitoringConfig) (stop func()) {
 	zap.L().Debug("Start monitoring", zap.Reflect("conf", conf))
-	if conf.Expvar {
-		go func() {
-			err := http.ListenAndServe(":1234", nil)
-			zap.L().Fatal("Monitoring server failed", zap.Error(err))
-		}()
+	if conf.Expvar != nil {
+		if conf.Expvar.Enabled {
+			go func() {
+				err := http.ListenAndServe(":"+strconv.Itoa(conf.Expvar.Port), nil)
+				zap.L().Fatal("Monitoring server failed", zap.Error(err))
+			}()
+		}
 	}
 	var stops []func()
-	if conf.CPUProfile != "" {
-		f, err := os.Create(conf.CPUProfile)
+	if conf.CPUProfile.Enabled {
+		f, err := os.Create(conf.CPUProfile.File)
 		if err != nil {
 			zap.L().Fatal("CPU profile file create fail", zap.Error(err))
 		}
@@ -202,8 +268,8 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 			f.Close()
 		})
 	}
-	if conf.MemProfile != "" {
-		f, err := os.Create(conf.MemProfile)
+	if conf.MemProfile.Enabled {
+		f, err := os.Create(conf.MemProfile.File)
 		if err != nil {
 			zap.L().Fatal("Memory profile file create fail", zap.Error(err))
 		}

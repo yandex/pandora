@@ -5,7 +5,7 @@ test_fmt() {
     DIR="$1"
     hash goimports 2>&- || { echo >&2 "goimports not in PATH."; exit 1; }
 
-    for file in $(find -L $DIR -type f -name "*.go" -not -path "./vendor/*")
+    for file in $(find -L $DIR -type f -name "*.go" -not -path "./vendor/*" -not -path "./.idea/*")
     do
         output=`cat $file | goimports -l 2>&1`
         if test $? -ne 0

@@ -91,7 +91,7 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 
 	req, sample := ammo.Request()
 	if b.DebugLog {
-		b.Log.Debug("Shoot", zap.Stringer("url", req.URL))
+		b.Log.Debug("Prepared ammo to shoot", zap.Stringer("url", req.URL))
 	}
 
 	if b.Config.AutoTag.Enabled && (!b.Config.AutoTag.NoTagOnly || sample.Tags() == "") {
@@ -116,9 +116,11 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 		b.Log.Warn("Request fail", zap.Error(err))
 		return
 	}
+
 	if b.DebugLog {
-		b.Log.Debug("Got response", zap.Int("status", res.StatusCode))
+		b.verboseLogging(res)
 	}
+
 	sample.SetProtoCode(res.StatusCode)
 	defer res.Body.Close()
 	// TODO: measure body read time
@@ -127,7 +129,6 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 		b.Log.Warn("Body read fail", zap.Error(err))
 		return
 	}
-	// TODO: verbose logging
 }
 
 func (b *BaseGun) Close() error {
@@ -135,6 +136,38 @@ func (b *BaseGun) Close() error {
 		return b.OnClose()
 	}
 	return nil
+}
+
+func (b *BaseGun) verboseLogging(res *http.Response) {
+	if res.Request.Body != nil {
+		reqBody, err := ioutil.ReadAll(res.Request.Body)
+		if err != nil {
+			b.Log.Debug("Body read failed for verbose logging of Request")
+		} else {
+			b.Log.Debug("Request body", zap.ByteString("Body", reqBody))
+		}
+	}
+	b.Log.Debug(
+		"Request debug info",
+		zap.String("URL", res.Request.URL.String()),
+		zap.String("Host", res.Request.Host),
+		zap.Any("Headers", res.Request.Header),
+	)
+
+	if res.Body != nil {
+		respBody, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			b.Log.Debug("Body read failed for verbose logging of Response")
+		} else {
+			b.Log.Debug("Response body", zap.ByteString("Body", respBody))
+		}
+	}
+	b.Log.Debug(
+		"Response debug info",
+		zap.Int("Status Code", res.StatusCode),
+		zap.String("Status", res.Status),
+		zap.Any("Headers", res.Header),
+	)
 }
 
 func autotag(depth int, URL *url.URL) string {

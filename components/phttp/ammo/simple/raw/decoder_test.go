@@ -66,4 +66,51 @@ var _ = Describe("Decoder", func() {
 		}
 		Expect(bout.String()).To(Equal("foobar"))
 	})
+	It("should return error on bad urls", func() {
+		raw := "GET ../../../../etc/passwd HTTP/1.1\r\n" +
+			"Host: foo.com\r\n" +
+			"Content-Length: 0\r\n" +
+			"\r\n"
+		req, err := decodeRequest([]byte(raw))
+		Expect(err).ToNot(BeNil())
+		Expect(req).To(BeNil())
+	})
+	It("should replace header Host for URL if specified", func() {
+		raw := "GET /etc/passwd HTTP/1.1\r\n" +
+			"Host: hostname.tld\r\n" +
+			"Content-Length: 0\r\n" +
+			"\r\n"
+		req, err := decodeRequest([]byte(raw))
+		Expect(err).To(BeNil())
+		Expect(req.Host).To(Equal("hostname.tld"))
+		Expect(req.URL.Host).To(Equal("hostname.tld"))
+	})
+	It("should replace header Host from config", func() {
+		const host = "hostname.tld"
+		const newhost = "newhostname.tld"
+
+		raw := "GET / HTTP/1.1\r\n" +
+			"Host: " + host + "\r\n" +
+			"Content-Length: 0\r\n" +
+			"\r\n"
+		configHeaders := []string{
+			"[Host: " + newhost + "]",
+			"[SomeTestKey: sometestvalue]",
+		}
+		req, err := decodeRequest([]byte(raw))
+		Expect(err).To(BeNil())
+		Expect(req.Host).To(Equal(host))
+		Expect(req.URL.Host).To(Equal(host))
+		decodedConfigHeaders, _ := decodeHTTPConfigHeaders(configHeaders)
+		for _, header := range decodedConfigHeaders {
+			// special behavior for `Host` header
+			if header.key == "Host" {
+				req.URL.Host = header.value
+			} else {
+				req.Header.Set(header.key, header.value)
+			}
+		}
+		Expect(req.URL.Host).To(Equal(newhost))
+		Expect(req.Header.Get("SomeTestKey")).To(Equal("sometestvalue"))
+	})
 })

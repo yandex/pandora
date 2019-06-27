@@ -22,8 +22,14 @@ type decoder struct {
 	sink chan<- *simple.Ammo
 	pool *sync.Pool
 
-	ammoNum int
-	header  http.Header
+	ammoNum       int
+	header        http.Header
+	configHeaders []ConfigHeader
+}
+
+type ConfigHeader struct {
+	key   string
+	value string
 }
 
 func newDecoder(ctx context.Context, sink chan<- *simple.Ammo, pool *sync.Pool) *decoder {
@@ -36,6 +42,8 @@ func newDecoder(ctx context.Context, sink chan<- *simple.Ammo, pool *sync.Pool) 
 }
 
 func (d *decoder) Decode(line []byte) error {
+	// FIXME: rewrite decoder
+	// OPTIMIZE: reuse *http.Request, http.Header. Benchmark both variants.
 	if len(line) == 0 {
 		return errors.New("empty line")
 	}
@@ -50,7 +58,6 @@ func (d *decoder) Decode(line []byte) error {
 }
 
 func (d *decoder) decodeURI(line []byte) error {
-	// OPTIMIZE: reuse *http.Request, http.Header. Benchmark both variants.
 	parts := strings.SplitN(string(line), " ", 2)
 	url := parts[0]
 	var tag string
@@ -62,14 +69,24 @@ func (d *decoder) decodeURI(line []byte) error {
 		return errors.Wrap(err, "uri decode")
 	}
 	for k, v := range d.header {
-		// http.Request.Write sends Host header based on Host or URL.Host.
+		// http.Request.Write sends Host header based on req.URL.Host
 		if k == "Host" {
-			req.URL.Host = v[0]
 			req.Host = v[0]
+			req.URL.Host = v[0]
 		} else {
 			req.Header[k] = v
 		}
 	}
+	// redefine request Headers from config
+	for _, configHeader := range d.configHeaders {
+		if configHeader.key == "Host" {
+			req.Host = configHeader.value
+			req.URL.Host = configHeader.value
+		} else {
+			req.Header.Set(configHeader.key, configHeader.value)
+		}
+	}
+
 	sh := d.pool.Get().(*simple.Ammo)
 	sh.Reset(req, tag)
 	select {
@@ -103,4 +120,24 @@ func (d *decoder) ResetHeader() {
 	for k := range d.header {
 		delete(d.header, k)
 	}
+}
+
+func decodeHTTPConfigHeaders(headers []string) (configHTTPHeaders []ConfigHeader, err error) {
+	for _, header := range headers {
+		line := []byte(header)
+		if len(line) < 3 || line[0] != '[' || line[len(line)-1] != ']' {
+			return nil, errors.New("header line should be like '[key: value]")
+		}
+		line = line[1 : len(line)-1]
+		colonIdx := bytes.IndexByte(line, ':')
+		if colonIdx < 0 {
+			return nil, errors.New("missing colon")
+		}
+		preparedHeader := ConfigHeader{
+			string(bytes.TrimSpace(line[:colonIdx])),
+			string(bytes.TrimSpace(line[colonIdx+1:])),
+		}
+		configHTTPHeaders = append(configHTTPHeaders, preparedHeader)
+	}
+	return
 }
