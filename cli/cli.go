@@ -90,9 +90,15 @@ func Run() {
 	}
 	var (
 		example bool
+		expvar  bool
 	)
 	flag.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
+	flag.BoolVar(&expvar, "expvar", false, "stab for compatibility")
 	flag.Parse()
+
+	if expvar {
+		fmt.Fprintf(os.Stderr, "-expvar flag is a stab. Use monitoring section in config to turn it on\n")
+	}
 
 	if example {
 		panic("Not implemented yet")
