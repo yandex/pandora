@@ -90,9 +90,15 @@ func Run() {
 	}
 	var (
 		example bool
+		expvar  bool
 	)
 	flag.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
+	flag.BoolVar(&expvar, "expvar", false, "enable expvar service (DEPRECATED, use monitoring config section instead)")
 	flag.Parse()
+
+	if expvar {
+		fmt.Fprintf(os.Stderr, "-expvar flag is DEPRECATED. Use monitoring config section instead\n")
+	}
 
 	if example {
 		panic("Not implemented yet")
