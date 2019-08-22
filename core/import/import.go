@@ -29,6 +29,10 @@ const (
 	fileDataKey          = "file"
 	compositeScheduleKey = "composite"
 )
+//getter for fs to avoid afero dependency in custom guns
+func GetFs() afero.Fs {
+        return afero.NewOsFs()
+}
 
 func Import(fs afero.Fs) {
 
