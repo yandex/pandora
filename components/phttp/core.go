@@ -23,7 +23,7 @@ type Ammo interface {
 	Request() (*http.Request, *netsample.Sample)
 	// Id unique ammo id. Usually equals to ammo num got from provider.
 	Id() int
-	IsInvalidate() bool
+	IsInvalid() bool
 }
 
 type Gun interface {

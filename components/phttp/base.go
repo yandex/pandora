@@ -90,10 +90,11 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 	}
 
 	req, sample := ammo.Request()
-	if ammo.IsInvalidate() {
+	if ammo.IsInvalid() {
 		sample.AddTag(EmptyTag)
 		sample.SetProtoCode(0)
 		b.Aggregator.Report(sample)
+		b.Log.Warn("Invalid ammo", zap.Int("request", ammo.Id()))
 		return
 	}
 	if b.DebugLog {

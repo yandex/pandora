@@ -18,7 +18,7 @@ type Ammo struct {
 	req *http.Request
 	tag string
 	id  int
-	isInvalidated bool
+	isInvalid bool
 }
 
 func (a *Ammo) Request() (*http.Request, *netsample.Sample) {
@@ -40,11 +40,15 @@ func (a *Ammo) Id() int {
 }
 
 func (a *Ammo) Invalidate() {
-	a.isInvalidated = true
+	a.isInvalid = true
 }
 
-func (a *Ammo) IsInvalidate() bool {
-	return a.isInvalidated
+func (a *Ammo) IsInvalid() bool {
+	return a.isInvalid
+}
+
+func (a *Ammo) IsValid() bool {
+	return !a.isInvalid
 }
 
 var _ phttp.Ammo = (*Ammo)(nil)
