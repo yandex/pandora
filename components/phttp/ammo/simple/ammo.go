@@ -18,6 +18,7 @@ type Ammo struct {
 	req *http.Request
 	tag string
 	id  int
+	isInvalid bool
 }
 
 func (a *Ammo) Request() (*http.Request, *netsample.Sample) {
@@ -27,7 +28,7 @@ func (a *Ammo) Request() (*http.Request, *netsample.Sample) {
 }
 
 func (a *Ammo) Reset(req *http.Request, tag string) {
-	*a = Ammo{req, tag, -1}
+	*a = Ammo{req, tag, -1, false}
 }
 
 func (a *Ammo) SetId(id int) {
@@ -36,6 +37,18 @@ func (a *Ammo) SetId(id int) {
 
 func (a *Ammo) Id() int {
 	return a.id
+}
+
+func (a *Ammo) Invalidate() {
+	a.isInvalid = true
+}
+
+func (a *Ammo) IsInvalid() bool {
+	return a.isInvalid
+}
+
+func (a *Ammo) IsValid() bool {
+	return !a.isInvalid
 }
 
 var _ phttp.Ammo = (*Ammo)(nil)

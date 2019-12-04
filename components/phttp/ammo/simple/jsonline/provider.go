@@ -36,6 +36,7 @@ type Config struct {
 	Limit int `validate:"min=0"`
 	// Passes limits ammo file passes. Unlimited if zero.
 	Passes int `validate:"min=0"`
+	ContinueOnError bool
 }
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
@@ -47,7 +48,11 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			data := scanner.Bytes()
 			a, err := decodeAmmo(data, p.Pool.Get().(*simple.Ammo))
 			if err != nil {
-				return errors.Wrapf(err, "failed to decode ammo at line: %v; data: %q", line, data)
+				if p.Config.ContinueOnError == true {
+					a.Invalidate()
+				} else {
+					return errors.Wrapf(err, "failed to decode ammo at line: %v; data: %q", line, data)
+				}
 			}
 			ammoNum++
 			select {
@@ -68,11 +73,11 @@ func decodeAmmo(jsonDoc []byte, am *simple.Ammo) (*simple.Ammo, error) {
 	var data data
 	err := data.UnmarshalJSON(jsonDoc)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return am, errors.WithStack(err)
 	}
 	req, err := data.ToRequest()
 	if err != nil {
-		return nil, err
+		return am, err
 	}
 	am.Reset(req, data.Tag)
 	return am, nil
