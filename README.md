@@ -44,3 +44,7 @@ pandora myconfig.yaml
 
 Or use Pandora with [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/configuration.html#pandora) and
 [Overload](https://overload.yandex.net).
+
+### Documentation
+[ReadTheDocs](https://yandexpandora.readthedocs.io/en/develop/)
+
