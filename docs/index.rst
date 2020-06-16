@@ -15,7 +15,6 @@ Pandora is a high-performance load generator in Go language. It has built-in HTT
    install
    tutorial
    advanced
-   guns
    custom
    performance
    architecture
