@@ -15,9 +15,9 @@ import (
 type Ammo struct {
 	// OPTIMIZE(skipor): reuse *http.Request.
 	// Need to research is it possible. http.Transport can hold reference to http.Request.
-	req *http.Request
-	tag string
-	id  int
+	req       *http.Request
+	tag       string
+	id        int
 	isInvalid bool
 }
 

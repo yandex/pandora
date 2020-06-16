@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+
 	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
@@ -35,7 +36,7 @@ type Config struct {
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
 	// Passes limits ammo file passes. Unlimited if zero.
-	Passes int `validate:"min=0"`
+	Passes          int `validate:"min=0"`
 	ContinueOnError bool
 }
 
