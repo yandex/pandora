@@ -51,6 +51,26 @@ func TestSampleBehaviour(t *testing.T) {
 	assert.Equal(t, expected, sample.String())
 }
 
+func TestCustomSets(t *testing.T) {
+	const tag = "UserDefine"
+	s := Acquire(tag)
+	s.SetUserDuration(100 * time.Millisecond)
+	s.SetUserProto(0)
+	s.SetUserNet(110)
+	expectedTimeStamp := fmt.Sprintf("%v.%3.f",
+		s.timeStamp.Unix(),
+		float32((s.timeStamp.UnixNano()/1e6)%1000))
+	expectedTimeStamp = strings.Replace(expectedTimeStamp, " ", "0", -1)
+	expected := fmt.Sprintf("%s\t%s#0\t%v\t0\t0\t0\t0\t0\t0\t0\t%v\t%v",
+		expectedTimeStamp,
+		tag,
+		100000,
+		110,
+		0,
+	)
+	assert.Equal(t, expected, s.String())
+}
+
 func TestGetErrno(t *testing.T) {
 	var err error = syscall.EINVAL
 	err = &os.SyscallError{Err: err}

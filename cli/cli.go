@@ -25,7 +25,7 @@ import (
 	"github.com/yandex/pandora/lib/zaputil"
 )
 
-const Version = "0.3.1"
+const Version = "0.3.2"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 
@@ -91,8 +91,10 @@ func Run() {
 	var (
 		example bool
 		expvar  bool
+		version bool
 	)
 	flag.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
+	flag.BoolVar(&version, "version", false, "print pandora core version")
 	flag.BoolVar(&expvar, "expvar", false, "enable expvar service (DEPRECATED, use monitoring config section instead)")
 	flag.Parse()
 
@@ -103,6 +105,11 @@ func Run() {
 	if example {
 		panic("Not implemented yet")
 		// TODO: print example config file content
+	}
+
+	if version {
+		fmt.Fprintf(os.Stderr, "Pandora core/%s\n", Version)
+		return
 	}
 
 	conf := readConfig()
