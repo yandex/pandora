@@ -38,6 +38,8 @@ type Config struct {
 	// Passes limits ammo file passes. Unlimited if zero.
 	Passes          int `validate:"min=0"`
 	ContinueOnError bool
+	//Maximum number of byte in an ammo. Default is bufio.MaxScanTokenSize
+	MaxAmmoSize int
 }
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
@@ -45,6 +47,10 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	for {
 		passNum++
 		scanner := bufio.NewScanner(ammoFile)
+		if p.Config.MaxAmmoSize != 0 {
+			var buffer []byte
+			scanner.Buffer(buffer, p.Config.MaxAmmoSize)
+		}
 		for line := 1; scanner.Scan() && (p.Limit == 0 || ammoNum < p.Limit); line++ {
 			data := scanner.Bytes()
 			a, err := decodeAmmo(data, p.Pool.Get().(*simple.Ammo))
