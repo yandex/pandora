@@ -120,7 +120,7 @@ HandleLoop:
 			if err != nil {
 				return
 			}
-		case _ = <-flushTick:
+		case <-flushTick:
 			if previousFlushes == flushes {
 				a.Log.Debug("Flushing")
 				err = encoder.Flush()

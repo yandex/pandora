@@ -11,9 +11,9 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
 
-	"github.com/pkg/errors"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 	"github.com/yandex/pandora/core"
+	"github.com/pkg/errors"
 )
 
 const testFile = "./ammo.uri"

@@ -31,7 +31,9 @@ var _ = Describe("preResolveTargetAddr", func() {
 		conf.Dialer.DNSCache = true
 
 		listener, err := net.ListenTCP("tcp4", nil)
-		defer listener.Close()
+		if listener != nil {
+			defer listener.Close()
+		}
 		Expect(err).NotTo(HaveOccurred())
 
 		port := strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)

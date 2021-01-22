@@ -27,7 +27,7 @@ type instance struct {
 
 func newInstance(ctx context.Context, log *zap.Logger, id int, deps instanceDeps) (*instance, error) {
 	log = log.With(zap.Int("instance", id))
-	gunDeps := core.GunDeps{ctx, log, id}
+	gunDeps := core.GunDeps{Ctx: ctx, Log: log, InstanceID: id}
 	sched, err := deps.newSchedule()
 	if err != nil {
 		return nil, err

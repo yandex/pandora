@@ -21,7 +21,7 @@ const (
 
 func BenchmarkRawDecoder(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		decodeRequest([]byte(benchTestRequest))
+		_, _ = decodeRequest([]byte(benchTestRequest))
 	}
 }
 

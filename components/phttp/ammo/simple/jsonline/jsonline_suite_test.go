@@ -34,13 +34,13 @@ var testData = []data{
 	{
 		Host:    "example.com",
 		Method:  "GET",
-		Uri:     "/00",
+		URI:     "/00",
 		Headers: map[string]string{"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "User-Agent": "Pandora/0.0.1"},
 	},
 	{
 		Host:    "ya.ru",
 		Method:  "HEAD",
-		Uri:     "/01",
+		URI:     "/01",
 		Headers: map[string]string{"Accept": "*/*", "Accept-Encoding": "gzip, brotli", "User-Agent": "YaBro/0.1"},
 		Tag:     "head",
 	},
@@ -73,7 +73,7 @@ var _ = Describe("data", func() {
 		data := data{
 			Host:    "ya.ru",
 			Method:  "GET",
-			Uri:     "/00",
+			URI:     "/00",
 			Headers: map[string]string{"A": "a", "B": "b"},
 			Tag:     "tag",
 		}
@@ -86,7 +86,7 @@ var _ = Describe("data", func() {
 			"URL": PointTo(MatchFields(IgnoreExtras, Fields{
 				"Scheme": Equal("http"),
 				"Host":   Equal(data.Host),
-				"Path":   Equal(data.Uri),
+				"Path":   Equal(data.URI),
 			})),
 			"Header": Equal(http.Header{
 				"A": []string{"a"},
@@ -227,13 +227,13 @@ func Benchmark(b *testing.B) {
 	}
 	b.Run("Decode", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			decodeAmmo(jsonDoc, &simple.Ammo{})
+			_, _ = decodeAmmo(jsonDoc, &simple.Ammo{})
 		}
 	})
 	b.Run("DecodeWithPool", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			h := pool.Get().(*simple.Ammo)
-			decodeAmmo(jsonDoc, h)
+			_, _ = decodeAmmo(jsonDoc, h)
 			pool.Put(h)
 		}
 	})

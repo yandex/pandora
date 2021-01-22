@@ -11,6 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
@@ -38,6 +39,7 @@ func NewProvider(fs afero.Fs, conf Config) *Provider {
 type Provider struct {
 	simple.Provider
 	Config
+	log *zap.Logger
 
 	decoder *decoder // Initialized on start.
 }
@@ -70,7 +72,10 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		if p.Passes != 0 && passNum >= p.Passes {
 			break
 		}
-		ammoFile.Seek(0, 0)
+		_, err := ammoFile.Seek(0, 0)
+		if err != nil {
+			p.log.Info("Failed to seek ammo file", zap.Error(err))
+		}
 		p.decoder.ResetHeader()
 	}
 	return nil

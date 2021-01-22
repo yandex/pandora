@@ -27,7 +27,7 @@ func TestSampleBehaviour(t *testing.T) {
 	const id = 42
 	sample := Acquire(tag)
 	sample.AddTag(tag2)
-	sample.SetId(id)
+	sample.SetID(id)
 	const sleep = time.Millisecond
 	time.Sleep(sleep)
 	sample.SetErr(syscall.EINVAL)

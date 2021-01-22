@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/afero"
 	"go.uber.org/zap"
 
-	. "github.com/yandex/pandora/components/phttp"
+	"github.com/yandex/pandora/components/phttp"
 	"github.com/yandex/pandora/components/phttp/ammo/simple/jsonline"
 	"github.com/yandex/pandora/components/phttp/ammo/simple/raw"
 	"github.com/yandex/pandora/components/phttp/ammo/simple/uri"
@@ -33,25 +33,25 @@ func Import(fs afero.Fs) {
 		return raw.NewProvider(fs, conf)
 	})
 
-	register.Gun("http", func(conf HTTPGunConfig) func() core.Gun {
-		preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
-		return func() core.Gun { return WrapGun(NewHTTPGun(conf)) }
-	}, DefaultHTTPGunConfig)
+	register.Gun("http", func(conf phttp.HTTPGunConfig) func() core.Gun {
+		_ = preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
+		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTPGun(conf)) }
+	}, phttp.DefaultHTTPGunConfig)
 
-	register.Gun("http2", func(conf HTTP2GunConfig) func() (core.Gun, error) {
-		preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
+	register.Gun("http2", func(conf phttp.HTTP2GunConfig) func() (core.Gun, error) {
+		_ = preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
 		return func() (core.Gun, error) {
-			gun, err := NewHTTP2Gun(conf)
-			return WrapGun(gun), err
+			gun, err := phttp.NewHTTP2Gun(conf)
+			return phttp.WrapGun(gun), err
 		}
-	}, DefaultHTTP2GunConfig)
+	}, phttp.DefaultHTTP2GunConfig)
 
-	register.Gun("connect", func(conf ConnectGunConfig) func() core.Gun {
-		preResolveTargetAddr(&conf.Client, &conf.Target)
+	register.Gun("connect", func(conf phttp.ConnectGunConfig) func() core.Gun {
+		_ = preResolveTargetAddr(&conf.Client, &conf.Target)
 		return func() core.Gun {
-			return WrapGun(NewConnectGun(conf))
+			return phttp.WrapGun(phttp.NewConnectGun(conf))
 		}
-	}, DefaultConnectGunConfig)
+	}, phttp.DefaultConnectGunConfig)
 }
 
 // DNS resolve optimisation.
@@ -60,7 +60,7 @@ func Import(fs afero.Fs) {
 // If we can resolve accessible target addr - use it as target, not use caching.
 // Otherwise just use DNS cache - we should not fail shooting, we should try to
 // connect on every shoot. DNS cache will save resolved addr after first successful connect.
-func preResolveTargetAddr(clientConf *ClientConfig, target *string) (err error) {
+func preResolveTargetAddr(clientConf *phttp.ClientConfig, target *string) (err error) {
 	if !clientConf.Dialer.DNSCache {
 		return
 	}

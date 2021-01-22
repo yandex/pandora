@@ -9,8 +9,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/spf13/afero"
 	"github.com/yandex/pandora/core/coretest"
+	"github.com/spf13/afero"
 )
 
 func TestFileSource(t *testing.T) {

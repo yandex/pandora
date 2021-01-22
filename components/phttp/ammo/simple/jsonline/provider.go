@@ -12,9 +12,10 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 
-	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"github.com/spf13/afero"
 )
 
 func NewProvider(fs afero.Fs, conf Config) *Provider {
@@ -29,6 +30,7 @@ func NewProvider(fs afero.Fs, conf Config) *Provider {
 type Provider struct {
 	simple.Provider
 	Config
+	log *zap.Logger
 }
 
 type Config struct {
@@ -55,7 +57,7 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			data := scanner.Bytes()
 			a, err := decodeAmmo(data, p.Pool.Get().(*simple.Ammo))
 			if err != nil {
-				if p.Config.ContinueOnError == true {
+				if p.Config.ContinueOnError {
 					a.Invalidate()
 				} else {
 					return errors.Wrapf(err, "failed to decode ammo at line: %v; data: %q", line, data)
@@ -71,7 +73,10 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		if p.Passes != 0 && passNum >= p.Passes {
 			break
 		}
-		ammoFile.Seek(0, 0)
+		_, err := ammoFile.Seek(0, 0)
+		if err != nil {
+			p.log.Info("Failed to seek ammo file", zap.Error(err))
+		}
 	}
 	return nil
 }
@@ -91,7 +96,7 @@ func decodeAmmo(jsonDoc []byte, am *simple.Ammo) (*simple.Ammo, error) {
 }
 
 func (d *data) ToRequest() (req *http.Request, err error) {
-	uri := "http://" + d.Host + d.Uri
+	uri := "http://" + d.Host + d.URI
 	req, err = http.NewRequest(d.Method, uri, strings.NewReader(d.Body))
 	if err != nil {
 		return nil, errors.WithStack(err)

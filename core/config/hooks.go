@@ -53,7 +53,7 @@ func StringToURLHook(f reflect.Type, t reflect.Type, data interface{}) (interfac
 	return urlPtr, nil
 }
 
-var InvalidIPError = stderrors.New("string is not valid IP")
+var ErrInvalidIP = stderrors.New("string is not valid IP")
 
 // StringToIPHook converts string to net.IP
 func StringToIPHook(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
@@ -66,7 +66,7 @@ func StringToIPHook(f reflect.Type, t reflect.Type, data interface{}) (interface
 	str := data.(string)
 	ip := net.ParseIP(str)
 	if ip == nil {
-		return nil, errors.WithStack(InvalidIPError)
+		return nil, errors.WithStack(ErrInvalidIP)
 	}
 	return ip, nil
 }
@@ -111,7 +111,7 @@ func TextUnmarshallerHook(f reflect.Type, t reflect.Type, data interface{}) (int
 
 func unmarhsallText(v reflect.Value, data interface{}) error {
 	unmarshaller := v.Interface().(encoding.TextUnmarshaler)
-	unmarshaller.UnmarshalText([]byte(data.(string)))
+	// unmarshaller.UnmarshalText([]byte(data.(string)))
 	err := unmarshaller.UnmarshalText([]byte(data.(string)))
 	return err
 }

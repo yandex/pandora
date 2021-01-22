@@ -42,7 +42,7 @@ func NewDNSCachingDialer(dialer Dialer, cache DNSCache) DialerFunc {
 		remoteAddr := conn.RemoteAddr().(*net.TCPAddr)
 		_, port, err := net.SplitHostPort(addr)
 		if err != nil {
-			conn.Close()
+			_ = conn.Close()
 			return nil, errors.Wrap(err, "invalid address, but successful dial - should not happen")
 		}
 		cache.Add(addr, net.JoinHostPort(remoteAddr.IP.String(), port))
@@ -78,7 +78,7 @@ func WarmDNSCache(c DNSCache, addr string) error {
 	if err != nil {
 		return err
 	}
-	conn.Close()
+	_ = conn.Close()
 	return nil
 }
 

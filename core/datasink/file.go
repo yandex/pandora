@@ -21,7 +21,7 @@ type FileConfig struct {
 }
 
 func NewFile(fs afero.Fs, conf FileConfig) core.DataSink {
-	return &fileSink{afero.Afero{fs}, conf}
+	return &fileSink{afero.Afero{Fs: fs}, conf}
 }
 
 type fileSink struct {

@@ -22,7 +22,7 @@ type Ammo interface {
 	// TODO(skipor): instead of sample use it wrapper with httptrace and more usable interface.
 	Request() (*http.Request, *netsample.Sample)
 	// Id unique ammo id. Usually equals to ammo num got from provider.
-	Id() int
+	ID() int
 	IsInvalid() bool
 }
 

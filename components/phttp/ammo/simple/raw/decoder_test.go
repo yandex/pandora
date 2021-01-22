@@ -62,7 +62,7 @@ var _ = Describe("Decoder", func() {
 		if req.Body != nil {
 			_, err := io.Copy(&bout, req.Body)
 			Expect(err).To(BeNil())
-			req.Body.Close()
+			_ = req.Body.Close()
 		}
 		Expect(bout.String()).To(Equal("foobar"))
 	})

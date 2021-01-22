@@ -63,8 +63,8 @@ func (s *Sample) AddTag(tag string) {
 	s.tags += "|" + tag
 }
 
-func (s *Sample) Id() int      { return s.id }
-func (s *Sample) SetId(id int) { s.id = id }
+func (s *Sample) ID() int      { return s.id }
+func (s *Sample) SetID(id int) { s.id = id }
 
 func (s *Sample) ProtoCode() int { return s.get(keyProtoCode) }
 func (s *Sample) SetProtoCode(code int) {

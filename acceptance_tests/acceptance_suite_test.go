@@ -112,7 +112,7 @@ func NewInstansePoolConfig() *InstancePoolConfig {
 }
 
 type InstancePoolConfig struct {
-	Id              string
+	ID              string
 	Provider        map[string]interface{} `json:"ammo"`
 	Aggregator      map[string]interface{} `json:"result"`
 	Gun             map[string]interface{} `json:"gun"`
@@ -185,5 +185,5 @@ func (pt *PandoraTester) ExitCode() int {
 
 func (pt *PandoraTester) Close() {
 	pt.Terminate()
-	os.RemoveAll(pt.TestDir)
+	_ = os.RemoveAll(pt.TestDir)
 }

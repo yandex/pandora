@@ -70,7 +70,7 @@ func NewEncoderAggregatorTester(t testutil.TestingT) *EncoderAggregatorTester {
 		ReporterConfig: ReporterConfig{100},
 	}
 	tr.ctx, tr.cancel = context.WithCancel(context.Background())
-	tr.deps = core.AggregatorDeps{zap.L()}
+	tr.deps = core.AggregatorDeps{Log: zap.L()}
 	return tr
 }
 
@@ -234,7 +234,7 @@ func TestEncoderAggregator_ManualFlush(t *testing.T) {
 		defer writeTicker.Stop()
 		for {
 			select {
-			case _ = <-writeTicker.C:
+			case <-writeTicker.C:
 				testee.Report(0)
 			case <-tr.ctx.Done():
 				return

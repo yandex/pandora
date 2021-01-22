@@ -302,7 +302,7 @@ handle_Uri:
 
 			outBuf := fs.Output.Bytes()
 
-			j.Uri = string(string(outBuf))
+			j.URI = string(string(outBuf))
 
 		}
 	}

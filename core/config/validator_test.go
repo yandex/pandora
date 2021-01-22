@@ -72,7 +72,7 @@ type D struct {
 
 func TestValidateInvalidValidatorName(t *testing.T) {
 	require.Panics(t, func() {
-		Validate(&D{"test"})
+		_ = Validate(&D{"test"})
 	})
 }
 

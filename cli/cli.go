@@ -275,10 +275,16 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 			zap.L().Fatal("CPU profile file create fail", zap.Error(err))
 		}
 		zap.L().Info("Starting CPU profiling")
-		pprof.StartCPUProfile(f)
+		err = pprof.StartCPUProfile(f)
+		if err != nil {
+			zap.L().Info("CPU profiling is already enabled")
+		}
 		stops = append(stops, func() {
 			pprof.StopCPUProfile()
-			f.Close()
+			err := f.Close()
+			if err != nil {
+				zap.L().Info("Error closing CPUProfile file")
+			}
 		})
 	}
 	if conf.MemProfile.Enabled {
@@ -289,8 +295,14 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 		stops = append(stops, func() {
 			zap.L().Info("Writing memory profile")
 			runtime.GC()
-			pprof.WriteHeapProfile(f)
-			f.Close()
+			err := pprof.WriteHeapProfile(f)
+			if err != nil {
+				zap.L().Info("Error writing HeapProfile file")
+			}
+			err = f.Close()
+			if err != nil {
+				zap.L().Info("Error closing HeapProfile file")
+			}
 		})
 	}
 	stop = func() {

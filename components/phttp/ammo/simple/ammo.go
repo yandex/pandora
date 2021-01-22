@@ -23,7 +23,7 @@ type Ammo struct {
 
 func (a *Ammo) Request() (*http.Request, *netsample.Sample) {
 	sample := netsample.Acquire(a.tag)
-	sample.SetId(a.id)
+	sample.SetID(a.id)
 	return a.req, sample
 }
 
@@ -31,11 +31,11 @@ func (a *Ammo) Reset(req *http.Request, tag string) {
 	*a = Ammo{req, tag, -1, false}
 }
 
-func (a *Ammo) SetId(id int) {
+func (a *Ammo) SetID(id int) {
 	a.id = id
 }
 
-func (a *Ammo) Id() int {
+func (a *Ammo) ID() int {
 	return a.id
 }
 
