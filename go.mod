@@ -1,5 +1,7 @@
 module github.com/yandex/pandora
 
+go 1.15
+
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20171111151018-521b25f4b05f
@@ -33,7 +35,6 @@ require (
 	github.com/spf13/viper v1.0.0
 	github.com/stretchr/objx v0.1.0 // indirect
 	github.com/stretchr/testify v1.2.1
-	github.com/uber-go/atomic v1.3.0
 	go.uber.org/atomic v1.3.1
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.7.1

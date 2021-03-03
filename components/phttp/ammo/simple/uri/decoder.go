@@ -48,13 +48,11 @@ func (d *decoder) Decode(line []byte) error {
 		return errors.New("empty line")
 	}
 	line = bytes.TrimSpace(line)
-	switch line[0] {
-	case '/':
-		return d.decodeURI(line)
-	case '[':
+	if line[0] == '[' {
 		return d.decodeHeader(line)
+	} else {
+		return d.decodeURI(line)
 	}
-	return errors.New("every line should begin with '[' or '/'")
 }
 
 func (d *decoder) decodeURI(line []byte) error {
