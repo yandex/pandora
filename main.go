@@ -10,6 +10,7 @@ import (
 
 	"github.com/yandex/pandora/cli"
 	example "github.com/yandex/pandora/components/example/import"
+	grpc "github.com/yandex/pandora/components/grpc/import"
 	phttp "github.com/yandex/pandora/components/phttp/import"
 	coreimport "github.com/yandex/pandora/core/import"
 )
@@ -21,6 +22,7 @@ func main() {
 	coreimport.Import(fs)
 	phttp.Import(fs)
 	example.Import()
+	grpc.Import()
 
 	cli.Run()
 }
