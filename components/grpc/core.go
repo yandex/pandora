@@ -36,9 +36,10 @@ type GunConfig struct {
 }
 
 type Gun struct {
-	client *grpc.ClientConn
-	conf   GunConfig
-	aggr   core.Aggregator
+	DebugLog bool
+	client   *grpc.ClientConn
+	conf     GunConfig
+	aggr     core.Aggregator
 	core.GunDeps
 
 	stub     grpcdynamic.Stub
@@ -64,6 +65,11 @@ func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
 	g.stub = grpcdynamic.NewStub(conn)
 
 	log := deps.Log
+
+	if ent := log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
+		// Enable debug level logging during shooting. Creating log entries isn't free.
+		g.DebugLog = true
+	}
 
 	meta := make(metadata.MD)
 	refCtx := metadata.NewOutgoingContext(context.Background(), meta)
@@ -143,6 +149,10 @@ func (g *Gun) shoot(ammo *Ammo) {
 		code = 200
 	} else {
 		code = 400
+	}
+	if g.DebugLog {
+		g.Log.Debug("Request:", zap.Stringer("method", &method), zap.Stringer("message", message))
+		g.Log.Debug("Response:", zap.Stringer("resp", out))
 	}
 
 }
