@@ -10,7 +10,6 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/c2h5oh/datasize"
-	"gopkg.in/bluesuncorp/validator.v9"
 )
 
 func MinTimeValidation(fl validator.FieldLevel) bool {
