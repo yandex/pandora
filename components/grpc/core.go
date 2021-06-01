@@ -15,8 +15,10 @@ import (
 	"github.com/jhump/protoreflect/grpcreflect"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
+	"google.golang.org/grpc/status"
 )
 
 type Ammo struct {
@@ -139,20 +141,53 @@ func (g *Gun) shoot(ammo *Ammo) {
 	}
 
 	ctx := metadata.NewOutgoingContext(context.Background(), meta)
-
 	out, err := g.stub.InvokeRpc(ctx, &method, message)
+	code = convertGrpcStatus(err)
+
 	if err != nil {
-		code = 0
-		log.Printf("BAD REQUEST: %s\n", err)
+		log.Printf("Response error: %s\n", err)
 	}
-	if out != nil {
-		code = 200
-	} else {
-		code = 400
-	}
+
 	if g.DebugLog {
 		g.Log.Debug("Request:", zap.Stringer("method", &method), zap.Stringer("message", message))
 		g.Log.Debug("Response:", zap.Stringer("resp", out))
 	}
 
+}
+
+func convertGrpcStatus(err error) int {
+	s := status.Convert(err)
+
+	switch s.Code() {
+	case codes.OK:
+		return 200
+	case codes.Canceled:
+		return 499
+	case codes.InvalidArgument:
+		return 400
+	case codes.DeadlineExceeded:
+		return 504
+	case codes.NotFound:
+		return 404
+	case codes.AlreadyExists:
+		return 409
+	case codes.PermissionDenied:
+		return 403
+	case codes.ResourceExhausted:
+		return 429
+	case codes.FailedPrecondition:
+		return 400
+	case codes.Aborted:
+		return 409
+	case codes.OutOfRange:
+		return 400
+	case codes.Unimplemented:
+		return 501
+	case codes.Unavailable:
+		return 503
+	case codes.Unauthenticated:
+		return 401
+	default:
+		return 500
+	}
 }
