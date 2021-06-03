@@ -105,7 +105,7 @@ type GunDeps struct {
 	// There is a race between Instances for Ammo Acquire, so it's not guaranteed, that
 	// Instance with lower InstanceId gets it's Ammo earlier.
 	InstanceID int
-	// TODO(skipor): https://github.com/yandex/pandora/issues/71
+	// TODO(skipor): https://a.yandex-team.ru/load/projects/pandora/issues/71
 	// Pass parallelism value. InstanceId MUST be -1 if parallelism > 1.
 }
 

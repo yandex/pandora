@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
+	"a.yandex-team.ru/load/projects/pandora/core/config"
+	"a.yandex-team.ru/load/projects/pandora/core/plugin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/yandex/pandora/core/config"
-	"github.com/yandex/pandora/core/plugin"
 )
 
 func init() {

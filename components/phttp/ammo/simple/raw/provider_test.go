@@ -14,8 +14,8 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
 
-	"github.com/yandex/pandora/components/phttp/ammo/simple"
-	"github.com/yandex/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple"
+	"a.yandex-team.ru/load/projects/pandora/core"
 )
 
 const testFile = "./ammo.stpd"

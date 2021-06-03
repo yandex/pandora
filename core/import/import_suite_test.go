@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/config"
-	"github.com/yandex/pandora/core/coretest"
-	"github.com/yandex/pandora/core/plugin"
-	"github.com/yandex/pandora/lib/ginkgoutil"
-	"github.com/yandex/pandora/lib/testutil"
+	"a.yandex-team.ru/load/projects/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/core/config"
+	"a.yandex-team.ru/load/projects/pandora/core/coretest"
+	"a.yandex-team.ru/load/projects/pandora/core/plugin"
+	"a.yandex-team.ru/load/projects/pandora/lib/ginkgoutil"
+	"a.yandex-team.ru/load/projects/pandora/lib/testutil"
 )
 
 func TestImport(t *testing.T) {

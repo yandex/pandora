@@ -13,8 +13,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 
-	coremock "github.com/yandex/pandora/core/mocks"
-	"github.com/yandex/pandora/lib/testutil"
+	coremock "a.yandex-team.ru/load/projects/pandora/core/mocks"
+	"a.yandex-team.ru/load/projects/pandora/lib/testutil"
 )
 
 func TestReporter_DroppedErr(t *testing.T) {

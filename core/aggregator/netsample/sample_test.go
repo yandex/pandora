@@ -79,8 +79,8 @@ func TestCustomSets(t *testing.T) {
 		tag,
 		int(userDuration.Nanoseconds()/1000), // keyRTTMicro
 		int(latency.Nanoseconds()/1000),      // keyLatencyMicro
-		reqBytes,  // keyRequestBytes
-		respBytes, // keyResponseBytes
+		reqBytes,                             // keyRequestBytes
+		respBytes,                            // keyResponseBytes
 		110,
 		0,
 	)

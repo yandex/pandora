@@ -8,7 +8,7 @@ package schedule
 import (
 	"time"
 
-	"github.com/yandex/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/core"
 )
 
 func NewStep(from, to float64, step int64, duration time.Duration) core.Schedule {

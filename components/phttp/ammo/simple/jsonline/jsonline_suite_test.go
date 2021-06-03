@@ -18,9 +18,9 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
 
-	"github.com/yandex/pandora/components/phttp/ammo/simple"
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/lib/ginkgoutil"
+	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple"
+	"a.yandex-team.ru/load/projects/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/lib/ginkgoutil"
 )
 
 func TestJsonline(t *testing.T) {

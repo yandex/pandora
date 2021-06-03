@@ -5,6 +5,7 @@ package config
 
 import (
 	"github.com/pkg/errors"
+	"gopkg.in/bluesuncorp/validator.v9"
 )
 
 var validations = []struct {

@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/afero"
 
-	"github.com/yandex/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/core"
 )
 
 // TODO(skipor): gzip on flag

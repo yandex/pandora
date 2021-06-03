@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/afero"
 	"go.uber.org/zap"
 
-	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple"
 )
 
 /*

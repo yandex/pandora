@@ -6,8 +6,8 @@
 package register
 
 import (
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/plugin"
+	"a.yandex-team.ru/load/projects/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/core/plugin"
 )
 
 func RegisterPtr(ptr interface{}, name string, newPlugin interface{}, defaultConfigOptional ...interface{}) {

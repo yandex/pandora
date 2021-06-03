@@ -14,9 +14,9 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 
+	"a.yandex-team.ru/load/projects/pandora/core/config"
+	"a.yandex-team.ru/load/projects/pandora/lib/netutil"
 	"github.com/pkg/errors"
-	"github.com/yandex/pandora/core/config"
-	"github.com/yandex/pandora/lib/netutil"
 )
 
 //go:generate mockery -name=Client -case=underscore -inpkg -testonly

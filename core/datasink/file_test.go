@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/afero"
 
-	"github.com/yandex/pandora/core/coretest"
+	"a.yandex-team.ru/load/projects/pandora/core/coretest"
 )
 
 func TestFileSink(t *testing.T) {

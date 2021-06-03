@@ -9,7 +9,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/yandex/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/core"
 )
 
 // Waiter goroutine unsafe wrapper for efficient waiting schedule.
