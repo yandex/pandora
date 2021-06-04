@@ -16,9 +16,9 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"a.yandex-team.ru/load/projects/pandora/core/config"
-	"a.yandex-team.ru/load/projects/pandora/core/plugin"
-	"a.yandex-team.ru/load/projects/pandora/lib/tag"
+	"github.com/yandex/pandora/core/config"
+	"github.com/yandex/pandora/core/plugin"
+	"github.com/yandex/pandora/lib/tag"
 )
 
 func AddHooks() {

@@ -9,8 +9,8 @@ import (
 	"os"
 	"testing"
 
-	"a.yandex-team.ru/load/projects/pandora/core/coretest"
 	"github.com/spf13/afero"
+	"github.com/yandex/pandora/core/coretest"
 )
 
 func TestFileSource(t *testing.T) {

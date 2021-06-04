@@ -12,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 
-	"a.yandex-team.ru/load/projects/pandora/core"
-	"a.yandex-team.ru/load/projects/pandora/core/coreutil"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/coreutil"
 )
 
 type PhoutConfig struct {

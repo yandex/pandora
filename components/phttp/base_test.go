@@ -19,11 +19,11 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
-	ammomock "a.yandex-team.ru/load/projects/pandora/components/phttp/mocks"
-	"a.yandex-team.ru/load/projects/pandora/core"
-	"a.yandex-team.ru/load/projects/pandora/core/aggregator/netsample"
-	"a.yandex-team.ru/load/projects/pandora/core/coretest"
-	"a.yandex-team.ru/load/projects/pandora/lib/ginkgoutil"
+	ammomock "github.com/yandex/pandora/components/phttp/mocks"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/aggregator/netsample"
+	"github.com/yandex/pandora/core/coretest"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func testDeps() core.GunDeps {

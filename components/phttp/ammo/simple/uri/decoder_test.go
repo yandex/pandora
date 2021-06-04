@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
-	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple"
-	"a.yandex-team.ru/load/projects/pandora/core"
+	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"github.com/yandex/pandora/core"
 )
 
 func newAmmoPool() *sync.Pool {

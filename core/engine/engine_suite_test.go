@@ -3,8 +3,8 @@ package engine
 import (
 	"testing"
 
-	"a.yandex-team.ru/load/projects/pandora/lib/ginkgoutil"
-	"a.yandex-team.ru/load/projects/pandora/lib/monitoring"
+	"github.com/yandex/pandora/lib/ginkgoutil"
+	"github.com/yandex/pandora/lib/monitoring"
 )
 
 func TestEngine(t *testing.T) {

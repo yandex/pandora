@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"a.yandex-team.ru/load/projects/pandora/core/engine"
-	"a.yandex-team.ru/load/projects/pandora/lib/monitoring"
+	"github.com/yandex/pandora/core/engine"
+	"github.com/yandex/pandora/lib/monitoring"
 )
 
 func newEngineMetrics() engine.Metrics {

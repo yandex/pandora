@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/afero"
 
-	"a.yandex-team.ru/load/projects/pandora/core"
+	"github.com/yandex/pandora/core"
 )
 
 // TODO(skipor): auto unzip with option to turn this behaviour off.

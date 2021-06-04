@@ -1,4 +1,4 @@
-module a.yandex-team.ru/load/projects/pandora
+module github.com/yandex/pandora
 
 go 1.15
 

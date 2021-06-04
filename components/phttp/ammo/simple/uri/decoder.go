@@ -14,7 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple"
+	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
 
 type decoder struct {

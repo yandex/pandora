@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/atomic"
 
-	"a.yandex-team.ru/load/projects/pandora/core"
-	"a.yandex-team.ru/load/projects/pandora/core/aggregator"
-	"a.yandex-team.ru/load/projects/pandora/core/config"
-	coremock "a.yandex-team.ru/load/projects/pandora/core/mocks"
-	"a.yandex-team.ru/load/projects/pandora/core/provider"
-	"a.yandex-team.ru/load/projects/pandora/core/schedule"
-	"a.yandex-team.ru/load/projects/pandora/lib/ginkgoutil"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/aggregator"
+	"github.com/yandex/pandora/core/config"
+	coremock "github.com/yandex/pandora/core/mocks"
+	"github.com/yandex/pandora/core/provider"
+	"github.com/yandex/pandora/core/schedule"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 var _ = Describe("config validation", func() {

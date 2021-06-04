@@ -13,9 +13,9 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"a.yandex-team.ru/load/projects/pandora/core"
-	"a.yandex-team.ru/load/projects/pandora/lib/errutil"
-	"a.yandex-team.ru/load/projects/pandora/lib/ioutil2"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/lib/errutil"
+	"github.com/yandex/pandora/lib/ioutil2"
 )
 
 type NewAmmoDecoder func(deps core.ProviderDeps, source io.Reader) (AmmoDecoder, error)

@@ -12,8 +12,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"a.yandex-team.ru/load/projects/pandora/core"
-	"a.yandex-team.ru/load/projects/pandora/core/coretest"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/coretest"
 	"go.uber.org/atomic"
 )
 

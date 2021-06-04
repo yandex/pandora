@@ -9,10 +9,10 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
-	"a.yandex-team.ru/load/projects/pandora/core"
-	coremock "a.yandex-team.ru/load/projects/pandora/core/mocks"
-	"a.yandex-team.ru/load/projects/pandora/core/schedule"
-	"a.yandex-team.ru/load/projects/pandora/lib/ginkgoutil"
+	"github.com/yandex/pandora/core"
+	coremock "github.com/yandex/pandora/core/mocks"
+	"github.com/yandex/pandora/core/schedule"
+	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 var _ = Describe("Instance", func() {
@@ -115,10 +115,10 @@ var _ = Describe("Instance", func() {
 		BeforeEach(func() {
 			ctx, _ = context.WithTimeout(context.Background(), 10*time.Millisecond)
 			sched := sched.(*coremock.Schedule)
-                        sched.On("Next").Return(time.Now().Add(5*time.Second), true)
-                        sched.On("Left").Return(1)
-                        gun.On("Bind", aggregator, mock.Anything).Return(nil)
-                        provider.On("Acquire").Return(struct{}{}, true)
+			sched.On("Next").Return(time.Now().Add(5*time.Second), true)
+			sched.On("Left").Return(1)
+			gun.On("Bind", aggregator, mock.Anything).Return(nil)
+			provider.On("Acquire").Return(struct{}{}, true)
 		})
 		It("start fail", func() {
 			err := ins.Run(ctx)

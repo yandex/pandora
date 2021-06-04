@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"a.yandex-team.ru/load/projects/pandora/core"
+	"github.com/yandex/pandora/core"
 )
 
 func NewLog() core.Aggregator {
