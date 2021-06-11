@@ -15,6 +15,7 @@ import (
 	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple/jsonline"
 	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple/raw"
 	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple/uri"
+	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple/uripost"
 	"a.yandex-team.ru/load/projects/pandora/core"
 	"a.yandex-team.ru/load/projects/pandora/core/register"
 	"a.yandex-team.ru/load/projects/pandora/lib/netutil"
@@ -27,6 +28,10 @@ func Import(fs afero.Fs) {
 
 	register.Provider("uri", func(conf uri.Config) core.Provider {
 		return uri.NewProvider(fs, conf)
+	})
+
+	register.Provider("uripost", func(conf uripost.Config) core.Provider {
+		return uripost.NewProvider(fs, conf)
 	})
 
 	register.Provider("raw", func(conf raw.Config) core.Provider {
