@@ -16,7 +16,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/yandex/pandora/core/aggregator/netsample"
+	"a.yandex-team.ru/load/projects/pandora/core/aggregator/netsample"
 )
 
 var _ = Describe("connect", func() {

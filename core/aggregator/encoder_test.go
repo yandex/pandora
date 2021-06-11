@@ -12,17 +12,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/yandex/pandora/core"
-	aggregatemock "github.com/yandex/pandora/core/aggregator/mocks"
-	coremock "github.com/yandex/pandora/core/mocks"
-	iomock "github.com/yandex/pandora/lib/ioutil2/mocks"
-	"github.com/yandex/pandora/lib/testutil"
+	"a.yandex-team.ru/load/projects/pandora/core"
+	aggregatemock "a.yandex-team.ru/load/projects/pandora/core/aggregator/mocks"
+	coremock "a.yandex-team.ru/load/projects/pandora/core/mocks"
+	iomock "a.yandex-team.ru/load/projects/pandora/lib/ioutil2/mocks"
+	"a.yandex-team.ru/load/projects/pandora/lib/testutil"
 )
 
 type EncoderAggregatorTester struct {

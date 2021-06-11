@@ -9,7 +9,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/yandex/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/core"
 )
 
 func NewLine(from, to float64, duration time.Duration) core.Schedule {

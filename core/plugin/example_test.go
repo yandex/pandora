@@ -5,7 +5,7 @@
 
 package plugin_test
 
-import "github.com/yandex/pandora/core/plugin"
+import "a.yandex-team.ru/load/projects/pandora/core/plugin"
 
 type Plugin interface {
 	DoSmth()

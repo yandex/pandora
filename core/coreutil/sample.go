@@ -5,7 +5,7 @@
 
 package coreutil
 
-import "github.com/yandex/pandora/core"
+import "a.yandex-team.ru/load/projects/pandora/core"
 
 func ReturnSampleIfBorrowed(s core.Sample) {
 	borrowed, ok := s.(core.BorrowedSample)

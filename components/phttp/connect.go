@@ -14,8 +14,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 
+	"a.yandex-team.ru/load/projects/pandora/lib/netutil"
 	"github.com/pkg/errors"
-	"github.com/yandex/pandora/lib/netutil"
 )
 
 type ConnectGunConfig struct {

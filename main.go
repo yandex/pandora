@@ -8,11 +8,11 @@ package main
 import (
 	"github.com/spf13/afero"
 
-	"github.com/yandex/pandora/cli"
-	example "github.com/yandex/pandora/components/example/import"
-	grpc "github.com/yandex/pandora/components/grpc/import"
-	phttp "github.com/yandex/pandora/components/phttp/import"
-	coreimport "github.com/yandex/pandora/core/import"
+	"a.yandex-team.ru/load/projects/pandora/cli"
+	example "a.yandex-team.ru/load/projects/pandora/components/example/import"
+	grpc "a.yandex-team.ru/load/projects/pandora/components/grpc/import"
+	phttp "a.yandex-team.ru/load/projects/pandora/components/phttp/import"
+	coreimport "a.yandex-team.ru/load/projects/pandora/core/import"
 )
 
 func main() {

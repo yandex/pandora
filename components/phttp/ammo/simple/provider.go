@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/afero"
 	"go.uber.org/atomic"
 
-	"github.com/yandex/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/core"
 )
 
 func NewProvider(fs afero.Fs, fileName string, start func(ctx context.Context, file afero.File) error) Provider {

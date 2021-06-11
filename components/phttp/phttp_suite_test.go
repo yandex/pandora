@@ -8,7 +8,7 @@ package phttp
 import (
 	"testing"
 
-	"github.com/yandex/pandora/lib/ginkgoutil"
+	"a.yandex-team.ru/load/projects/pandora/lib/ginkgoutil"
 )
 
 func TestPhttp(t *testing.T) {

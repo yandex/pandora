@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
 
-	. "github.com/yandex/pandora/components/phttp"
-	"github.com/yandex/pandora/lib/ginkgoutil"
+	. "a.yandex-team.ru/load/projects/pandora/components/phttp"
+	"a.yandex-team.ru/load/projects/pandora/lib/ginkgoutil"
 )
 
 func TestImport(t *testing.T) {

@@ -20,9 +20,9 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/yandex/pandora/core/config"
-	"github.com/yandex/pandora/core/engine"
-	"github.com/yandex/pandora/lib/zaputil"
+	"a.yandex-team.ru/load/projects/pandora/core/config"
+	"a.yandex-team.ru/load/projects/pandora/core/engine"
+	"a.yandex-team.ru/load/projects/pandora/lib/zaputil"
 )
 
 const Version = "0.3.3"

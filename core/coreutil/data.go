@@ -8,7 +8,7 @@ package coreutil
 import (
 	"io"
 
-	"github.com/yandex/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/core"
 )
 
 type DataSinkFunc func() (wc io.WriteCloser, err error)

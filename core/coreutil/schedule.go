@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yandex/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/core"
 )
 
 // NewCallbackOnFinishSchedule returns schedule that calls back once onFinish

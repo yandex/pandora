@@ -12,9 +12,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/coreutil"
-	"github.com/yandex/pandora/lib/errutil"
+	"a.yandex-team.ru/load/projects/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/core/coreutil"
+	"a.yandex-team.ru/load/projects/pandora/lib/errutil"
 )
 
 type NewSampleEncoder func(w io.Writer, onFlush func()) SampleEncoder

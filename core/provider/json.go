@@ -10,9 +10,9 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/coreutil"
-	"github.com/yandex/pandora/lib/ioutil2"
+	"a.yandex-team.ru/load/projects/pandora/core"
+	"a.yandex-team.ru/load/projects/pandora/core/coreutil"
+	"a.yandex-team.ru/load/projects/pandora/lib/ioutil2"
 )
 
 // NewJSONProvider returns generic core.Provider that reads JSON data from source and decodes it
