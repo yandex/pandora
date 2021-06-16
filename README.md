@@ -14,7 +14,7 @@ Pandora is a high-performance load generator in Go language. It has built-in HTT
 
 ### Building from sources
 We use go 1.11 modules.
-If you build pandora inside $GOPATH, please make sure you have env variable `GO111MODULE` set to `on` .
+If you build pandora inside $GOPATH, please make sure you have env variable `GO111MODULE` set to `on`.
 ```bash
 git clone https://github.com/yandex/pandora.git
 cd pandora
