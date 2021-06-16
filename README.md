@@ -3,7 +3,7 @@
 [![Join the chat at https://gitter.im/yandex/pandora](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/yandex/pandora?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/yandex/pandora.svg)](https://travis-ci.org/yandex/pandora)
 [![Coverage Status](https://coveralls.io/repos/yandex/pandora/badge.svg?branch=develop&service=github)](https://coveralls.io/github/yandex/pandora?branch=develop)
-[![Read the Docs](https://readthedocs.org/projects/yandexpandora/badge/)](https://yandexpandora.readthedocs.io/en/develop/)
+[![Documentation Status](https://readthedocs.org/projects/yandexpandora/badge/?version=develop)](https://yandexpandora.readthedocs.io/en/develop/?badge=develop)
 
 Pandora is a high-performance load generator in Go language. It has built-in HTTP(S) and HTTP/2 support and you can write your own load scenarios in Go, compiling them just before your test.
 
@@ -14,7 +14,7 @@ Pandora is a high-performance load generator in Go language. It has built-in HTT
 
 ### Building from sources
 We use go 1.11 modules.
-If you build pandora inside $GOPATH, please make sure you have env variable `GO111MODULE` set to `on`.
+If you build pandora inside $GOPATH, please make sure you have env variable `GO111MODULE` set to `on` .
 ```bash
 git clone https://github.com/yandex/pandora.git
 cd pandora
