@@ -6,10 +6,10 @@
 package example
 
 import (
-	"a.yandex-team.ru/load/projects/pandora/components/grpc"
-	"a.yandex-team.ru/load/projects/pandora/core"
-	coreimport "a.yandex-team.ru/load/projects/pandora/core/import"
-	"a.yandex-team.ru/load/projects/pandora/core/register"
+	"github.com/yandex/pandora/components/grpc"
+	"github.com/yandex/pandora/core"
+	coreimport "github.com/yandex/pandora/core/import"
+	"github.com/yandex/pandora/core/register"
 )
 
 func Import() {

@@ -8,7 +8,7 @@ package netsample
 import (
 	"context"
 
-	"a.yandex-team.ru/load/projects/pandora/core"
+	"github.com/yandex/pandora/core"
 )
 
 type TestAggregator struct {

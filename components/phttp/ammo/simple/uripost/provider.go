@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/afero"
 	"go.uber.org/zap"
 
-	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple"
+	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
 
 func filePosition(file afero.File) (position int64) {

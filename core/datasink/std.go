@@ -9,8 +9,8 @@ import (
 	"bytes"
 	"io"
 
-	"a.yandex-team.ru/load/projects/pandora/core"
-	"a.yandex-team.ru/load/projects/pandora/lib/ioutil2"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/lib/ioutil2"
 )
 
 type Buffer struct {

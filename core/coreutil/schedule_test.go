@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"a.yandex-team.ru/load/projects/pandora/core/schedule"
+	"github.com/yandex/pandora/core/schedule"
 )
 
 var _ = Describe("callback on finish schedule", func() {

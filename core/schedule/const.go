@@ -8,7 +8,7 @@ package schedule
 import (
 	"time"
 
-	"a.yandex-team.ru/load/projects/pandora/core"
+	"github.com/yandex/pandora/core"
 )
 
 type ConstConfig struct {

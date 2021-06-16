@@ -12,11 +12,11 @@ import (
 	"github.com/spf13/afero"
 	"go.uber.org/zap"
 
-	"a.yandex-team.ru/load/projects/pandora/cli"
-	phttp "a.yandex-team.ru/load/projects/pandora/components/phttp/import"
-	"a.yandex-team.ru/load/projects/pandora/core"
-	coreimport "a.yandex-team.ru/load/projects/pandora/core/import"
-	"a.yandex-team.ru/load/projects/pandora/core/register"
+	"github.com/yandex/pandora/cli"
+	phttp "github.com/yandex/pandora/components/phttp/import"
+	"github.com/yandex/pandora/core"
+	coreimport "github.com/yandex/pandora/core/import"
+	"github.com/yandex/pandora/core/register"
 )
 
 type Ammo struct {

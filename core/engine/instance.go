@@ -12,9 +12,9 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"a.yandex-team.ru/load/projects/pandora/core"
-	"a.yandex-team.ru/load/projects/pandora/core/coreutil"
-	"a.yandex-team.ru/load/projects/pandora/lib/tag"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/coreutil"
+	"github.com/yandex/pandora/lib/tag"
 )
 
 type instance struct {

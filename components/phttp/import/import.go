@@ -11,14 +11,14 @@ import (
 	"github.com/spf13/afero"
 	"go.uber.org/zap"
 
-	"a.yandex-team.ru/load/projects/pandora/components/phttp"
-	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple/jsonline"
-	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple/raw"
-	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple/uri"
-	"a.yandex-team.ru/load/projects/pandora/components/phttp/ammo/simple/uripost"
-	"a.yandex-team.ru/load/projects/pandora/core"
-	"a.yandex-team.ru/load/projects/pandora/core/register"
-	"a.yandex-team.ru/load/projects/pandora/lib/netutil"
+	"github.com/yandex/pandora/components/phttp"
+	"github.com/yandex/pandora/components/phttp/ammo/simple/jsonline"
+	"github.com/yandex/pandora/components/phttp/ammo/simple/raw"
+	"github.com/yandex/pandora/components/phttp/ammo/simple/uri"
+	"github.com/yandex/pandora/components/phttp/ammo/simple/uripost"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/register"
+	"github.com/yandex/pandora/lib/netutil"
 )
 
 func Import(fs afero.Fs) {

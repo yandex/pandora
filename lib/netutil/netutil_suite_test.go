@@ -9,9 +9,9 @@ import (
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 
-	"a.yandex-team.ru/load/projects/pandora/lib/ginkgoutil"
-	netmock "a.yandex-team.ru/load/projects/pandora/lib/netutil/mocks"
 	"github.com/pkg/errors"
+	"github.com/yandex/pandora/lib/ginkgoutil"
+	netmock "github.com/yandex/pandora/lib/netutil/mocks"
 )
 
 func TestNetutil(t *testing.T) {
