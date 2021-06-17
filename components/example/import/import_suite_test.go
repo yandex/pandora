@@ -3,9 +3,9 @@ package example
 import (
 	"testing"
 
+	"github.com/yandex/pandora/lib/ginkgoutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestImport(t *testing.T) {
