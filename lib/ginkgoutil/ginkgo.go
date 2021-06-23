@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/mock"
@@ -21,12 +21,12 @@ import (
 func SetupSuite() {
 	format.UseStringerRepresentation = true // Otherwise error stacks have binary format.
 	ReplaceGlobalLogger()
-	RegisterFailHandler(Fail)
+	gomega.RegisterFailHandler(ginkgo.Fail)
 }
 
 func RunSuite(t *testing.T, description string) {
 	SetupSuite()
-	RunSpecs(t, description)
+	ginkgo.RunSpecs(t, description)
 }
 
 func ReplaceGlobalLogger() *zap.Logger {
@@ -39,7 +39,7 @@ func ReplaceGlobalLogger() *zap.Logger {
 func NewLogger() *zap.Logger {
 	conf := zap.NewDevelopmentConfig()
 	enc := zapcore.NewConsoleEncoder(conf.EncoderConfig)
-	core := zapcore.NewCore(enc, zapcore.AddSync(GinkgoWriter), zap.DebugLevel)
+	core := zapcore.NewCore(enc, zapcore.AddSync(ginkgo.GinkgoWriter), zap.DebugLevel)
 	log := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.DPanicLevel))
 	return log
 }
@@ -51,18 +51,18 @@ type Mock interface {
 
 func AssertExpectations(mocks ...Mock) {
 	for _, m := range mocks {
-		m.AssertExpectations(GinkgoT(1))
+		m.AssertExpectations(ginkgo.GinkgoT(1))
 	}
 }
 
 func AssertNotCalled(mock Mock, methodName string) {
-	mock.AssertNotCalled(GinkgoT(1), methodName)
+	mock.AssertNotCalled(ginkgo.GinkgoT(1), methodName)
 }
 
 func ParseYAML(data string) map[string]interface{} {
 	v := viper.New()
 	v.SetConfigType("yaml")
 	err := v.ReadConfig(strings.NewReader(data))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	return v.AllSettings()
 }

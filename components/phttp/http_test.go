@@ -49,7 +49,7 @@ var _ = Describe("BaseGun", func() {
 		conf.Gun.Target = strings.TrimPrefix(server.URL, "http://")
 		results := &netsample.TestAggregator{}
 		httpGun := NewHTTPGun(conf)
-		httpGun.Bind(results, testDeps())
+		_ = httpGun.Bind(results, testDeps())
 
 		am := newAmmoReq(expectedReq)
 		httpGun.Shoot(am)
@@ -99,7 +99,7 @@ var _ = Describe("HTTP", func() {
 		conf.Gun.SSL = https
 		gun := NewHTTPGun(conf)
 		var aggr netsample.TestAggregator
-		gun.Bind(&aggr, testDeps())
+		_ = gun.Bind(&aggr, testDeps())
 		gun.Shoot(newAmmoURL("/"))
 
 		Expect(aggr.Samples).To(HaveLen(1))
@@ -124,7 +124,7 @@ var _ = Describe("HTTP", func() {
 		conf.Client.Redirect = redirect
 		gun := NewHTTPGun(conf)
 		var aggr netsample.TestAggregator
-		gun.Bind(&aggr, testDeps())
+		_ = gun.Bind(&aggr, testDeps())
 		gun.Shoot(newAmmoURL("/redirect"))
 
 		Expect(aggr.Samples).To(HaveLen(1))
@@ -161,7 +161,7 @@ var _ = Describe("HTTP", func() {
 		conf.Gun.SSL = true
 		gun := NewHTTPGun(conf)
 		var results netsample.TestAggregator
-		gun.Bind(&results, testDeps())
+		_ = gun.Bind(&results, testDeps())
 		gun.Shoot(newAmmoURL("/"))
 
 		Expect(results.Samples).To(HaveLen(1))
@@ -184,7 +184,7 @@ var _ = Describe("HTTP/2", func() {
 		conf.Gun.Target = server.Listener.Addr().String()
 		gun, _ := NewHTTP2Gun(conf)
 		var results netsample.TestAggregator
-		gun.Bind(&results, testDeps())
+		_ = gun.Bind(&results, testDeps())
 		gun.Shoot(newAmmoURL("/"))
 		Expect(results.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
 	})
@@ -198,7 +198,7 @@ var _ = Describe("HTTP/2", func() {
 		conf.Gun.Target = server.Listener.Addr().String()
 		gun, _ := NewHTTP2Gun(conf)
 		var results netsample.TestAggregator
-		gun.Bind(&results, testDeps())
+		_ = gun.Bind(&results, testDeps())
 		var r interface{}
 		func() {
 			defer func() {
@@ -230,7 +230,7 @@ func isHTTP2Request(req *http.Request) bool {
 
 func newHTTP2TestServer(handler http.Handler) *httptest.Server {
 	server := httptest.NewUnstartedServer(handler)
-	http2.ConfigureServer(server.Config, nil)
+	_ = http2.ConfigureServer(server.Config, nil)
 	server.TLS = server.Config.TLSConfig // StartTLS takes TLS configuration from that field.
 	server.StartTLS()
 	return server

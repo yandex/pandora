@@ -192,6 +192,21 @@ var _ = Describe("line", func() {
 
 })
 
+var _ = Describe("step", func() {
+	It("", func() {
+		conf := StepConfig{
+			From:     1,
+			To:       2,
+			Step:     1,
+			Duration: 2 * time.Second,
+		}
+		testee := NewStepConf(conf)
+		Expect(testee.Left()).To(Equal(6))
+
+	})
+
+})
+
 func BenchmarkLineSchedule(b *testing.B) {
 	schedule := NewLine(0, float64(b.N), 2*time.Second)
 	benchmarkScheduleNext(b, schedule)

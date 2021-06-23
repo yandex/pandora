@@ -48,11 +48,11 @@ var _ = Describe("Phout", func() {
 		testee.Report(newTestSample())
 		cancel()
 		Expect(<-runErr).NotTo(HaveOccurred())
-		Expect(getOutput()).To(Equal(strings.Repeat(testSampleNoIdPhout+"\n", 2)))
+		Expect(getOutput()).To(Equal(strings.Repeat(testSampleNoIDPhout+"\n", 2)))
 	}, 1)
 	Context("id option set", func() {
 		BeforeEach(func() {
-			conf.Id = true
+			conf.ID = true
 		})
 		It("id printed", func() {
 			testee.Report(newTestSample())
@@ -67,13 +67,13 @@ var _ = Describe("Phout", func() {
 
 const (
 	testSamplePhout     = "1484660999.002	tag1|tag2#42	333333	0	0	0	0	0	0	0	13	999"
-	testSampleNoIdPhout = "1484660999.002	tag1|tag2	333333	0	0	0	0	0	0	0	13	999"
+	testSampleNoIDPhout = "1484660999.002	tag1|tag2	333333	0	0	0	0	0	0	0	13	999"
 )
 
 func newTestSample() *Sample {
 	s := &Sample{}
 	s.timeStamp = time.Unix(1484660999, 002*1000000)
-	s.SetId(42)
+	s.SetID(42)
 	s.AddTag("tag1|tag2")
 	s.setDuration(keyRTTMicro, time.Second/3)
 	s.set(keyErrno, 13)

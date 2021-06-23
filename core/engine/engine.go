@@ -24,7 +24,7 @@ type Config struct {
 }
 
 type InstancePoolConfig struct {
-	Id              string
+	ID              string
 	Provider        core.Provider                 `config:"ammo" validate:"required"`
 	Aggregator      core.Aggregator               `config:"result" validate:"required"`
 	NewGun          func() (core.Gun, error)      `config:"gun" validate:"required"`
@@ -67,18 +67,18 @@ func (e *Engine) Run(ctx context.Context) error {
 
 	runRes := make(chan poolRunResult, 1)
 	for i, conf := range e.config.Pools {
-		if conf.Id == "" {
-			conf.Id = fmt.Sprintf("pool_%v", i)
+		if conf.ID == "" {
+			conf.ID = fmt.Sprintf("pool_%v", i)
 		}
 		e.wait.Add(1)
 		pool := newPool(e.log, e.metrics, e.wait.Done, conf)
 		go func() {
 			err := pool.Run(ctx)
 			select {
-			case runRes <- poolRunResult{pool.Id, err}:
+			case runRes <- poolRunResult{pool.ID, err}:
 			case <-ctx.Done():
 				pool.log.Info("Pool run result suppressed",
-					zap.String("id", pool.Id), zap.Error(err))
+					zap.String("id", pool.ID), zap.Error(err))
 			}
 		}()
 	}
@@ -87,14 +87,14 @@ func (e *Engine) Run(ctx context.Context) error {
 		select {
 		case res := <-runRes:
 			e.log.Debug("Pool awaited", zap.Int("awaited", i),
-				zap.String("id", res.Id), zap.Error(res.Err))
+				zap.String("id", res.ID), zap.Error(res.Err))
 			if res.Err != nil {
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
 				default:
 				}
-				return errors.WithMessage(res.Err, fmt.Sprintf("%q pool run failed", res.Id))
+				return errors.WithMessage(res.Err, fmt.Sprintf("%q pool run failed", res.ID))
 			}
 		case <-ctx.Done():
 			e.log.Info("Engine run canceled")
@@ -111,7 +111,7 @@ func (e *Engine) Wait() {
 }
 
 func newPool(log *zap.Logger, m Metrics, onWaitDone func(), conf InstancePoolConfig) *instancePool {
-	log = log.With(zap.String("pool", conf.Id))
+	log = log.With(zap.String("pool", conf.ID))
 	return &instancePool{log, m, onWaitDone, conf}
 }
 
@@ -178,6 +178,7 @@ type poolAsyncRunHandle struct {
 func (p *instancePool) runAsync(runCtx context.Context) (*poolAsyncRunHandle, error) {
 	// Canceled in case all instances finish, fail or run runCancel.
 	runCtx, runCancel := context.WithCancel(runCtx)
+	_ = runCancel
 	// Canceled also on out of ammo, and finish of shared RPS schedule.
 	instanceStartCtx, instanceStartCancel := context.WithCancel(runCtx)
 	newInstanceSchedule, err := p.buildNewInstanceSchedule(instanceStartCtx, instanceStartCancel)
@@ -194,11 +195,11 @@ func (p *instancePool) runAsync(runCtx context.Context) (*poolAsyncRunHandle, er
 		runRes        = make(chan instanceRunResult, runResultBufSize)
 	)
 	go func() {
-		deps := core.ProviderDeps{p.log}
+		deps := core.ProviderDeps{Log: p.log}
 		providerErr <- p.Provider.Run(runCtx, deps)
 	}()
 	go func() {
-		deps := core.AggregatorDeps{p.log}
+		deps := core.AggregatorDeps{Log: p.log}
 		aggregatorErr <- p.Aggregator.Run(runCtx, deps)
 	}()
 	go func() {
@@ -288,10 +289,10 @@ func (ah *runAwaitHandle) awaitRun() {
 		case res := <-ah.runRes:
 			ah.awaitedInstances++
 			if ent := ah.log.Check(zap.DebugLevel, "Instance run awaited"); ent != nil {
-				ent.Write(zap.Int("id", res.Id), zap.Int("awaited", ah.awaitedInstances), zap.Error(res.Err))
+				ent.Write(zap.Int("id", res.ID), zap.Int("awaited", ah.awaitedInstances), zap.Error(res.Err))
 			}
 			if errutil.IsNotCtxError(ah.runCtx, res.Err) {
-				ah.onErrAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.Id)))
+				ah.onErrAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.ID)))
 			}
 			ah.checkAllInstancesAreFinished()
 		}
@@ -408,12 +409,12 @@ func runNewInstance(ctx context.Context, log *zap.Logger, id int, deps instanceD
 }
 
 type poolRunResult struct {
-	Id  string
+	ID  string
 	Err error
 }
 
 type instanceRunResult struct {
-	Id  int
+	ID  int
 	Err error
 }
 

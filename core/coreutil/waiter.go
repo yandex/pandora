@@ -57,7 +57,7 @@ func (w *Waiter) Wait() (ok bool) {
 		w.timer.Reset(waitFor)
 	}
 	select {
-	case _ = <-w.timer.C:
+	case <-w.timer.C:
 		return true
 	case <-w.ctx.Done():
 		return false

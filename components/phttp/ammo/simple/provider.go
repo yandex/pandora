@@ -39,7 +39,7 @@ type Provider struct {
 func (p *Provider) Acquire() (core.Ammo, bool) {
 	ammo, ok := <-p.Sink
 	if ok {
-		ammo.SetId(int(p.idCounter.Inc() - 1))
+		ammo.SetID(int(p.idCounter.Inc() - 1))
 	}
 	return ammo, ok
 }

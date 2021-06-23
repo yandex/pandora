@@ -24,7 +24,7 @@ func TestReporter_DroppedErr(t *testing.T) {
 	reporter := NewReporter(ReporterConfig{1})
 	reporter.Report(1)
 
-	assert.Nil(t, reporter.DroppedErr())
+	assert.NoError(t, reporter.DroppedErr())
 	reporter.Report(2)
 	err := reporter.DroppedErr()
 	require.Error(t, err)

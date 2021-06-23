@@ -45,15 +45,15 @@ var _ = Describe("BaseGun", func() {
 	Context("BindResultTo", func() {
 		It("nil panics", func() {
 			Expect(func() {
-				base.Bind(nil, testDeps())
+				_ = base.Bind(nil, testDeps())
 			}).To(Panic())
 		})
 		It("second time panics", func() {
 			res := &netsample.TestAggregator{}
-			base.Bind(res, testDeps())
+			_ = base.Bind(res, testDeps())
 			Expect(base.Aggregator).To(Equal(res))
 			Expect(func() {
-				base.Bind(&netsample.TestAggregator{}, testDeps())
+				_ = base.Bind(&netsample.TestAggregator{}, testDeps())
 			}).To(Panic())
 		})
 	})
@@ -90,7 +90,7 @@ var _ = Describe("BaseGun", func() {
 			req = httptest.NewRequest("GET", "/1/2/3/4", nil)
 			tag = ""
 			results = &netsample.TestAggregator{}
-			base.Bind(results, testDeps())
+			_ = base.Bind(results, testDeps())
 		})
 
 		JustBeforeEach(func() {

@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/yandex/pandora/lib/ginkgoutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
-	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 
 func TestErrutil(t *testing.T) {

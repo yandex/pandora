@@ -121,7 +121,7 @@ func TestProviderJSONLine(t *testing.T) {
 	conf.Aggregator.Report([]int{0, 1, 2})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err = conf.Aggregator.Run(ctx, core.AggregatorDeps{zap.L()})
+	err = conf.Aggregator.Run(ctx, core.AggregatorDeps{Log: zap.L()})
 	require.NoError(t, err)
 
 	testutil.AssertFileEqual(t, fs, filename, "[0,1,2]\n")

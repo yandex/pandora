@@ -3,7 +3,7 @@
 [![Join the chat at https://gitter.im/yandex/pandora](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/yandex/pandora?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/yandex/pandora.svg)](https://travis-ci.org/yandex/pandora)
 [![Coverage Status](https://coveralls.io/repos/yandex/pandora/badge.svg?branch=develop&service=github)](https://coveralls.io/github/yandex/pandora?branch=develop)
-[![Read the Docs](https://readthedocs.org/projects/yandexpandora/badge/)](https://readthedocs.org/projects/yandexpandora/)
+[![Documentation Status](https://readthedocs.org/projects/yandexpandora/badge/?version=develop)](https://yandexpandora.readthedocs.io/en/develop/?badge=develop)
 
 Pandora is a high-performance load generator in Go language. It has built-in HTTP(S) and HTTP/2 support and you can write your own load scenarios in Go, compiling them just before your test.
 

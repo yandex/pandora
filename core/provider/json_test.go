@@ -19,7 +19,7 @@ import (
 )
 
 type testJSONAmmo struct {
-	Id   string
+	ID   string
 	Data string
 }
 
@@ -158,12 +158,12 @@ func TestDecoderWhitespaces(t *testing.T) {
 
 func TestDecoderReset(t *testing.T) {
 	val := testJSONAmmo{
-		Id: "id",
+		ID: "id",
 	}
 	input := strings.NewReader(`{"data":"first"}`)
 	decoder := NewJSONAmmoDecoder(input, 512)
 	err := decoder.Decode(&val)
 	require.NoError(t, err)
 	assert.Equal(t, "first", val.Data)
-	assert.Zero(t, val.Id)
+	assert.Zero(t, val.ID)
 }

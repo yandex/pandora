@@ -41,9 +41,9 @@ func (r *MultiPassReader) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (r *MultiPassReader) PassesLeft() int {
-	return r.PassesLeft()
-}
+// func (r *MultiPassReader) PassesLeft() int {
+//	return r.PassesLeft()
+// }
 
 func (r *MultiPassReader) Unwrap() io.Reader {
 	return r.rs

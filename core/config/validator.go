@@ -5,7 +5,7 @@ package config
 
 import (
 	"github.com/pkg/errors"
-	"gopkg.in/bluesuncorp/validator.v9"
+	validator "gopkg.in/bluesuncorp/validator.v9"
 )
 
 var validations = []struct {
@@ -36,10 +36,10 @@ func newValidator() *validator.Validate {
 	validate := validator.New()
 	validate.SetTagName("validate")
 	for _, val := range validations {
-		validate.RegisterValidation(val.key, val.val)
+		_ = validate.RegisterValidation(val.key, val.val)
 	}
 	for _, val := range stringValidations {
-		validate.RegisterValidation(val.key, StringToAbstractValidation(val.val))
+		_ = validate.RegisterValidation(val.key, StringToAbstractValidation(val.val))
 	}
 	return validate
 }

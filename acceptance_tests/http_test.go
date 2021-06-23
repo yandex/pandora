@@ -133,7 +133,7 @@ var _ = Describe("http", func() {
 })
 
 func startHTTP2(server *httptest.Server) {
-	http2.ConfigureServer(server.Config, nil)
+	_ = http2.ConfigureServer(server.Config, nil)
 	server.TLS = server.Config.TLSConfig
 	server.StartTLS()
 }

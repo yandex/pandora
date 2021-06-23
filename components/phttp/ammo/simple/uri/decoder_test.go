@@ -43,7 +43,6 @@ var _ = Describe("Decoder", func() {
 			Expect(decoder.header).To(BeEmpty())
 		},
 		Entry("empty line", ""),
-		Entry("line start", "test"),
 		Entry("empty header", "[  ]"),
 		Entry("no closing brace", "[key: val "),
 		Entry("no header key", "[ : val ]"),

@@ -8,17 +8,17 @@ package coretest
 import (
 	"time"
 
-	. "github.com/onsi/gomega"
 	"github.com/yandex/pandora/core"
+	"github.com/onsi/gomega"
 )
 
 func ExpectScheduleNextsStartAt(sched core.Schedule, startAt time.Time, nexts ...time.Duration) {
 	beforeStartLeft := sched.Left()
 	tokensExpected := len(nexts) - 1 // Last next is finish time.
-	Expect(beforeStartLeft).To(Equal(tokensExpected))
+	gomega.Expect(beforeStartLeft).To(gomega.Equal(tokensExpected))
 	sched.Start(startAt)
 	actualNexts := DrainScheduleDuration(sched, startAt)
-	Expect(actualNexts).To(Equal(nexts))
+	gomega.Expect(actualNexts).To(gomega.Equal(nexts))
 }
 
 func ExpectScheduleNexts(sched core.Schedule, nexts ...time.Duration) {
@@ -47,11 +47,11 @@ func DrainSchedule(sched core.Schedule) []time.Time {
 		next, ok := sched.Next()
 		nexts = append(nexts, next)
 		if !ok {
-			Expect(sched.Left()).To(Equal(0))
+			gomega.Expect(sched.Left()).To(gomega.Equal(0))
 			return nexts
 		}
 		expectedLeft--
-		Expect(sched.Left()).To(Equal(expectedLeft))
+		gomega.Expect(sched.Left()).To(gomega.Equal(expectedLeft))
 	}
 	panic("drain limit reached")
 }

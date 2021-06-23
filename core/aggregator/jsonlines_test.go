@@ -38,7 +38,7 @@ func TestNewJSONLinesAggregator(t *testing.T) {
 
 	runErr := make(chan error)
 	go func() {
-		runErr <- testee.Run(ctx, core.AggregatorDeps{zap.L()})
+		runErr <- testee.Run(ctx, core.AggregatorDeps{Log: zap.L()})
 	}()
 
 	for _, sample := range samples {

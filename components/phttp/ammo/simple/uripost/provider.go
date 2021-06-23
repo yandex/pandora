@@ -1,9 +1,12 @@
-package raw
+package uripost
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"io"
+	"net/http"
+	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
@@ -11,36 +14,6 @@ import (
 
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
-
-/*
-Parses size-prefixed HTTP ammo files. Each ammo is prefixed with a header line (delimited with \n), which consists of
-two fields delimited by a space: ammo size and tag. Ammo size is in bytes (integer, including special characters like CR, LF).
-Tag is a string. Example:
-
-77 bad
-GET /abra HTTP/1.0
-Host: xxx.tanks.example.com
-User-Agent: xxx (shell 1)
-
-904
-POST /upload/2 HTTP/1.0
-Content-Length: 801
-Host: xxxxxxxxx.dev.example.com
-User-Agent: xxx (shell 1)
-
-^.^........W.j^1^.^.^.²..^^.i.^B.P..-!(.l/Y..V^.      ...L?...S'NR.^^vm...3Gg@s...d'.\^.5N.$NF^,.Z^.aTE^.
-._.[..k#L^ƨ`\RE.J.<.!,.q5.F^՚iΔĬq..^6..P..тH.`..i2
-.".uuzs^^F2...Rh.&.U.^^..J.P@.A......x..lǝy^?.u.p{4..g...m.,..R^.^.^......].^^.^J...p.ifTF0<.s.9V.o5<..%!6ļS.ƐǢ..㱋....C^&.....^.^y...v]^YT.1.#K.ibc...^.26...   ..7.
-b.$...j6.٨f...W.R7.^1.3....K`%.&^..d..{{      l0..^\..^X.g.^.r.(!.^^...4.1.$\ .%.8$(.n&..^^q.,.Q..^.D^.].^.R9.kE.^.$^.I..<..B^..^.h^^C.^E.|....3o^.@..Z.^.s.$[v.
-527
-POST /upload/3 HTTP/1.0
-Content-Length: 424
-Host: xxxxxxxxx.dev.example.com
-User-Agent: xxx (shell 1)
-
-^.^........QMO.0^.++^zJw.ر^$^.^Ѣ.^V.J....vM.8r&.T+...{@pk%~C.G../z顲^.7....l...-.^W"cR..... .&^?u.U^^.^.....{^.^..8.^.^.I.EĂ.p...'^.3.Tq..@R8....RAiBU..1.Bd*".7+.
-.Ol.j=^.3..n....wp..,Wg.y^.T..~^..
-*/
 
 func filePosition(file afero.File) (position int64) {
 	position, _ = file.Seek(0, io.SeekCurrent)
@@ -75,6 +48,13 @@ type Provider struct {
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	var passNum int
 	var ammoNum int
+	//	var key string
+	//	var val string
+	var bodySize int
+	var uri string
+	var tag string
+
+	header := make(http.Header)
 	// parse and prepare Headers from config
 	decodedConfigHeaders, err := decodeHTTPConfigHeaders(p.Config.Headers)
 	if err != nil {
@@ -97,17 +77,37 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			if len(data) == 0 {
 				continue // skip empty lines
 			}
-			reqSize, tag, _ := decodeHeader(data)
-			if reqSize == 0 {
+			data = bytes.TrimSpace(data)
+			if data[0] == '[' {
+				key, val, err := decodeHeader(data)
+				if err == nil {
+					header.Set(key, val)
+				}
+				continue
+			}
+			if _, err := strconv.Atoi(string(data[0])); err == nil {
+				bodySize, uri, tag, _ = decodeURI(data)
+			}
+			if bodySize == 0 {
 				break // start over from the beginning of file if ammo size is 0
 			}
-			buff := make([]byte, reqSize)
+			buff := make([]byte, bodySize)
 			if n, err := io.ReadFull(reader, buff); err != nil {
-				return errors.Wrapf(err, "failed to read ammo at position: %v; tried to read: %v; have read: %v", filePosition(ammoFile), reqSize, n)
+				return errors.Wrapf(err, "failed to read ammo at position: %v; tried to read: %v; have read: %v", filePosition(ammoFile), bodySize, n)
 			}
-			req, err := decodeRequest(buff)
+			req, err := http.NewRequest("POST", uri, bytes.NewReader(buff))
 			if err != nil {
 				return errors.Wrapf(err, "failed to decode ammo at position: %v; data: %q", filePosition(ammoFile), buff)
+			}
+
+			for k, v := range header {
+				// http.Request.Write sends Host header based on req.URL.Host
+				if k == "Host" {
+					req.Host = v[0]
+					req.URL.Host = v[0]
+				} else {
+					req.Header[k] = v
+				}
 			}
 
 			// redefine request Headers from config

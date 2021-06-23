@@ -9,8 +9,8 @@ import (
 	"bufio"
 	"io"
 
-	jsoniter "github.com/json-iterator/go"
 	"github.com/yandex/pandora/lib/ioutil2"
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/config"
@@ -75,6 +75,6 @@ func (e *jsonEncoder) Encode(s core.Sample) error {
 
 func (e *jsonEncoder) Flush() error {
 	err := e.Stream.Flush()
-	e.buf.Flush()
+	_ = e.buf.Flush()
 	return err
 }

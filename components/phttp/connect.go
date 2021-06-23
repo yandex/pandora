@@ -14,8 +14,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	"github.com/pkg/errors"
 	"github.com/yandex/pandora/lib/netutil"
+	"github.com/pkg/errors"
 )
 
 type ConnectGunConfig struct {
@@ -88,7 +88,7 @@ func newConnectDialFunc(target string, connectSSL bool, dialer netutil.Dialer) n
 		}
 		defer func() {
 			if err != nil && conn != nil {
-				conn.Close()
+				_ = conn.Close()
 				conn = nil
 			}
 		}()

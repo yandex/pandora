@@ -104,7 +104,7 @@ type GunDeps struct {
 	// Pool set's ids to Instances from 0, incrementing it after Instance Run.
 	// There is a race between Instances for Ammo Acquire, so it's not guaranteed, that
 	// Instance with lower InstanceId gets it's Ammo earlier.
-	InstanceId int
+	InstanceID int
 	// TODO(skipor): https://github.com/yandex/pandora/issues/71
 	// Pass parallelism value. InstanceId MUST be -1 if parallelism > 1.
 }
