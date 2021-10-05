@@ -115,10 +115,10 @@ var _ = Describe("Instance", func() {
 		BeforeEach(func() {
 			ctx, _ = context.WithTimeout(context.Background(), 10*time.Millisecond)
 			sched := sched.(*coremock.Schedule)
-                        sched.On("Next").Return(time.Now().Add(5*time.Second), true)
-                        sched.On("Left").Return(1)
-                        gun.On("Bind", aggregator, mock.Anything).Return(nil)
-                        provider.On("Acquire").Return(struct{}{}, true)
+			sched.On("Next").Return(time.Now().Add(5*time.Second), true)
+			sched.On("Left").Return(1)
+			gun.On("Bind", aggregator, mock.Anything).Return(nil)
+			provider.On("Acquire").Return(struct{}{}, true)
 		})
 		It("start fail", func() {
 			err := ins.Run(ctx)
