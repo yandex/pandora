@@ -9,12 +9,13 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 
-	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/lib/netutil"
 )
@@ -145,6 +146,11 @@ const notHTTP2PanicMsg = "Non HTTP/2 connection established. Seems that target d
 func (c *panicOnHTTP1Client) Do(req *http.Request) (*http.Response, error) {
 	res, err := c.Client.Do(req)
 	if err != nil {
+		var opError *net.OpError
+		// Unfortunately, Go doesn't expose tls.alert (https://github.com/golang/go/issues/35234), so we make decisions based on the error message
+		if errors.As(err, &opError) && opError.Op == "remote error" && strings.Contains(err.Error(), "no application protocol") {
+			zap.L().Panic(notHTTP2PanicMsg, zap.Error(err))
+		}
 		return nil, err
 	}
 	err = checkHTTP2(res.TLS)
