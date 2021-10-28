@@ -8,8 +8,8 @@ package coretest
 import (
 	"time"
 
-	"github.com/yandex/pandora/core"
 	"github.com/onsi/gomega"
+	"github.com/yandex/pandora/core"
 )
 
 func ExpectScheduleNextsStartAt(sched core.Schedule, startAt time.Time, nexts ...time.Duration) {
