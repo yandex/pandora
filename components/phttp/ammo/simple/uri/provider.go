@@ -8,6 +8,7 @@ package uri
 import (
 	"bufio"
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
@@ -17,21 +18,49 @@ import (
 )
 
 type Config struct {
-	File string `validate:"required"`
+	File string
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
 	// Redefine HTTP headers
 	Headers []string
 	// Passes limits ammo file passes. Unlimited if zero.
 	Passes int `validate:"min=0"`
+	Uris   []string
 }
 
 // TODO: pass logger and metricsRegistry
 func NewProvider(fs afero.Fs, conf Config) *Provider {
+	if len(conf.Uris) > 0 {
+		if conf.File != "" {
+			panic(`One should specify either 'file' or 'uris', but not both of them.`)
+		}
+		file, err := afero.TempFile(fs, "", "generated_ammo_")
+		if err != nil {
+			panic(fmt.Sprintf(`failed to create tmp ammo file: %v`, err))
+		}
+		for _, uri := range conf.Uris {
+			_, err := file.WriteString(fmt.Sprintf("%s\n", uri))
+			if err != nil {
+				panic(fmt.Sprintf(`failed to write ammo in tmp file: %v`, err))
+			}
+		}
+		conf.File = file.Name()
+	}
+	if conf.File == "" {
+		panic(`One should specify either 'file' or 'uris'.`)
+	}
 	var p Provider
 	p = Provider{
 		Provider: simple.NewProvider(fs, conf.File, p.start),
 		Config:   conf,
+	}
+	p.Close = func() {
+		if len(conf.Uris) > 0 {
+			err := fs.Remove(conf.File)
+			if err != nil {
+				zap.L().Error("failed to delete temp file", zap.String("file name", conf.File))
+			}
+		}
 	}
 	return &p
 }
