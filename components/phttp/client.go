@@ -31,6 +31,7 @@ type ClientConfig struct {
 	Redirect  bool            // When true, follow HTTP redirects.
 	Dialer    DialerConfig    `config:"dial"`
 	Transport TransportConfig `config:",squash"`
+	Timeout   time.Duration   `config:"timeout"`
 }
 
 func DefaultClientConfig() ClientConfig {
@@ -38,6 +39,7 @@ func DefaultClientConfig() ClientConfig {
 		Transport: DefaultTransportConfig(),
 		Dialer:    DefaultDialerConfig(),
 		Redirect:  false,
+        Timeout: time.Second * 10,
 	}
 }
 
@@ -46,7 +48,7 @@ func DefaultClientConfig() ClientConfig {
 type DialerConfig struct {
 	DNSCache bool `config:"dns-cache" map:"-"`
 
-	Timeout   time.Duration `config:"timeout"`
+	Timeout   time.Duration `config:"connect-timeout"`
 	DualStack bool          `config:"dual-stack"`
 
 	// IPv4/IPv6 settings should not matter really,
@@ -117,9 +119,9 @@ func NewHTTP2Transport(conf TransportConfig, dial netutil.DialerFunc) *http.Tran
 	return tr
 }
 
-func newClient(tr *http.Transport, redirect bool) Client {
+func newClient(tr *http.Transport, redirect bool, timeout time.Duration) Client {
 	if redirect {
-		return redirectClient{&http.Client{Transport: tr}}
+        return redirectClient{&http.Client{Transport: tr, Timeout: timeout}}
 	}
 	return noRedirectClient{tr}
 }

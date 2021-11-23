@@ -76,7 +76,7 @@ func newConnectClient(conf ConnectGunConfig) Client {
 			conf.ConnectSSL,
 			NewDialer(conf.Client.Dialer),
 		))
-	return newClient(transport, conf.Client.Redirect)
+	return newClient(transport, conf.Client.Redirect, conf.Client.Timeout)
 }
 
 func newConnectDialFunc(target string, connectSSL bool, dialer netutil.Dialer) netutil.DialerFunc {
