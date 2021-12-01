@@ -18,10 +18,13 @@ import (
 	"github.com/yandex/pandora/components/phttp/ammo/simple/uripost"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/register"
+	"github.com/yandex/pandora/lib/answlog"
 	"github.com/yandex/pandora/lib/netutil"
 )
 
 func Import(fs afero.Fs) {
+	answLog := answlog.Init()
+
 	register.Provider("http/json", func(conf jsonline.Config) core.Provider {
 		return jsonline.NewProvider(fs, conf)
 	})
@@ -40,13 +43,13 @@ func Import(fs afero.Fs) {
 
 	register.Gun("http", func(conf phttp.HTTPGunConfig) func() core.Gun {
 		_ = preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
-		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTPGun(conf)) }
+		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTPGun(conf, answLog)) }
 	}, phttp.DefaultHTTPGunConfig)
 
 	register.Gun("http2", func(conf phttp.HTTP2GunConfig) func() (core.Gun, error) {
 		_ = preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
 		return func() (core.Gun, error) {
-			gun, err := phttp.NewHTTP2Gun(conf)
+			gun, err := phttp.NewHTTP2Gun(conf, answLog)
 			return phttp.WrapGun(gun), err
 		}
 	}, phttp.DefaultHTTP2GunConfig)
@@ -54,7 +57,7 @@ func Import(fs afero.Fs) {
 	register.Gun("connect", func(conf phttp.ConnectGunConfig) func() core.Gun {
 		_ = preResolveTargetAddr(&conf.Client, &conf.Target)
 		return func() core.Gun {
-			return phttp.WrapGun(phttp.NewConnectGun(conf))
+			return phttp.WrapGun(phttp.NewConnectGun(conf, answLog))
 		}
 	}, phttp.DefaultConnectGunConfig)
 }

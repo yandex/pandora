@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 type ClientGunConfig struct {
@@ -27,14 +28,14 @@ type HTTP2GunConfig struct {
 	Client ClientConfig    `config:",squash"`
 }
 
-func NewHTTPGun(conf HTTPGunConfig) *HTTPGun {
+func NewHTTPGun(conf HTTPGunConfig, answLog *zap.Logger) *HTTPGun {
 	transport := NewTransport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext)
 	client := newClient(transport, conf.Client.Redirect)
-	return NewClientGun(client, conf.Gun)
+	return NewClientGun(client, conf.Gun, answLog)
 }
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
-func NewHTTP2Gun(conf HTTP2GunConfig) (*HTTPGun, error) {
+func NewHTTP2Gun(conf HTTP2GunConfig, answLog *zap.Logger) (*HTTPGun, error) {
 	if !conf.Gun.SSL {
 		// Open issue on github if you really need this feature.
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
@@ -43,10 +44,10 @@ func NewHTTP2Gun(conf HTTP2GunConfig) (*HTTPGun, error) {
 	client := newClient(transport, conf.Client.Redirect)
 	// Will panic and cancel shooting whet target doesn't support HTTP/2.
 	client = &panicOnHTTP1Client{client}
-	return NewClientGun(client, conf.Gun), nil
+	return NewClientGun(client, conf.Gun, answLog), nil
 }
 
-func NewClientGun(client Client, conf ClientGunConfig) *HTTPGun {
+func NewClientGun(client Client, conf ClientGunConfig, answLog *zap.Logger) *HTTPGun {
 	scheme := "http"
 	if conf.SSL {
 		scheme = "https"
@@ -60,6 +61,7 @@ func NewClientGun(client Client, conf ClientGunConfig) *HTTPGun {
 				client.CloseIdleConnections()
 				return nil
 			},
+			AnswLog: answLog,
 		},
 		scheme: scheme,
 		target: conf.Target,
