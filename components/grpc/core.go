@@ -34,7 +34,8 @@ type Sample struct {
 }
 
 type GunConfig struct {
-	Target string `validate:"required"`
+	Target  string        `validate:"required"`
+	Timeout time.Duration `config:"timeout"` // grpc request timeout
 }
 
 type Gun struct {
@@ -140,7 +141,14 @@ func (g *Gun) shoot(ammo *Ammo) {
 		}
 	}
 
-	ctx := metadata.NewOutgoingContext(context.Background(), meta)
+	timeout := time.Second * 15
+	if g.conf.Timeout != 0 {
+		timeout = time.Second * g.conf.Timeout
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	ctx = metadata.NewOutgoingContext(ctx, meta)
 	out, err := g.stub.InvokeRpc(ctx, &method, message)
 	code = convertGrpcStatus(err)
 
