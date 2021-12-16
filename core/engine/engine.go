@@ -195,7 +195,7 @@ func (p *instancePool) runAsync(runCtx context.Context) (*poolAsyncRunHandle, er
 		runRes        = make(chan instanceRunResult, runResultBufSize)
 	)
 	go func() {
-		deps := core.ProviderDeps{Log: p.log}
+		deps := core.ProviderDeps{Log: p.log, PoolID: p.ID}
 		providerErr <- p.Provider.Run(runCtx, deps)
 	}()
 	go func() {
@@ -351,7 +351,7 @@ func (p *instancePool) startInstances(
 		err = startCtx.Err()
 		return
 	}
-	firstInstance, err := newInstance(runCtx, p.log, 0, deps)
+	firstInstance, err := newInstance(runCtx, p.log, p.ID, 0, deps)
 	if err != nil {
 		return
 	}
@@ -364,7 +364,7 @@ func (p *instancePool) startInstances(
 	for ; waiter.Wait(); started++ {
 		id := started
 		go func() {
-			runRes <- instanceRunResult{id, runNewInstance(runCtx, p.log, id, deps)}
+			runRes <- instanceRunResult{id, runNewInstance(runCtx, p.log, p.ID, id, deps)}
 		}()
 	}
 	err = startCtx.Err()
@@ -399,8 +399,8 @@ func (p *instancePool) buildNewInstanceSchedule(startCtx context.Context, cancel
 	return
 }
 
-func runNewInstance(ctx context.Context, log *zap.Logger, id int, deps instanceDeps) error {
-	instance, err := newInstance(ctx, log, id, deps)
+func runNewInstance(ctx context.Context, log *zap.Logger, poolID string, id int, deps instanceDeps) error {
+	instance, err := newInstance(ctx, log, poolID, id, deps)
 	if err != nil {
 		return err
 	}

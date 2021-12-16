@@ -63,7 +63,8 @@ type Provider interface {
 // WARN: another fields could be added in next MINOR versions.
 // That is NOT considered as a breaking compatibility change.
 type ProviderDeps struct {
-	Log *zap.Logger
+	Log    *zap.Logger
+	PoolID string
 }
 
 //go:generate mockery -name=Gun -case=underscore -outpkg=coremock
@@ -105,6 +106,8 @@ type GunDeps struct {
 	// There is a race between Instances for Ammo Acquire, so it's not guaranteed, that
 	// Instance with lower InstanceId gets it's Ammo earlier.
 	InstanceID int
+	PoolID     string
+
 	// TODO(skipor): https://github.com/yandex/pandora/issues/71
 	// Pass parallelism value. InstanceId MUST be -1 if parallelism > 1.
 }
