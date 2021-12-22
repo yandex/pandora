@@ -13,9 +13,10 @@ import (
 )
 
 type ClientGunConfig struct {
-	Target string `validate:"endpoint,required"`
-	SSL    bool
-	Base   BaseGunConfig `config:",squash"`
+	Target      string `validate:"endpoint,required"`
+	SSL         bool
+	AnswLogPath string        `config:"answ_path"`
+	Base        BaseGunConfig `config:",squash"`
 }
 
 type HTTPGunConfig struct {

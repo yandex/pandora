@@ -23,6 +23,7 @@ type ConnectGunConfig struct {
 	Target        string       `validate:"endpoint,required"`
 	ConnectSSL    bool         `config:"connect-ssl"` // Defines if tunnel encrypted.
 	SSL           bool         // As in HTTP gun, defines scheme for http requests.
+	AnswLogPath   string       `config:"answ_path"`
 	Client        ClientConfig `config:",squash"`
 	BaseGunConfig `config:",squash"`
 }

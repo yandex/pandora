@@ -7,8 +7,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func Init() *zap.Logger {
-	writerSyncer := getAnswWriter()
+func Init(path string) *zap.Logger {
+	writerSyncer := getAnswWriter(path)
 	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
 	core := zapcore.NewCore(encoder, writerSyncer, zapcore.DebugLevel)
 
@@ -17,7 +17,10 @@ func Init() *zap.Logger {
 	return Log
 }
 
-func getAnswWriter() zapcore.WriteSyncer {
-	file, _ := os.Create("./answ.log")
+func getAnswWriter(path string) zapcore.WriteSyncer {
+	if path == "" {
+		path = "./answ.log"
+	}
+	file, _ := os.Create(path)
 	return zapcore.AddSync(file)
 }
