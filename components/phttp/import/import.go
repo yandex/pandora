@@ -42,13 +42,13 @@ func Import(fs afero.Fs) {
 
 	register.Gun("http", func(conf phttp.HTTPGunConfig) func() core.Gun {
 		_ = preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
-		answLog := answlog.Init(conf.Gun.AnswLogPath)
+		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path)
 		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTPGun(conf, answLog)) }
 	}, phttp.DefaultHTTPGunConfig)
 
 	register.Gun("http2", func(conf phttp.HTTP2GunConfig) func() (core.Gun, error) {
 		_ = preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
-		answLog := answlog.Init(conf.Gun.AnswLogPath)
+		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path)
 		return func() (core.Gun, error) {
 			gun, err := phttp.NewHTTP2Gun(conf, answLog)
 			return phttp.WrapGun(gun), err
@@ -57,7 +57,7 @@ func Import(fs afero.Fs) {
 
 	register.Gun("connect", func(conf phttp.ConnectGunConfig) func() core.Gun {
 		_ = preResolveTargetAddr(&conf.Client, &conf.Target)
-		answLog := answlog.Init(conf.AnswLogPath)
+		answLog := answlog.Init(conf.BaseGunConfig.AnswLog.Path)
 		return func() core.Gun {
 			return phttp.WrapGun(phttp.NewConnectGun(conf, answLog))
 		}

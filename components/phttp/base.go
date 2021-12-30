@@ -26,11 +26,9 @@ const (
 	EmptyTag = "__EMPTY__"
 )
 
-//var answ *zap.Logger = answlog.Init()
-//var bodyBytes []byte
-
 type BaseGunConfig struct {
 	AutoTag AutoTagConfig `config:"auto-tag"`
+	AnswLog AnswLogConfig `config:"answlog"`
 }
 
 // AutoTagConfig configure automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
@@ -41,13 +39,25 @@ type AutoTagConfig struct {
 	NoTagOnly   bool `config:"no-tag-only"`                   // When true, autotagged only ammo that has no tag before.
 }
 
+type AnswLogConfig struct {
+	Enabled bool   `config:"enabled"`
+	Path    string `config:"path"`
+	Filter  string `config:"filter" valid:"oneof=all warning error"`
+}
+
 func DefaultBaseGunConfig() BaseGunConfig {
 	return BaseGunConfig{
 		AutoTagConfig{
 			Enabled:     false,
 			URIElements: 2,
 			NoTagOnly:   true,
-		}}
+		},
+		AnswLogConfig{
+			Enabled: false,
+			Path:    "answ.log",
+			Filter:  "error",
+		},
+	}
 }
 
 type BaseGun struct {
@@ -107,13 +117,15 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 	}
 	if b.DebugLog {
 		b.Log.Debug("Prepared ammo to shoot", zap.Stringer("url", req.URL))
-		bodyBytes = GetBody(req)
 	}
 	if b.Config.AutoTag.Enabled && (!b.Config.AutoTag.NoTagOnly || sample.Tags() == "") {
 		sample.AddTag(autotag(b.Config.AutoTag.URIElements, req.URL))
 	}
 	if sample.Tags() == "" {
 		sample.AddTag(EmptyTag)
+	}
+	if b.Config.AnswLog.Enabled {
+		bodyBytes = GetBody(req)
 	}
 
 	var err error
@@ -134,7 +146,22 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 
 	if b.DebugLog {
 		b.verboseLogging(res)
-		b.answLogging(req, bodyBytes, res)
+	}
+	if b.Config.AnswLog.Enabled {
+		switch b.Config.AnswLog.Filter {
+		case "all":
+			b.answLogging(req, bodyBytes, res)
+
+		case "warning":
+			if res.StatusCode >= 400 {
+				b.answLogging(req, bodyBytes, res)
+			}
+
+		case "error":
+			if res.StatusCode >= 500 {
+				b.answLogging(req, bodyBytes, res)
+			}
+		}
 	}
 
 	sample.SetProtoCode(res.StatusCode)
