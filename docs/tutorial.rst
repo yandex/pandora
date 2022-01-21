@@ -17,7 +17,7 @@ Pandora supports config files in `YAML`_ format. Create a new file named ``load.
         type: http                     # gun type
         target: example.com:80         # gun target
       ammo:
-        type: uri                      # ammo format                        
+        type: uri                      # ammo format
         file: ./ammo.uri               # ammo File
       result:
         type: phout                    # report format (phout is compatible with Yandex.Tank)
@@ -77,5 +77,5 @@ References
 .. target-notes::
 
 .. _`Overload`: https://overload.yandex.net
-.. _`Yandex.Tank`: http://yandextank.readthedocs.org/en/latest/configuration.html#pandora
+.. _`Yandex.Tank`: https://yandextank.readthedocs.io/en/latest/core_and_modules.html#pandora
 .. _`YAML`: https://en.wikipedia.org/wiki/YAML

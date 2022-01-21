@@ -29,7 +29,6 @@ const Version = "0.3.5"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 
-var useStdinConfig = false
 var configSearchDirs = []string{"./", "./config", "/etc/pandora"}
 
 type cliConfig struct {
@@ -189,6 +188,7 @@ func readConfig() *cliConfig {
 
 	v := newViper()
 
+	var useStdinConfig = false
 	args := flag.Args()
 	if len(args) > 0 {
 		switch {
