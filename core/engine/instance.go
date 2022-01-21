@@ -41,7 +41,7 @@ func newInstance(ctx context.Context, log *zap.Logger, poolID string, id int, de
 	}
 	if warmedUp, ok := gun.(warmup.WarmedUp); ok {
 		if err := warmedUp.AcceptWarmUpResult(deps.gunWarmUpResult); err != nil {
-			return nil, fmt.Errorf("gun fauiled to accept warmup result: %w", err)
+			return nil, fmt.Errorf("gun failed to accept warmup result: %w", err)
 		}
 	}
 	err = gun.Bind(deps.aggregator, gunDeps)

@@ -173,7 +173,7 @@ func (p *instancePool) Run(ctx context.Context) error {
 func (p *instancePool) warmUpGun(ctx context.Context) error {
 	dummyGun, err := p.NewGun()
 	if err != nil {
-		return fmt.Errorf("can't initiante a gun: %w", err)
+		return fmt.Errorf("can't initiate a gun: %w", err)
 	}
 	if gunWithWarmUp, ok := dummyGun.(warmup.WarmedUp); ok {
 		p.gunWarmUpResult, err = gunWithWarmUp.WarmUp(&warmup.Options{
