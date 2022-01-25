@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/yandex/pandora/core/warmup"
+
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
@@ -112,7 +114,7 @@ func (e *Engine) Wait() {
 
 func newPool(log *zap.Logger, m Metrics, onWaitDone func(), conf InstancePoolConfig) *instancePool {
 	log = log.With(zap.String("pool", conf.ID))
-	return &instancePool{log, m, onWaitDone, conf}
+	return &instancePool{log, m, onWaitDone, conf, nil}
 }
 
 type instancePool struct {
@@ -120,6 +122,7 @@ type instancePool struct {
 	metrics    Metrics
 	onWaitDone func()
 	InstancePoolConfig
+	gunWarmUpResult interface{}
 }
 
 // Run start instance pool. Run blocks until fail happen, or all instances finish.
@@ -141,6 +144,11 @@ func (p *instancePool) Run(ctx context.Context) error {
 		cancel()
 	}()
 
+	if err := p.warmUpGun(ctx); err != nil {
+		p.onWaitDone()
+		return err
+	}
+
 	rh, err := p.runAsync(ctx)
 	if err != nil {
 		return err
@@ -160,6 +168,23 @@ func (p *instancePool) Run(ctx context.Context) error {
 		p.log.Info("Pool run finished successfully")
 		return nil
 	}
+}
+
+func (p *instancePool) warmUpGun(ctx context.Context) error {
+	dummyGun, err := p.NewGun()
+	if err != nil {
+		return fmt.Errorf("can't initiate a gun: %w", err)
+	}
+	if gunWithWarmUp, ok := dummyGun.(warmup.WarmedUp); ok {
+		p.gunWarmUpResult, err = gunWithWarmUp.WarmUp(&warmup.Options{
+			Log: p.log,
+			Ctx: ctx,
+		})
+		if err != nil {
+			return fmt.Errorf("gun warm up failed: %w", err)
+		}
+	}
+	return nil
 }
 
 type poolAsyncRunHandle struct {
@@ -195,7 +220,7 @@ func (p *instancePool) runAsync(runCtx context.Context) (*poolAsyncRunHandle, er
 		runRes        = make(chan instanceRunResult, runResultBufSize)
 	)
 	go func() {
-		deps := core.ProviderDeps{Log: p.log}
+		deps := core.ProviderDeps{Log: p.log, PoolID: p.ID}
 		providerErr <- p.Provider.Run(runCtx, deps)
 	}()
 	go func() {
@@ -340,7 +365,7 @@ func (p *instancePool) startInstances(
 		p.Aggregator,
 		newInstanceSchedule,
 		p.NewGun,
-		instanceSharedDeps{p.Provider, p.metrics},
+		instanceSharedDeps{p.Provider, p.metrics, p.gunWarmUpResult},
 	}
 
 	waiter := coreutil.NewWaiter(p.StartupSchedule, startCtx)
@@ -351,7 +376,7 @@ func (p *instancePool) startInstances(
 		err = startCtx.Err()
 		return
 	}
-	firstInstance, err := newInstance(runCtx, p.log, 0, deps)
+	firstInstance, err := newInstance(runCtx, p.log, p.ID, 0, deps)
 	if err != nil {
 		return
 	}
@@ -364,7 +389,7 @@ func (p *instancePool) startInstances(
 	for ; waiter.Wait(); started++ {
 		id := started
 		go func() {
-			runRes <- instanceRunResult{id, runNewInstance(runCtx, p.log, id, deps)}
+			runRes <- instanceRunResult{id, runNewInstance(runCtx, p.log, p.ID, id, deps)}
 		}()
 	}
 	err = startCtx.Err()
@@ -399,8 +424,8 @@ func (p *instancePool) buildNewInstanceSchedule(startCtx context.Context, cancel
 	return
 }
 
-func runNewInstance(ctx context.Context, log *zap.Logger, id int, deps instanceDeps) error {
-	instance, err := newInstance(ctx, log, id, deps)
+func runNewInstance(ctx context.Context, log *zap.Logger, poolID string, id int, deps instanceDeps) error {
+	instance, err := newInstance(ctx, log, poolID, id, deps)
 	if err != nil {
 		return err
 	}

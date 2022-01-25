@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 
 	ammomock "github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core"
@@ -109,6 +110,7 @@ var _ = Describe("BaseGun", func() {
 		Context("Do ok", func() {
 			BeforeEach(func() {
 				body = ioutil.NopCloser(strings.NewReader("aaaaaaa"))
+				base.AnswLog = zap.NewNop()
 				base.Do = func(doReq *http.Request) (*http.Response, error) {
 					Expect(doReq).To(Equal(req))
 					return res, nil

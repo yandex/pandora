@@ -3,8 +3,13 @@ package grpc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
+
+	"github.com/jhump/protoreflect/grpcreflect"
+	"github.com/yandex/pandora/core/warmup"
+	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
@@ -12,12 +17,10 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
-	"github.com/jhump/protoreflect/grpcreflect"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 	"google.golang.org/grpc/status"
 )
 
@@ -34,7 +37,8 @@ type Sample struct {
 }
 
 type GunConfig struct {
-	Target string `validate:"required"`
+	Target  string        `validate:"required"`
+	Timeout time.Duration `config:"timeout"` // grpc request timeout
 }
 
 type Gun struct {
@@ -46,6 +50,50 @@ type Gun struct {
 
 	stub     grpcdynamic.Stub
 	services map[string]desc.MethodDescriptor
+}
+
+func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
+	conn, err := grpc.Dial(
+		g.conf.Target,
+		grpc.WithInsecure(),
+		grpc.WithTimeout(time.Second),
+		grpc.WithUserAgent("load test, pandora universal grpc shooter"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to target: %w", err)
+	}
+	defer conn.Close()
+
+	meta := make(metadata.MD)
+	refCtx := metadata.NewOutgoingContext(context.Background(), meta)
+	refClient := grpcreflect.NewClient(refCtx, reflectpb.NewServerReflectionClient(conn))
+	listServices, err := refClient.ListServices()
+	if err != nil {
+		opts.Log.Fatal("Fatal: failed to get services list\n %s\n", zap.Error(err))
+	}
+	services := make(map[string]desc.MethodDescriptor)
+	for _, s := range listServices {
+		service, err := refClient.ResolveService(s)
+		if err != nil {
+			if grpcreflect.IsElementNotFoundError(err) {
+				continue
+			}
+			opts.Log.Fatal("FATAL ResolveService: %s", zap.Error(err))
+		}
+		listMethods := service.GetMethods()
+		for _, m := range listMethods {
+			services[m.GetFullyQualifiedName()] = *m
+		}
+	}
+	return services, nil
+}
+
+func (g *Gun) AcceptWarmUpResult(i interface{}) error {
+	services, ok := i.(map[string]desc.MethodDescriptor)
+	if !ok {
+		return fmt.Errorf("grpc WarmUp result should be services: map[string]desc.MethodDescriptor")
+	}
+	g.services = services
+	return nil
 }
 
 func NewGun(conf GunConfig) *Gun {
@@ -66,33 +114,9 @@ func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
 	g.GunDeps = deps
 	g.stub = grpcdynamic.NewStub(conn)
 
-	log := deps.Log
-
-	if ent := log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
+	if ent := deps.Log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
 		// Enable debug level logging during shooting. Creating log entries isn't free.
 		g.DebugLog = true
-	}
-
-	meta := make(metadata.MD)
-	refCtx := metadata.NewOutgoingContext(context.Background(), meta)
-	refClient := grpcreflect.NewClient(refCtx, reflectpb.NewServerReflectionClient(conn))
-	listServices, err := refClient.ListServices()
-	if err != nil {
-		log.Fatal("Fatal: failed to get services list\n %s\n", zap.Error(err))
-	}
-	g.services = make(map[string]desc.MethodDescriptor)
-	for _, s := range listServices {
-		service, err := refClient.ResolveService(s)
-		if err != nil {
-			if grpcreflect.IsElementNotFoundError(err) {
-				continue
-			}
-			log.Fatal("FATAL ResolveService: %s", zap.Error(err))
-		}
-		listMethods := service.GetMethods()
-		for _, m := range listMethods {
-			g.services[m.GetFullyQualifiedName()] = *m
-		}
 	}
 
 	return nil
@@ -140,7 +164,14 @@ func (g *Gun) shoot(ammo *Ammo) {
 		}
 	}
 
-	ctx := metadata.NewOutgoingContext(context.Background(), meta)
+	timeout := time.Second * 15
+	if g.conf.Timeout != 0 {
+		timeout = time.Second * g.conf.Timeout
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	ctx = metadata.NewOutgoingContext(ctx, meta)
 	out, err := g.stub.InvokeRpc(ctx, &method, message)
 	code = convertGrpcStatus(err)
 

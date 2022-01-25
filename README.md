@@ -42,7 +42,7 @@ Run the binary with your config (see config examples at [examples](https://githu
 pandora myconfig.yaml
 ```
 
-Or use Pandora with [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/configuration.html#pandora) and
+Or use Pandora with [Yandex.Tank](https://yandextank.readthedocs.io/en/latest/core_and_modules.html#pandora) and
 [Overload](https://overload.yandex.net).
 
 ### Documentation

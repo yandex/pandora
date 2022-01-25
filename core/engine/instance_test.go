@@ -54,9 +54,10 @@ var _ = Describe("Instance", func() {
 			instanceSharedDeps{
 				provider,
 				metrics,
+				nil,
 			},
 		}
-		ins, insCreateErr = newInstance(ctx, ginkgoutil.NewLogger(), 0, deps)
+		ins, insCreateErr = newInstance(ctx, ginkgoutil.NewLogger(), "pool_0", 0, deps)
 	})
 
 	AfterEach(func() {

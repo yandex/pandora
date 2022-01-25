@@ -45,10 +45,11 @@ var _ = Describe("BaseGun", func() {
 			actualReq = req
 		}))
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTPGunConfig()
 		conf.Gun.Target = strings.TrimPrefix(server.URL, "http://")
 		results := &netsample.TestAggregator{}
-		httpGun := NewHTTPGun(conf)
+		httpGun := NewHTTPGun(conf, log)
 		_ = httpGun.Bind(results, testDeps())
 
 		am := newAmmoReq(expectedReq)
@@ -94,10 +95,11 @@ var _ = Describe("HTTP", func() {
 			server.Start()
 		}
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTPGunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Gun.SSL = https
-		gun := NewHTTPGun(conf)
+		gun := NewHTTPGun(conf, log)
 		var aggr netsample.TestAggregator
 		_ = gun.Bind(&aggr, testDeps())
 		gun.Shoot(newAmmoURL("/"))
@@ -119,10 +121,11 @@ var _ = Describe("HTTP", func() {
 			}
 		}))
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTPGunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Client.Redirect = redirect
-		gun := NewHTTPGun(conf)
+		gun := NewHTTPGun(conf, log)
 		var aggr netsample.TestAggregator
 		_ = gun.Bind(&aggr, testDeps())
 		gun.Shoot(newAmmoURL("/redirect"))
@@ -156,10 +159,11 @@ var _ = Describe("HTTP", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res.StatusCode).To(Equal(http.StatusForbidden))
 
+		log := zap.NewNop()
 		conf := DefaultHTTPGunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Gun.SSL = true
-		gun := NewHTTPGun(conf)
+		gun := NewHTTPGun(conf, log)
 		var results netsample.TestAggregator
 		_ = gun.Bind(&results, testDeps())
 		gun.Shoot(newAmmoURL("/"))
@@ -180,9 +184,10 @@ var _ = Describe("HTTP/2", func() {
 			}
 		}))
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTP2GunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
-		gun, _ := NewHTTP2Gun(conf)
+		gun, _ := NewHTTP2Gun(conf, log)
 		var results netsample.TestAggregator
 		_ = gun.Bind(&results, testDeps())
 		gun.Shoot(newAmmoURL("/"))
@@ -194,9 +199,10 @@ var _ = Describe("HTTP/2", func() {
 			zap.S().Info("Served")
 		}))
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTP2GunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
-		gun, _ := NewHTTP2Gun(conf)
+		gun, _ := NewHTTP2Gun(conf, log)
 		var results netsample.TestAggregator
 		_ = gun.Bind(&results, testDeps())
 		var r interface{}
@@ -215,10 +221,11 @@ var _ = Describe("HTTP/2", func() {
 			zap.S().Info("Served")
 		}))
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTP2GunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Gun.SSL = false
-		_, err := NewHTTP2Gun(conf)
+		_, err := NewHTTP2Gun(conf, log)
 		Expect(err).To(HaveOccurred())
 	})
 

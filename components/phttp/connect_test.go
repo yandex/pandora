@@ -15,6 +15,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"go.uber.org/zap"
 
 	"github.com/yandex/pandora/core/aggregator/netsample"
 )
@@ -85,9 +86,10 @@ var _ = Describe("connect", func() {
 		proxy := httptest.NewServer(tunnelHandler(origin.URL))
 		defer proxy.Close()
 
+		log := zap.NewNop()
 		conf := DefaultConnectGunConfig()
 		conf.Target = proxy.Listener.Addr().String()
-		connectGun := NewConnectGun(conf)
+		connectGun := NewConnectGun(conf, log)
 
 		results := &netsample.TestAggregator{}
 		_ = connectGun.Bind(results, testDeps())

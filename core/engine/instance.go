@@ -7,7 +7,10 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"io"
+
+	"github.com/yandex/pandora/core/warmup"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -25,9 +28,9 @@ type instance struct {
 	instanceSharedDeps
 }
 
-func newInstance(ctx context.Context, log *zap.Logger, id int, deps instanceDeps) (*instance, error) {
+func newInstance(ctx context.Context, log *zap.Logger, poolID string, id int, deps instanceDeps) (*instance, error) {
 	log = log.With(zap.Int("instance", id))
-	gunDeps := core.GunDeps{Ctx: ctx, Log: log, InstanceID: id}
+	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: poolID, InstanceID: id}
 	sched, err := deps.newSchedule()
 	if err != nil {
 		return nil, err
@@ -35,6 +38,11 @@ func newInstance(ctx context.Context, log *zap.Logger, id int, deps instanceDeps
 	gun, err := deps.newGun()
 	if err != nil {
 		return nil, err
+	}
+	if warmedUp, ok := gun.(warmup.WarmedUp); ok {
+		if err := warmedUp.AcceptWarmUpResult(deps.gunWarmUpResult); err != nil {
+			return nil, fmt.Errorf("gun failed to accept warmup result: %w", err)
+		}
 	}
 	err = gun.Bind(deps.aggregator, gunDeps)
 	if err != nil {
@@ -54,6 +62,7 @@ type instanceDeps struct {
 type instanceSharedDeps struct {
 	provider core.Provider
 	Metrics
+	gunWarmUpResult interface{}
 }
 
 // Run blocks until ammo finish, error or context cancel.

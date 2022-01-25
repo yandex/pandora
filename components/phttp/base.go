@@ -6,10 +6,13 @@
 package phttp
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 
 	"github.com/pkg/errors"
@@ -25,6 +28,7 @@ const (
 
 type BaseGunConfig struct {
 	AutoTag AutoTagConfig `config:"auto-tag"`
+	AnswLog AnswLogConfig `config:"answlog"`
 }
 
 // AutoTagConfig configure automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
@@ -35,13 +39,25 @@ type AutoTagConfig struct {
 	NoTagOnly   bool `config:"no-tag-only"`                   // When true, autotagged only ammo that has no tag before.
 }
 
+type AnswLogConfig struct {
+	Enabled bool   `config:"enabled"`
+	Path    string `config:"path"`
+	Filter  string `config:"filter" valid:"oneof=all warning error"`
+}
+
 func DefaultBaseGunConfig() BaseGunConfig {
 	return BaseGunConfig{
 		AutoTagConfig{
 			Enabled:     false,
 			URIElements: 2,
 			NoTagOnly:   true,
-		}}
+		},
+		AnswLogConfig{
+			Enabled: false,
+			Path:    "answ.log",
+			Filter:  "error",
+		},
+	}
 }
 
 type BaseGun struct {
@@ -51,6 +67,7 @@ type BaseGun struct {
 	Connect    func(ctx context.Context) error               // Optional hook.
 	OnClose    func() error                                  // Optional. Called on Close().
 	Aggregator netsample.Aggregator                          // Lazy set via BindResultTo.
+	AnswLog    *zap.Logger
 	core.GunDeps
 }
 
@@ -78,6 +95,7 @@ func (b *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error
 
 // Shoot is thread safe iff Do and Connect hooks are thread safe.
 func (b *BaseGun) Shoot(ammo Ammo) {
+	var bodyBytes []byte
 	if b.Aggregator == nil {
 		zap.L().Panic("must bind before shoot")
 	}
@@ -100,12 +118,14 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 	if b.DebugLog {
 		b.Log.Debug("Prepared ammo to shoot", zap.Stringer("url", req.URL))
 	}
-
 	if b.Config.AutoTag.Enabled && (!b.Config.AutoTag.NoTagOnly || sample.Tags() == "") {
 		sample.AddTag(autotag(b.Config.AutoTag.URIElements, req.URL))
 	}
 	if sample.Tags() == "" {
 		sample.AddTag(EmptyTag)
+	}
+	if b.Config.AnswLog.Enabled {
+		bodyBytes = GetBody(req)
 	}
 
 	var err error
@@ -126,6 +146,22 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 
 	if b.DebugLog {
 		b.verboseLogging(res)
+	}
+	if b.Config.AnswLog.Enabled {
+		switch b.Config.AnswLog.Filter {
+		case "all":
+			b.answLogging(req, bodyBytes, res)
+
+		case "warning":
+			if res.StatusCode >= 400 {
+				b.answLogging(req, bodyBytes, res)
+			}
+
+		case "error":
+			if res.StatusCode >= 500 {
+				b.answLogging(req, bodyBytes, res)
+			}
+		}
 	}
 
 	sample.SetProtoCode(res.StatusCode)
@@ -177,6 +213,27 @@ func (b *BaseGun) verboseLogging(res *http.Response) {
 	)
 }
 
+func (b *BaseGun) answLogging(req *http.Request, bodyBytes []byte, res *http.Response) {
+	isBody := false
+	if bodyBytes != nil {
+		req.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+		isBody = true
+	}
+	dump, err := httputil.DumpRequestOut(req, isBody)
+	if err != nil {
+		zap.L().Error("Error dumping request: %s", zap.Error(err))
+	}
+	msg := fmt.Sprintf("REQUEST:\n%s\n\n", string(dump))
+	b.AnswLog.Debug(msg)
+
+	dump, err = httputil.DumpResponse(res, true)
+	if err != nil {
+		zap.L().Error("Error dumping response: %s", zap.Error(err))
+	}
+	msg = fmt.Sprintf("RESPONSE:\n%s", string(dump))
+	b.AnswLog.Debug(msg)
+}
+
 func autotag(depth int, URL *url.URL) string {
 	path := URL.Path
 	var ind int
@@ -189,4 +246,15 @@ func autotag(depth int, URL *url.URL) string {
 		}
 	}
 	return path[:ind]
+}
+
+func GetBody(req *http.Request) []byte {
+	if req.Body != nil && req.Body != http.NoBody {
+		bodyBytes, _ := ioutil.ReadAll(req.Body)
+		req.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+		return bodyBytes
+	}
+
+	return nil
+
 }
