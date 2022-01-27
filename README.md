@@ -5,7 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/yandex/pandora/badge.svg?branch=develop&service=github)](https://coveralls.io/github/yandex/pandora?branch=develop)
 [![Documentation Status](https://readthedocs.org/projects/yandexpandora/badge/?version=develop)](https://yandexpandora.readthedocs.io/en/develop/?badge=develop)
 
-Pandora is a high-performance load generator in Go language. It has built-in HTTP(S) and HTTP/2 support and you can write your own load scenarios in Go, compiling them just before your test.
+Pandora is a high-performance load generator in Go language. It has built-in HTTP(S) and HTTP/2 support and you can write your own load scenarios in Go, compiling them just before your test. 
 
 ## How to start
 
