@@ -38,10 +38,15 @@ type Sample struct {
 	ShootTimeSeconds float64
 }
 
+type grpcDialOptions struct {
+	Authority string `config:"authority"`
+}
+
 type GunConfig struct {
-	Target  string        `validate:"required"`
-	Timeout time.Duration `config:"timeout"` // grpc request timeout
-	TLS     bool
+	Target      string          `validate:"required"`
+	Timeout     time.Duration   `config:"timeout"` // grpc request timeout
+	TLS         bool            `config:"tls"`
+	DialOptions grpcDialOptions `config:"dial_options"`
 }
 
 type Gun struct {
@@ -56,7 +61,7 @@ type Gun struct {
 }
 
 func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
-	conn, err := makeGRPCConnect(g.conf.Target, g.conf.TLS)
+	conn, err := makeGRPCConnect(g.conf.Target, g.conf.TLS, g.conf.DialOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to target: %w", err)
 	}
@@ -100,7 +105,7 @@ func NewGun(conf GunConfig) *Gun {
 }
 
 func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
-	conn, err := makeGRPCConnect(g.conf.Target, g.conf.TLS)
+	conn, err := makeGRPCConnect(g.conf.Target, g.conf.TLS, g.conf.DialOptions)
 	if err != nil {
 		log.Fatalf("FATAL: grpc.Dial failed\n %s\n", err)
 	}
@@ -142,7 +147,6 @@ func (g *Gun) shoot(ammo *Ammo) {
 		log.Fatalf("FATAL: Payload parsing error %s\n", err)
 		return
 	}
-
 	md := method.GetInputType()
 	message := dynamic.NewMessage(md)
 	err = message.UnmarshalJSON(payloadJSON)
@@ -181,7 +185,7 @@ func (g *Gun) shoot(ammo *Ammo) {
 
 }
 
-func makeGRPCConnect(target string, isTLS bool) (conn *grpc.ClientConn, err error) {
+func makeGRPCConnect(target string, isTLS bool, dialOptions grpcDialOptions) (conn *grpc.ClientConn, err error) {
 	opts := []grpc.DialOption{}
 	if isTLS {
 		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
@@ -190,6 +194,10 @@ func makeGRPCConnect(target string, isTLS bool) (conn *grpc.ClientConn, err erro
 	}
 	opts = append(opts, grpc.WithTimeout(time.Second))
 	opts = append(opts, grpc.WithUserAgent("load test, pandora universal grpc shooter"))
+
+	if dialOptions.Authority != "" {
+		opts = append(opts, grpc.WithAuthority(dialOptions.Authority))
+	}
 
 	conn, err = grpc.Dial(target, opts...)
 	return
