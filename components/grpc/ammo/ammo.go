@@ -1,0 +1,39 @@
+// Copyright (c) 2017 Yandex LLC. All rights reserved.
+// Use of this source code is governed by a MPL 2.0
+// license that can be found in the LICENSE file.
+// Author: Vladimir Skipor <skipor@yandex-team.ru>
+
+package ammo
+
+type Ammo struct {
+	Tag       string                 `json:"tag"`
+	Call      string                 `json:"call"`
+	Metadata  map[string]string      `json:"metadata"`
+	Payload   map[string]interface{} `json:"payload"`
+	id        int
+	isInvalid bool
+}
+
+func (a *Ammo) Reset(tag string, call string, metadata map[string]string, payload map[string]interface{}) {
+	*a = Ammo{tag, call, metadata, payload, -1, false}
+}
+
+func (a *Ammo) SetID(id int) {
+	a.id = id
+}
+
+func (a *Ammo) ID() int {
+	return a.id
+}
+
+func (a *Ammo) Invalidate() {
+	a.isInvalid = true
+}
+
+func (a *Ammo) IsInvalid() bool {
+	return a.isInvalid
+}
+
+func (a *Ammo) IsValid() bool {
+	return !a.isInvalid
+}

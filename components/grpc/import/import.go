@@ -6,14 +6,18 @@
 package example
 
 import (
+	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/grpc"
+	"github.com/yandex/pandora/components/grpc/ammo/grpcjson"
 	"github.com/yandex/pandora/core"
-	coreimport "github.com/yandex/pandora/core/import"
 	"github.com/yandex/pandora/core/register"
 )
 
-func Import() {
-	coreimport.RegisterCustomJSONProvider("grpc/json", func() core.Ammo { return &grpc.Ammo{} })
+func Import(fs afero.Fs) {
+
+	register.Provider("grpc/json", func(conf grpcjson.Config) core.Provider {
+		return grpcjson.NewProvider(fs, conf)
+	})
 
 	register.Gun("grpc", grpc.NewGun, func() grpc.GunConfig {
 		return grpc.GunConfig{
