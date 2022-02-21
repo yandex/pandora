@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 
+	"github.com/yandex/pandora/components/grpc/ammo"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 
@@ -25,13 +26,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
-
-type Ammo struct {
-	Tag      string                 `json:"tag"`
-	Call     string                 `json:"call"`
-	Metadata map[string]string      `json:"metadata"`
-	Payload  map[string]interface{} `json:"payload"`
-}
 
 type Sample struct {
 	URL              string
@@ -122,12 +116,12 @@ func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
 	return nil
 }
 
-func (g *Gun) Shoot(ammo core.Ammo) {
-	customAmmo := ammo.(*Ammo)
+func (g *Gun) Shoot(am core.Ammo) {
+	customAmmo := am.(*ammo.Ammo)
 	g.shoot(customAmmo)
 }
 
-func (g *Gun) shoot(ammo *Ammo) {
+func (g *Gun) shoot(ammo *ammo.Ammo) {
 
 	code := 0
 	sample := netsample.Acquire(ammo.Tag)

@@ -22,7 +22,7 @@ func main() {
 	coreimport.Import(fs)
 	phttp.Import(fs)
 	example.Import()
-	grpc.Import()
+	grpc.Import(fs)
 
 	cli.Run()
 }
