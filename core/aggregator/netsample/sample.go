@@ -7,6 +7,7 @@ package netsample
 
 import (
 	"net"
+	"net/url"
 	"os"
 	"sync"
 	"syscall"
@@ -134,6 +135,8 @@ func getErrno(err error) int {
 		case *net.OpError:
 			err = typed.Err
 		case *os.SyscallError:
+			err = typed.Err
+		case *url.Error:
 			err = typed.Err
 		case syscall.Errno:
 			return int(typed)
