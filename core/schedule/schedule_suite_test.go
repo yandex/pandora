@@ -207,6 +207,21 @@ var _ = Describe("step", func() {
 
 })
 
+var _ = Describe("instance_step", func() {
+	It("", func() {
+		conf := InstanceStepConfig{
+			From:         1,
+			To:           3,
+			Step:         1,
+			StepDuration: 2 * time.Second,
+		}
+		testee := NewInstanceStepConf(conf)
+		Expect(testee.Left()).To(Equal(3))
+
+	})
+
+})
+
 func BenchmarkLineSchedule(b *testing.B) {
 	schedule := NewLine(0, float64(b.N), 2*time.Second)
 	benchmarkScheduleNext(b, schedule)

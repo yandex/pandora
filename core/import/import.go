@@ -88,6 +88,7 @@ func Import(fs afero.Fs) {
 	register.Limiter("once", schedule.NewOnceConf)
 	register.Limiter("unlimited", schedule.NewUnlimitedConf)
 	register.Limiter("step", schedule.NewStepConf)
+	register.Limiter("instance_step", schedule.NewInstanceStepConf)
 	register.Limiter(compositeScheduleKey, schedule.NewCompositeConf)
 
 	config.AddTypeHook(sinkStringHook)
