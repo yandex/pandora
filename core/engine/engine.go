@@ -382,8 +382,10 @@ func (p *instancePool) startInstances(
 	}
 	started++
 	go func() {
-		defer firstInstance.Close()
-		runRes <- instanceRunResult{0, firstInstance.Run(runCtx)}
+		runRes <- instanceRunResult{0, func() error {
+			defer firstInstance.Close()
+			return firstInstance.Run(runCtx)
+		}()}
 	}()
 
 	for ; waiter.Wait(); started++ {
