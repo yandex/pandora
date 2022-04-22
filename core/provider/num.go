@@ -20,6 +20,13 @@ func NewNum(limit int) core.Provider {
 	}
 }
 
+func NewNumBuffered(limit int) core.Provider {
+	return &num{
+		limit: limit,
+		sink:  make(chan core.Ammo, limit),
+	}
+}
+
 type NumConfig struct {
 	Limit int
 }
