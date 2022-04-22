@@ -291,10 +291,6 @@ func (ah *runAwaitHandle) awaitRun() {
 			if errutil.IsNotCtxError(ah.runCtx, err) {
 				ah.onErrAwaited(errors.WithMessage(err, "provider failed"))
 			}
-			if err == nil && !ah.isStartFinished() {
-				ah.log.Debug("Canceling instance start because out of ammo")
-				ah.instanceStartCancel()
-			}
 		case err := <-ah.aggregatorErr:
 			ah.aggregatorErr = nil
 			ah.toWait--
@@ -316,7 +312,13 @@ func (ah *runAwaitHandle) awaitRun() {
 			if ent := ah.log.Check(zap.DebugLevel, "Instance run awaited"); ent != nil {
 				ent.Write(zap.Int("id", res.ID), zap.Int("awaited", ah.awaitedInstances), zap.Error(res.Err))
 			}
-			if errutil.IsNotCtxError(ah.runCtx, res.Err) {
+
+			if res.Err == outOfAmmoErr {
+				if !ah.isStartFinished() {
+					ah.log.Debug("Canceling instance start because out of ammo")
+					ah.instanceStartCancel()
+				}
+			} else if errutil.IsNotCtxError(ah.runCtx, res.Err) {
 				ah.onErrAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.ID)))
 			}
 			ah.checkAllInstancesAreFinished()
