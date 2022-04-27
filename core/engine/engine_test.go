@@ -213,6 +213,21 @@ var _ = Describe("multiple instance", func() {
 		Expect(pool.metrics.InstanceStart.Get()).To(BeNumerically("<=", 3))
 	}, 1)
 
+	It("when provider run done it does not mean out of ammo; instance start is not canceled", func() {
+		conf, _ := newTestPoolConf()
+		conf.Provider = provider.NewNumBuffered(3)
+		conf.NewRPSSchedule = func() (core.Schedule, error) {
+			return schedule.NewOnce(1), nil
+		}
+		conf.StartupSchedule = schedule.NewOnce(3)
+		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
+		ctx := context.Background()
+
+		err := pool.Run(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pool.metrics.InstanceStart.Get()).To(BeNumerically("==", 3))
+	}, 1)
+
 	It("out of RPS - instance start is canceled", func() {
 		conf, _ := newTestPoolConf()
 		conf.NewRPSSchedule = func() (core.Schedule, error) {

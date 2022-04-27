@@ -93,7 +93,7 @@ func (i *instance) shoot(ctx context.Context) (err error) {
 		ammo, ok := i.provider.Acquire()
 		if !ok {
 			i.log.Debug("Out of ammo")
-			break
+			return outOfAmmoErr
 		}
 		if tag.Debug {
 			i.log.Debug("Ammo acquired", zap.Any("ammo", ammo))
@@ -124,3 +124,5 @@ func (i *instance) Close() error {
 	i.log.Debug("Gun closed")
 	return err
 }
+
+var outOfAmmoErr = errors.New("Out of ammo")
