@@ -118,6 +118,10 @@ func (s *Sample) String() string {
 }
 
 func getErrno(err error) int {
+	//
+	if e, ok := err.(net.Error); ok && e.Timeout() {
+		return 110 // Handle client Timeout as if it connection timeout
+	}
 	// stackerr.Error and etc.
 	type hasUnderlying interface {
 		Underlying() error
