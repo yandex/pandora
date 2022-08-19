@@ -6,9 +6,9 @@
 package schedule
 
 import (
-	"go.uber.org/atomic"
-
 	"sync"
+
+	"go.uber.org/atomic"
 )
 
 // StartSync is util to make schedule start goroutine safe.

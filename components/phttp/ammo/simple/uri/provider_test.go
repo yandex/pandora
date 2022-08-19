@@ -9,9 +9,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/spf13/afero"
-
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 	"github.com/yandex/pandora/core"
 )

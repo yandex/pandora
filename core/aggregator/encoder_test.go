@@ -17,13 +17,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	aggregatemock "github.com/yandex/pandora/core/aggregator/mocks"
 	coremock "github.com/yandex/pandora/core/mocks"
 	iomock "github.com/yandex/pandora/lib/ioutil2/mocks"
 	"github.com/yandex/pandora/lib/testutil"
+	"go.uber.org/zap"
 )
 
 type EncoderAggregatorTester struct {

@@ -12,9 +12,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"go.uber.org/zap"
 )
 
 type Config struct {

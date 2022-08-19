@@ -17,9 +17,8 @@ import (
 	"github.com/c2h5oh/datasize"
 	"github.com/facebookgo/stack"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/lib/tag"
+	"go.uber.org/zap"
 )
 
 var InvalidURLError = errors.New("string is not valid URL")

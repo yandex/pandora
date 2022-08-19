@@ -10,14 +10,13 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/coretest"
 	"github.com/yandex/pandora/core/plugin"
 	"github.com/yandex/pandora/lib/ginkgoutil"
 	"github.com/yandex/pandora/lib/testutil"
+	"go.uber.org/zap"
 )
 
 func TestImport(t *testing.T) {

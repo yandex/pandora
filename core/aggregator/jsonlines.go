@@ -10,11 +10,10 @@ import (
 	"io"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/yandex/pandora/lib/ioutil2"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/coreutil"
+	"github.com/yandex/pandora/lib/ioutil2"
 )
 
 type JSONLineAggregatorConfig struct {

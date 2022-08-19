@@ -8,7 +8,6 @@ import (
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/lib/ginkgoutil"
 	netmock "github.com/yandex/pandora/lib/netutil/mocks"

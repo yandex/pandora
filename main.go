@@ -7,7 +7,6 @@ package main
 
 import (
 	"github.com/spf13/afero"
-
 	"github.com/yandex/pandora/cli"
 	example "github.com/yandex/pandora/components/example/import"
 	grpc "github.com/yandex/pandora/components/grpc/import"

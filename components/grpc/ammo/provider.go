@@ -11,9 +11,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"go.uber.org/atomic"
-
 	"github.com/yandex/pandora/core"
+	"go.uber.org/atomic"
 )
 
 func NewProvider(fs afero.Fs, fileName string, start func(ctx context.Context, file afero.File) error) Provider {

@@ -17,12 +17,11 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/engine"
 	"github.com/yandex/pandora/lib/zaputil"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const Version = "0.3.8"

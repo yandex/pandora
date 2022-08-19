@@ -13,7 +13,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 )
 

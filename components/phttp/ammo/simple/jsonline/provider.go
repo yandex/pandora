@@ -12,10 +12,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
 	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"go.uber.org/zap"
 )
 
 func NewProvider(fs afero.Fs, conf Config) *Provider {

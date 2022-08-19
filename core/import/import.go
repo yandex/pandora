@@ -9,8 +9,6 @@ import (
 	"reflect"
 
 	"github.com/spf13/afero"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator"
 	"github.com/yandex/pandora/core/aggregator/netsample"
@@ -23,6 +21,7 @@ import (
 	"github.com/yandex/pandora/core/register"
 	"github.com/yandex/pandora/core/schedule"
 	"github.com/yandex/pandora/lib/tag"
+	"go.uber.org/zap"
 )
 
 const (

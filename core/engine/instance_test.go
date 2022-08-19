@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-
 	"github.com/yandex/pandora/core"
 	coremock "github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/core/schedule"

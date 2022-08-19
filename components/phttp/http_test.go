@@ -14,13 +14,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-
 	ammomock "github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/config"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"golang.org/x/net/http2"
 )
 
 var _ = Describe("BaseGun", func() {

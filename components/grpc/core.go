@@ -8,22 +8,20 @@ import (
 	"log"
 	"time"
 
-	"github.com/jhump/protoreflect/grpcreflect"
-	"github.com/yandex/pandora/core/warmup"
-	"google.golang.org/grpc/credentials"
-	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
-
-	"github.com/yandex/pandora/components/grpc/ammo"
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregator/netsample"
-
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
+	"github.com/jhump/protoreflect/grpcreflect"
+	"github.com/yandex/pandora/components/grpc/ammo"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/aggregator/netsample"
+	"github.com/yandex/pandora/core/warmup"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 	"google.golang.org/grpc/status"
 )
 

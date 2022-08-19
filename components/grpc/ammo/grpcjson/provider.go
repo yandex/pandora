@@ -9,13 +9,11 @@ import (
 	"bufio"
 	"context"
 
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
-	"github.com/yandex/pandora/components/grpc/ammo"
-
 	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"github.com/yandex/pandora/components/grpc/ammo"
+	"go.uber.org/zap"
 )
 
 func NewProvider(fs afero.Fs, conf Config) *Provider {

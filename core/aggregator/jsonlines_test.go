@@ -12,10 +12,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/datasink"
+	"go.uber.org/zap"
 )
 
 type jsonTestData struct {
