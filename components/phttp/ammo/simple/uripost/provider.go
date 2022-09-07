@@ -23,7 +23,7 @@ type Config struct {
 	File string `validate:"required"`
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
-	// Redefine HTTP headers
+	// Additional HTTP headers
 	Headers []string
 	// Passes limits ammo file passes. Unlimited if zero.
 	Passes int `validate:"min=0"`
@@ -55,7 +55,7 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 
 	header := make(http.Header)
 	// parse and prepare Headers from config
-	decodedConfigHeaders, err := decodeHTTPConfigHeaders(p.Config.Headers)
+	decodedConfigHeaders, err := simple.DecodeHTTPConfigHeaders(p.Config.Headers)
 	if err != nil {
 		return err
 	}
@@ -103,21 +103,13 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 				// http.Request.Write sends Host header based on req.URL.Host
 				if k == "Host" {
 					req.Host = v[0]
-					req.URL.Host = v[0]
 				} else {
 					req.Header[k] = v
 				}
 			}
 
-			// redefine request Headers from config
-			for _, header := range decodedConfigHeaders {
-				// special behavior for `Host` header
-				if header.key == "Host" {
-					req.URL.Host = header.value
-				} else {
-					req.Header.Set(header.key, header.value)
-				}
-			}
+			// add new Headers to request from config
+			simple.UpdateRequestWithHeaders(req, decodedConfigHeaders)
 
 			sh := p.Pool.Get().(*simple.Ammo)
 			sh.Reset(req, tag)

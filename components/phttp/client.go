@@ -171,3 +171,11 @@ func checkHTTP2(state *tls.ConnectionState) error {
 	}
 	return nil
 }
+
+func getHostWithoutPort(target string) string {
+	host, _, err := net.SplitHostPort(target)
+	if err != nil {
+		host = target
+	}
+	return host
+}

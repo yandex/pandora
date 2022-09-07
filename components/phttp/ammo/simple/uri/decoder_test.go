@@ -68,7 +68,6 @@ var _ = Describe("Decoder", func() {
 		req, sample := sh.Request()
 		Expect(*req.URL).To(MatchFields(IgnoreExtras, Fields{
 			"Path":   Equal(line),
-			"Host":   Equal(host),
 			"Scheme": BeEmpty(),
 		}))
 		Expect(req.Host).To(Equal(host))
@@ -94,7 +93,6 @@ var _ = Describe("Decoder", func() {
 		req, sample := sh.Request()
 		Expect(*req.URL).To(MatchFields(IgnoreExtras, Fields{
 			"Path":   Equal("/some/path"),
-			"Host":   Equal(host),
 			"Scheme": BeEmpty(),
 		}))
 		Expect(req.Host).To(Equal(host))
@@ -140,18 +138,6 @@ var _ = Describe("Decoder", func() {
 			Expect(decoder.header).To(Equal(http.Header{
 				"C": []string{""},
 			}))
-		})
-		It("overwrite by config", func() {
-			decodedConfigHeaders, _ := decodeHTTPConfigHeaders([]string{
-				"[Host: youhost.tld]",
-				"[SomeHeader: somevalue]",
-			})
-			decoder.configHeaders = decodedConfigHeaders
-			cfgHeaders := []ConfigHeader{
-				{"Host", "youhost.tld"},
-				{"SomeHeader", "somevalue"},
-			}
-			Expect(decoder.configHeaders).To(Equal(cfgHeaders))
 		})
 	})
 	It("Reset", func() {

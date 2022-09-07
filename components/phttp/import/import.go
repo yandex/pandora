@@ -40,22 +40,22 @@ func Import(fs afero.Fs) {
 	})
 
 	register.Gun("http", func(conf phttp.HTTPGunConfig) func() core.Gun {
-		_ = preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
+		targetResolved, _ := preResolveTargetAddr(&conf.Client, conf.Gun.Target)
 		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path)
-		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTPGun(conf, answLog)) }
+		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTPGun(conf, answLog, targetResolved)) }
 	}, phttp.DefaultHTTPGunConfig)
 
 	register.Gun("http2", func(conf phttp.HTTP2GunConfig) func() (core.Gun, error) {
-		_ = preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
+		targetResolved, _ := preResolveTargetAddr(&conf.Client, conf.Gun.Target)
 		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path)
 		return func() (core.Gun, error) {
-			gun, err := phttp.NewHTTP2Gun(conf, answLog)
+			gun, err := phttp.NewHTTP2Gun(conf, answLog, targetResolved)
 			return phttp.WrapGun(gun), err
 		}
 	}, phttp.DefaultHTTP2GunConfig)
 
 	register.Gun("connect", func(conf phttp.ConnectGunConfig) func() core.Gun {
-		_ = preResolveTargetAddr(&conf.Client, &conf.Target)
+		conf.Target, _ = preResolveTargetAddr(&conf.Client, conf.Target)
 		answLog := answlog.Init(conf.BaseGunConfig.AnswLog.Path)
 		return func() core.Gun {
 			return phttp.WrapGun(phttp.NewConnectGun(conf, answLog))
@@ -69,22 +69,24 @@ func Import(fs afero.Fs) {
 // If we can resolve accessible target addr - use it as target, not use caching.
 // Otherwise just use DNS cache - we should not fail shooting, we should try to
 // connect on every shoot. DNS cache will save resolved addr after first successful connect.
-func preResolveTargetAddr(clientConf *phttp.ClientConfig, target *string) (err error) {
+func preResolveTargetAddr(clientConf *phttp.ClientConfig, target string) (targetAddr string, err error) {
+	targetAddr = target
+
 	if !clientConf.Dialer.DNSCache {
 		return
 	}
-	if endpointIsResolved(*target) {
+	if endpointIsResolved(target) {
 		clientConf.Dialer.DNSCache = false
 		return
 	}
-	resolved, err := netutil.LookupReachable(*target)
+	resolved, err := netutil.LookupReachable(target)
 	if err != nil {
 		zap.L().Warn("DNS target pre resolve failed",
-			zap.String("target", *target), zap.Error(err))
+			zap.String("target", target), zap.Error(err))
 		return
 	}
 	clientConf.Dialer.DNSCache = false
-	*target = resolved
+	targetAddr = resolved
 	return
 }
 

@@ -146,7 +146,6 @@ var _ = Describe("provider decode", func() {
 				"Host":       Equal(expectedData.host),
 				"URL": PointTo(MatchFields(IgnoreExtras, Fields{
 					"Scheme": BeEmpty(),
-					"Host":   Equal(expectedData.host),
 					"Path":   Equal(expectedData.path),
 				})),
 				"Header": Equal(expectedData.header),

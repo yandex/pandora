@@ -75,7 +75,7 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	var passNum int
 	var ammoNum int
 	// parse and prepare Headers from config
-	decodedConfigHeaders, err := decodeHTTPConfigHeaders(p.Config.Headers)
+	decodedConfigHeaders, err := simple.DecodeHTTPConfigHeaders(p.Config.Headers)
 	if err != nil {
 		return err
 	}
@@ -109,15 +109,8 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 				return errors.Wrapf(err, "failed to decode ammo at position: %v; data: %q", filePosition(ammoFile), buff)
 			}
 
-			// redefine request Headers from config
-			for _, header := range decodedConfigHeaders {
-				// special behavior for `Host` header
-				if header.key == "Host" {
-					req.URL.Host = header.value
-				} else {
-					req.Header.Set(header.key, header.value)
-				}
-			}
+			// add new Headers to request from config
+			simple.UpdateRequestWithHeaders(req, decodedConfigHeaders)
 
 			sh := p.Pool.Get().(*simple.Ammo)
 			sh.Reset(req, tag)
