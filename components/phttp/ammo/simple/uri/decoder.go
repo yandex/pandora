@@ -14,6 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"github.com/yandex/pandora/lib/confutil"
 )
 
 type decoder struct {
@@ -24,14 +25,16 @@ type decoder struct {
 	ammoNum       int
 	header        http.Header
 	configHeaders []simple.Header
+	chosenCases   []string
 }
 
-func newDecoder(ctx context.Context, sink chan<- *simple.Ammo, pool *sync.Pool) *decoder {
+func newDecoder(ctx context.Context, sink chan<- *simple.Ammo, pool *sync.Pool, chosenCases []string) *decoder {
 	return &decoder{
-		sink:   sink,
-		header: http.Header{},
-		pool:   pool,
-		ctx:    ctx,
+		sink:        sink,
+		header:      http.Header{},
+		pool:        pool,
+		ctx:         ctx,
+		chosenCases: chosenCases,
 	}
 }
 
@@ -55,6 +58,9 @@ func (d *decoder) decodeURI(line []byte) error {
 	var tag string
 	if len(parts) > 1 {
 		tag = parts[1]
+	}
+	if !confutil.IsChosenCase(tag, d.chosenCases) {
+		return nil
 	}
 	req, err := http.NewRequest("GET", string(url), nil)
 	if err != nil {

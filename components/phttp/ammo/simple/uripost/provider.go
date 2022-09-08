@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"github.com/yandex/pandora/lib/confutil"
 	"go.uber.org/zap"
 )
 
@@ -26,7 +27,8 @@ type Config struct {
 	// Additional HTTP headers
 	Headers []string
 	// Passes limits ammo file passes. Unlimited if zero.
-	Passes int `validate:"min=0"`
+	Passes      int `validate:"min=0"`
+	ChosenCases []string
 }
 
 func NewProvider(fs afero.Fs, conf Config) *Provider {
@@ -89,6 +91,9 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			}
 			if bodySize == 0 {
 				break // start over from the beginning of file if ammo size is 0
+			}
+			if !confutil.IsChosenCase(tag, p.Config.ChosenCases) {
+				continue
 			}
 			buff := make([]byte, bodySize)
 			if n, err := io.ReadFull(reader, buff); err != nil {

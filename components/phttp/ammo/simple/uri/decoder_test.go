@@ -21,7 +21,7 @@ func newAmmoPool() *sync.Pool {
 var _ = Describe("Decoder", func() {
 	It("uri decode ctx cancel", func() {
 		ctx, cancel := context.WithCancel(context.Background())
-		decoder := newDecoder(ctx, make(chan *simple.Ammo), newAmmoPool())
+		decoder := newDecoder(ctx, make(chan *simple.Ammo), newAmmoPool(), nil)
 		cancel()
 		err := decoder.Decode([]byte("/some/path"))
 		Expect(err).To(Equal(context.Canceled))
@@ -32,7 +32,7 @@ var _ = Describe("Decoder", func() {
 	)
 	BeforeEach(func() {
 		ammoCh = make(chan *simple.Ammo, 10)
-		decoder = newDecoder(context.Background(), ammoCh, newAmmoPool())
+		decoder = newDecoder(context.Background(), ammoCh, newAmmoPool(), nil)
 	})
 	DescribeTable("invalid input",
 		func(line string) {

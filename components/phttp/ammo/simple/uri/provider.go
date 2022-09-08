@@ -23,8 +23,9 @@ type Config struct {
 	// Additional HTTP headers
 	Headers []string
 	// Passes limits ammo file passes. Unlimited if zero.
-	Passes int `validate:"min=0"`
-	Uris   []string
+	Passes      int `validate:"min=0"`
+	Uris        []string
+	ChosenCases []string
 }
 
 // TODO: pass logger and metricsRegistry
@@ -73,7 +74,7 @@ type Provider struct {
 }
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
-	p.decoder = newDecoder(ctx, p.Sink, &p.Pool)
+	p.decoder = newDecoder(ctx, p.Sink, &p.Pool, p.Config.ChosenCases)
 	// parse and prepare Headers from config
 	decodedConfigHeaders, err := simple.DecodeHTTPConfigHeaders(p.Config.Headers)
 	if err != nil {
