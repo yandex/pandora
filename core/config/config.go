@@ -84,6 +84,7 @@ func AddKindHook(hook KindHook) (_ struct{}) {
 
 func DefaultHooks() []mapstructure.DecodeHookFunc {
 	return []mapstructure.DecodeHookFunc{
+		VariableInjectHook,
 		DebugHook,
 		TextUnmarshallerHook,
 		mapstructure.StringToTimeDurationHookFunc(),

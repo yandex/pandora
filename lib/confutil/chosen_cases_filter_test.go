@@ -6,12 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type testCase struct {
-	ammoTag  string
-	expected bool
-}
-
 func TestChosenCases(t *testing.T) {
+	type testCase struct {
+		ammoTag  string
+		expected bool
+	}
+
 	cases := []string{"tag1", "tag3"}
 
 	tests := []testCase{

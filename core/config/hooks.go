@@ -17,6 +17,7 @@ import (
 	"github.com/c2h5oh/datasize"
 	"github.com/facebookgo/stack"
 	"github.com/pkg/errors"
+	"github.com/yandex/pandora/lib/confutil"
 	"github.com/yandex/pandora/lib/tag"
 	"go.uber.org/zap"
 )
@@ -136,4 +137,23 @@ func DebugHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{},
 		zap.String("data", fmt.Sprint(data)),
 	)
 	return
+}
+
+// VariableInjectHook injects values into ${VAR_NAME} placeholders
+func VariableInjectHook(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	if f.Kind() != reflect.String {
+		return data, nil
+	}
+
+	str := data.(string)
+	res, err := confutil.ResolveCustomTags(str, t)
+	if err == confutil.ErrNoTagsFound {
+		return data, nil
+	}
+
+	if err != nil {
+		return data, err
+	}
+
+	return res, nil
 }
