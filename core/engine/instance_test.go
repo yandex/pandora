@@ -47,13 +47,15 @@ var _ = Describe("Instance", func() {
 
 	JustBeforeEach(func() {
 		deps := instanceDeps{
-			aggregator,
+
 			newSchedule,
 			newGun,
 			instanceSharedDeps{
 				provider,
 				metrics,
 				nil,
+				aggregator,
+				false,
 			},
 		}
 		ins, insCreateErr = newInstance(ctx, ginkgoutil.NewLogger(), "pool_0", 0, deps)

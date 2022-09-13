@@ -17,7 +17,9 @@ import (
 )
 
 const (
-	ProtoCodeError = 999
+	ProtoCodeError          = 999
+	DiscardedShootCodeError = 777
+	DiscardedShootTag       = "discarded"
 )
 
 const (
@@ -149,4 +151,14 @@ func getErrno(err error) int {
 			return ProtoCodeError
 		}
 	}
+}
+
+func DiscardedShootSample() *Sample {
+	sample := &Sample{
+		timeStamp: time.Now(),
+		tags:      DiscardedShootTag,
+	}
+	sample.SetUserNet(DiscardedShootCodeError)
+
+	return sample
 }
