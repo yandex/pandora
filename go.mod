@@ -12,7 +12,6 @@ require (
 	github.com/hashicorp/go-multierror v0.0.0-20171204182908-b7773ae21874
 	github.com/jhump/protoreflect v1.10.1
 	github.com/json-iterator/go v0.0.0-20180214060632-e7c7f3b33712
-	github.com/magiconair/properties v1.7.6
 	github.com/mitchellh/mapstructure v0.0.0-20180203102830-a4e142e9c047
 	github.com/onsi/ginkgo v1.4.0
 	github.com/onsi/gomega v1.3.0
