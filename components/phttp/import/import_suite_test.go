@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
-
 	. "github.com/yandex/pandora/components/phttp"
 	"github.com/yandex/pandora/lib/ginkgoutil"
 )
@@ -40,7 +39,7 @@ var _ = Describe("preResolveTargetAddr", func() {
 		target := "localhost:" + port
 		expectedResolved := "127.0.0.1:" + port
 
-		err = preResolveTargetAddr(conf, &target)
+		target, err = preResolveTargetAddr(conf, target)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(conf.Dialer.DNSCache).To(BeFalse())
 
@@ -53,7 +52,7 @@ var _ = Describe("preResolveTargetAddr", func() {
 
 		const addr = "127.0.0.1:80"
 		target := addr
-		err := preResolveTargetAddr(conf, &target)
+		target, err := preResolveTargetAddr(conf, target)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(conf.Dialer.DNSCache).To(BeFalse())
 		Expect(target).To(Equal(addr))
@@ -65,7 +64,7 @@ var _ = Describe("preResolveTargetAddr", func() {
 
 		const addr = "localhost:54321"
 		target := addr
-		err := preResolveTargetAddr(conf, &target)
+		target, err := preResolveTargetAddr(conf, target)
 		Expect(err).To(HaveOccurred())
 		Expect(conf.Dialer.DNSCache).To(BeTrue())
 		Expect(target).To(Equal(addr))

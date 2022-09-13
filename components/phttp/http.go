@@ -28,14 +28,14 @@ type HTTP2GunConfig struct {
 	Client ClientConfig    `config:",squash"`
 }
 
-func NewHTTPGun(conf HTTPGunConfig, answLog *zap.Logger) *HTTPGun {
+func NewHTTPGun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string) *HTTPGun {
 	transport := NewTransport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext)
 	client := newClient(transport, conf.Client.Redirect)
-	return NewClientGun(client, conf.Gun, answLog)
+	return NewClientGun(client, conf.Gun, answLog, targetResolved)
 }
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
-func NewHTTP2Gun(conf HTTP2GunConfig, answLog *zap.Logger) (*HTTPGun, error) {
+func NewHTTP2Gun(conf HTTP2GunConfig, answLog *zap.Logger, targetResolved string) (*HTTPGun, error) {
 	if !conf.Gun.SSL {
 		// Open issue on github if you really need this feature.
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
@@ -44,10 +44,10 @@ func NewHTTP2Gun(conf HTTP2GunConfig, answLog *zap.Logger) (*HTTPGun, error) {
 	client := newClient(transport, conf.Client.Redirect)
 	// Will panic and cancel shooting whet target doesn't support HTTP/2.
 	client = &panicOnHTTP1Client{client}
-	return NewClientGun(client, conf.Gun, answLog), nil
+	return NewClientGun(client, conf.Gun, answLog, targetResolved), nil
 }
 
-func NewClientGun(client Client, conf ClientGunConfig, answLog *zap.Logger) *HTTPGun {
+func NewClientGun(client Client, conf ClientGunConfig, answLog *zap.Logger, targetResolved string) *HTTPGun {
 	scheme := "http"
 	if conf.SSL {
 		scheme = "https"
@@ -63,25 +63,30 @@ func NewClientGun(client Client, conf ClientGunConfig, answLog *zap.Logger) *HTT
 			},
 			AnswLog: answLog,
 		},
-		scheme: scheme,
-		target: conf.Target,
-		client: client,
+		scheme:         scheme,
+		hostname:       getHostWithoutPort(conf.Target),
+		targetResolved: targetResolved,
+		client:         client,
 	}
 	return &g
 }
 
 type HTTPGun struct {
 	BaseGun
-	scheme string
-	target string
-	client Client
+	scheme         string
+	hostname       string
+	targetResolved string
+	client         Client
 }
 
 var _ Gun = (*HTTPGun)(nil)
 
 func (g *HTTPGun) Do(req *http.Request) (*http.Response, error) {
-	req.Host = req.URL.Host
-	req.URL.Host = g.target
+	if req.Host == "" {
+		req.Host = g.hostname
+	}
+
+	req.URL.Host = g.targetResolved
 	req.URL.Scheme = g.scheme
 	return g.client.Do(req)
 }

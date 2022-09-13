@@ -12,10 +12,10 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
 	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"github.com/yandex/pandora/lib/confutil"
+	"go.uber.org/zap"
 )
 
 func NewProvider(fs afero.Fs, conf Config) *Provider {
@@ -42,10 +42,12 @@ type Config struct {
 	ContinueOnError bool
 	//Maximum number of byte in an ammo. Default is bufio.MaxScanTokenSize
 	MaxAmmoSize int
+	ChosenCases []string
 }
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	var ammoNum, passNum int
+
 	for {
 		passNum++
 		scanner := bufio.NewScanner(ammoFile)
@@ -62,6 +64,9 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 				} else {
 					return errors.Wrapf(err, "failed to decode ammo at line: %v; data: %q", line, data)
 				}
+			}
+			if !confutil.IsChosenCase(a.Tag(), p.Config.ChosenCases) {
+				continue
 			}
 			ammoNum++
 			select {

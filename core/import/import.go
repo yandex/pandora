@@ -9,8 +9,6 @@ import (
 	"reflect"
 
 	"github.com/spf13/afero"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator"
 	"github.com/yandex/pandora/core/aggregator/netsample"
@@ -22,7 +20,9 @@ import (
 	"github.com/yandex/pandora/core/provider"
 	"github.com/yandex/pandora/core/register"
 	"github.com/yandex/pandora/core/schedule"
+	"github.com/yandex/pandora/lib/confutil"
 	"github.com/yandex/pandora/lib/tag"
+	"go.uber.org/zap"
 )
 
 const (
@@ -88,10 +88,14 @@ func Import(fs afero.Fs) {
 	register.Limiter("once", schedule.NewOnceConf)
 	register.Limiter("unlimited", schedule.NewUnlimitedConf)
 	register.Limiter("step", schedule.NewStepConf)
+	register.Limiter("instance_step", schedule.NewInstanceStepConf)
 	register.Limiter(compositeScheduleKey, schedule.NewCompositeConf)
 
 	config.AddTypeHook(sinkStringHook)
 	config.AddTypeHook(scheduleSliceToCompositeConfigHook)
+
+	confutil.RegisterTagResolver("", confutil.EnvTagResolver)
+	confutil.RegisterTagResolver("ENV", confutil.EnvTagResolver)
 
 	// Required for decoding plugins. Need to be added after Composite Schedule hacky hook.
 	pluginconfig.AddHooks()

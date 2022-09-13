@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-
 	"github.com/yandex/pandora/core"
 	coremock "github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/core/schedule"
@@ -48,13 +47,15 @@ var _ = Describe("Instance", func() {
 
 	JustBeforeEach(func() {
 		deps := instanceDeps{
-			aggregator,
+
 			newSchedule,
 			newGun,
 			instanceSharedDeps{
 				provider,
 				metrics,
 				nil,
+				aggregator,
+				false,
 			},
 		}
 		ins, insCreateErr = newInstance(ctx, ginkgoutil.NewLogger(), "pool_0", 0, deps)

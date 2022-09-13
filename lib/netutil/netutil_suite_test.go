@@ -5,10 +5,10 @@ import (
 	"net"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/lib/ginkgoutil"
 	netmock "github.com/yandex/pandora/lib/netutil/mocks"
@@ -29,7 +29,7 @@ var _ = ginkgo.Describe("DNS", func() {
 		addr := "localhost:" + port
 		expectedResolved := "127.0.0.1:" + port
 
-		resolved, err := LookupReachable(addr)
+		resolved, err := LookupReachable(addr, time.Second)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		gomega.Expect(resolved).To(gomega.Equal(expectedResolved))
 	})

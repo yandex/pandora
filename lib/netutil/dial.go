@@ -9,6 +9,7 @@ import (
 	"context"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -56,8 +57,8 @@ var DefaultDNSCache = &SimpleDNSCache{}
 // This method has much more overhead, but get guaranteed reachable resolved addr.
 // Example: host is resolved to IPv4 and IPv6, but IPv4 is not working on machine.
 // LookupReachable will return IPv6 in that case.
-func LookupReachable(addr string) (string, error) {
-	d := net.Dialer{DualStack: true}
+func LookupReachable(addr string, timeout time.Duration) (string, error) {
+	d := net.Dialer{DualStack: true, Timeout: timeout}
 	conn, err := d.Dial("tcp", addr)
 	if err != nil {
 		return "", err

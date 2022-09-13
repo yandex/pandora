@@ -15,9 +15,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core/aggregator/netsample"
+	"go.uber.org/zap"
 )
 
 var _ = Describe("connect", func() {

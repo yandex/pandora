@@ -3,10 +3,9 @@ package cli
 import (
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core/engine"
 	"github.com/yandex/pandora/lib/monitoring"
+	"go.uber.org/zap"
 )
 
 func newEngineMetrics() engine.Metrics {

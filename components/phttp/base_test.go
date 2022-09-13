@@ -18,13 +18,12 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-	"go.uber.org/zap"
-
 	ammomock "github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coretest"
 	"github.com/yandex/pandora/lib/ginkgoutil"
+	"go.uber.org/zap"
 )
 
 func testDeps() core.GunDeps {

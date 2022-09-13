@@ -14,13 +14,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-
 	ammomock "github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/config"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"golang.org/x/net/http2"
 )
 
 var _ = Describe("BaseGun", func() {
@@ -47,9 +46,10 @@ var _ = Describe("BaseGun", func() {
 		defer server.Close()
 		log := zap.NewNop()
 		conf := DefaultHTTPGunConfig()
-		conf.Gun.Target = strings.TrimPrefix(server.URL, "http://")
+		conf.Gun.Target = host + ":80"
+		targetResolved := strings.TrimPrefix(server.URL, "http://")
 		results := &netsample.TestAggregator{}
-		httpGun := NewHTTPGun(conf, log)
+		httpGun := NewHTTPGun(conf, log, targetResolved)
 		_ = httpGun.Bind(results, testDeps())
 
 		am := newAmmoReq(expectedReq)
@@ -59,9 +59,9 @@ var _ = Describe("BaseGun", func() {
 		Expect(*actualReq).To(MatchFields(IgnoreExtras, Fields{
 			"Method": Equal("GET"),
 			"Proto":  Equal("HTTP/1.1"),
-			"Host":   Equal(host), // Not server host, but host from ammo.
+			"Host":   Equal(host), // Server host
 			"URL": PointTo(MatchFields(IgnoreExtras, Fields{
-				"Host": BeEmpty(), // Server request.
+				"Host": BeEmpty(), // Set in Do().
 				"Path": Equal(path),
 			})),
 		}))
@@ -99,7 +99,7 @@ var _ = Describe("HTTP", func() {
 		conf := DefaultHTTPGunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Gun.SSL = https
-		gun := NewHTTPGun(conf, log)
+		gun := NewHTTPGun(conf, log, conf.Gun.Target)
 		var aggr netsample.TestAggregator
 		_ = gun.Bind(&aggr, testDeps())
 		gun.Shoot(newAmmoURL("/"))
@@ -125,7 +125,7 @@ var _ = Describe("HTTP", func() {
 		conf := DefaultHTTPGunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Client.Redirect = redirect
-		gun := NewHTTPGun(conf, log)
+		gun := NewHTTPGun(conf, log, conf.Gun.Target)
 		var aggr netsample.TestAggregator
 		_ = gun.Bind(&aggr, testDeps())
 		gun.Shoot(newAmmoURL("/redirect"))
@@ -163,7 +163,7 @@ var _ = Describe("HTTP", func() {
 		conf := DefaultHTTPGunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Gun.SSL = true
-		gun := NewHTTPGun(conf, log)
+		gun := NewHTTPGun(conf, log, conf.Gun.Target)
 		var results netsample.TestAggregator
 		_ = gun.Bind(&results, testDeps())
 		gun.Shoot(newAmmoURL("/"))
@@ -187,7 +187,7 @@ var _ = Describe("HTTP/2", func() {
 		log := zap.NewNop()
 		conf := DefaultHTTP2GunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
-		gun, _ := NewHTTP2Gun(conf, log)
+		gun, _ := NewHTTP2Gun(conf, log, conf.Gun.Target)
 		var results netsample.TestAggregator
 		_ = gun.Bind(&results, testDeps())
 		gun.Shoot(newAmmoURL("/"))
@@ -202,7 +202,7 @@ var _ = Describe("HTTP/2", func() {
 		log := zap.NewNop()
 		conf := DefaultHTTP2GunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
-		gun, _ := NewHTTP2Gun(conf, log)
+		gun, _ := NewHTTP2Gun(conf, log, conf.Gun.Target)
 		var results netsample.TestAggregator
 		_ = gun.Bind(&results, testDeps())
 		var r interface{}
@@ -225,7 +225,7 @@ var _ = Describe("HTTP/2", func() {
 		conf := DefaultHTTP2GunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Gun.SSL = false
-		_, err := NewHTTP2Gun(conf, log)
+		_, err := NewHTTP2Gun(conf, log, conf.Gun.Target)
 		Expect(err).To(HaveOccurred())
 	})
 

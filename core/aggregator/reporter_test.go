@@ -10,11 +10,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
-
 	coremock "github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/lib/testutil"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestReporter_DroppedErr(t *testing.T) {

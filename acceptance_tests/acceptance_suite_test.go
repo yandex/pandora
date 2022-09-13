@@ -14,10 +14,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/lib/ginkgoutil"
 	"github.com/yandex/pandora/lib/tag"
+	"go.uber.org/zap"
 )
 
 var pandoraBin string

@@ -10,14 +10,13 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/yandex/pandora/core/warmup"
-
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coreutil"
+	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/lib/tag"
+	"go.uber.org/zap"
 )
 
 type instance struct {
@@ -53,7 +52,6 @@ func newInstance(ctx context.Context, log *zap.Logger, poolID string, id int, de
 }
 
 type instanceDeps struct {
-	aggregator  core.Aggregator
 	newSchedule func() (core.Schedule, error)
 	newGun      func() (core.Gun, error)
 	instanceSharedDeps
@@ -63,6 +61,8 @@ type instanceSharedDeps struct {
 	provider core.Provider
 	Metrics
 	gunWarmUpResult interface{}
+	aggregator      core.Aggregator
+	discardOverflow bool
 }
 
 // Run blocks until ammo finish, error or context cancel.
@@ -90,24 +90,34 @@ func (i *instance) shoot(ctx context.Context) (err error) {
 	// Checking, that schedule is not finished, required, to not consume extra ammo,
 	// on finish in case of per instance schedule.
 	for !waiter.IsFinished() {
-		ammo, ok := i.provider.Acquire()
-		if !ok {
-			i.log.Debug("Out of ammo")
-			return outOfAmmoErr
+		err := func() error {
+			ammo, ok := i.provider.Acquire()
+			if !ok {
+				i.log.Debug("Out of ammo")
+				return outOfAmmoErr
+			}
+			defer i.provider.Release(ammo)
+			if tag.Debug {
+				i.log.Debug("Ammo acquired", zap.Any("ammo", ammo))
+			}
+			if !waiter.Wait() {
+				return nil
+			}
+			if !i.discardOverflow || !waiter.IsSlowDown() {
+				i.Metrics.Request.Add(1)
+				if tag.Debug {
+					i.log.Debug("Shooting", zap.Any("ammo", ammo))
+				}
+				i.gun.Shoot(ammo)
+				i.Metrics.Response.Add(1)
+			} else {
+				i.aggregator.Report(netsample.DiscardedShootSample())
+			}
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
-		if tag.Debug {
-			i.log.Debug("Ammo acquired", zap.Any("ammo", ammo))
-		}
-		if !waiter.Wait() {
-			break
-		}
-		i.Metrics.Request.Add(1)
-		if tag.Debug {
-			i.log.Debug("Shooting", zap.Any("ammo", ammo))
-		}
-		i.gun.Shoot(ammo)
-		i.Metrics.Response.Add(1)
-		i.provider.Release(ammo)
 	}
 	return ctx.Err()
 }

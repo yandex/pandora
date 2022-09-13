@@ -8,9 +8,8 @@ package aggregator
 import (
 	"context"
 
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
+	"go.uber.org/zap"
 )
 
 func NewLog() core.Aggregator {

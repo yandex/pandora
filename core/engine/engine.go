@@ -10,15 +10,13 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/yandex/pandora/core/warmup"
-
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coreutil"
+	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/lib/errutil"
 	"github.com/yandex/pandora/lib/monitoring"
+	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -33,6 +31,7 @@ type InstancePoolConfig struct {
 	RPSPerInstance  bool                          `config:"rps-per-instance"`
 	NewRPSSchedule  func() (core.Schedule, error) `config:"rps" validate:"required"`
 	StartupSchedule core.Schedule                 `config:"startup" validate:"required"`
+	DiscardOverflow bool                          `config:"discard_overflow"`
 }
 
 // TODO(skipor): use something github.com/rcrowley/go-metrics based.
@@ -364,10 +363,9 @@ func (p *instancePool) startInstances(
 	newInstanceSchedule func() (core.Schedule, error),
 	runRes chan<- instanceRunResult) (started int, err error) {
 	deps := instanceDeps{
-		p.Aggregator,
 		newInstanceSchedule,
 		p.NewGun,
-		instanceSharedDeps{p.Provider, p.metrics, p.gunWarmUpResult},
+		instanceSharedDeps{p.Provider, p.metrics, p.gunWarmUpResult, p.Aggregator, p.DiscardOverflow},
 	}
 
 	waiter := coreutil.NewWaiter(p.StartupSchedule, startCtx)

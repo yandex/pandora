@@ -11,7 +11,6 @@ import (
 	"github.com/c2h5oh/datasize"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coreutil"
 )

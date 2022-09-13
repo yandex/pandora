@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-
 	"github.com/yandex/pandora/core"
 )
 

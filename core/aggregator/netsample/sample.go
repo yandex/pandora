@@ -7,6 +7,7 @@ package netsample
 
 import (
 	"net"
+	"net/url"
 	"os"
 	"sync"
 	"syscall"
@@ -16,7 +17,9 @@ import (
 )
 
 const (
-	ProtoCodeError = 999
+	ProtoCodeError          = 999
+	DiscardedShootCodeError = 777
+	DiscardedShootTag       = "discarded"
 )
 
 const (
@@ -117,6 +120,10 @@ func (s *Sample) String() string {
 }
 
 func getErrno(err error) int {
+	//
+	if e, ok := err.(net.Error); ok && e.Timeout() {
+		return 110 // Handle client Timeout as if it connection timeout
+	}
 	// stackerr.Error and etc.
 	type hasUnderlying interface {
 		Underlying() error
@@ -135,6 +142,8 @@ func getErrno(err error) int {
 			err = typed.Err
 		case *os.SyscallError:
 			err = typed.Err
+		case *url.Error:
+			err = typed.Err
 		case syscall.Errno:
 			return int(typed)
 		default:
@@ -142,4 +151,14 @@ func getErrno(err error) int {
 			return ProtoCodeError
 		}
 	}
+}
+
+func DiscardedShootSample() *Sample {
+	sample := &Sample{
+		timeStamp: time.Now(),
+		tags:      DiscardedShootTag,
+	}
+	sample.SetUserNet(DiscardedShootCodeError)
+
+	return sample
 }

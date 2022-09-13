@@ -51,4 +51,8 @@ func (a *Ammo) IsValid() bool {
 	return !a.isInvalid
 }
 
+func (a *Ammo) Tag() string {
+	return a.tag
+}
+
 var _ phttp.Ammo = (*Ammo)(nil)

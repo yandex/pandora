@@ -12,20 +12,20 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"go.uber.org/zap"
 )
 
 type Config struct {
 	File string
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
-	// Redefine HTTP headers
+	// Additional HTTP headers
 	Headers []string
 	// Passes limits ammo file passes. Unlimited if zero.
-	Passes int `validate:"min=0"`
-	Uris   []string
+	Passes      int `validate:"min=0"`
+	Uris        []string
+	ChosenCases []string
 }
 
 // TODO: pass logger and metricsRegistry
@@ -74,9 +74,9 @@ type Provider struct {
 }
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
-	p.decoder = newDecoder(ctx, p.Sink, &p.Pool)
+	p.decoder = newDecoder(ctx, p.Sink, &p.Pool, p.Config.ChosenCases)
 	// parse and prepare Headers from config
-	decodedConfigHeaders, err := decodeHTTPConfigHeaders(p.Config.Headers)
+	decodedConfigHeaders, err := simple.DecodeHTTPConfigHeaders(p.Config.Headers)
 	if err != nil {
 		return err
 	}

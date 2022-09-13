@@ -11,11 +11,10 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/lib/errutil"
 	"github.com/yandex/pandora/lib/ioutil2"
+	"go.uber.org/zap"
 )
 
 type NewAmmoDecoder func(deps core.ProviderDeps, source io.Reader) (AmmoDecoder, error)

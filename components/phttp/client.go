@@ -13,11 +13,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/lib/netutil"
+	"go.uber.org/zap"
+	"golang.org/x/net/http2"
 )
 
 //go:generate mockery -name=Client -case=underscore -inpkg -testonly
@@ -171,4 +170,12 @@ func checkHTTP2(state *tls.ConnectionState) error {
 		return errors.New("http2: could not negotiate protocol mutually")
 	}
 	return nil
+}
+
+func getHostWithoutPort(target string) string {
+	host, _, err := net.SplitHostPort(target)
+	if err != nil {
+		host = target
+	}
+	return host
 }

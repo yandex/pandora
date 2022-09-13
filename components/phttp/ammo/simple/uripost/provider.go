@@ -10,9 +10,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"github.com/yandex/pandora/lib/confutil"
+	"go.uber.org/zap"
 )
 
 func filePosition(file afero.File) (position int64) {
@@ -24,10 +24,11 @@ type Config struct {
 	File string `validate:"required"`
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
-	// Redefine HTTP headers
+	// Additional HTTP headers
 	Headers []string
 	// Passes limits ammo file passes. Unlimited if zero.
-	Passes int `validate:"min=0"`
+	Passes      int `validate:"min=0"`
+	ChosenCases []string
 }
 
 func NewProvider(fs afero.Fs, conf Config) *Provider {
@@ -56,7 +57,7 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 
 	header := make(http.Header)
 	// parse and prepare Headers from config
-	decodedConfigHeaders, err := decodeHTTPConfigHeaders(p.Config.Headers)
+	decodedConfigHeaders, err := simple.DecodeHTTPConfigHeaders(p.Config.Headers)
 	if err != nil {
 		return err
 	}
@@ -91,6 +92,9 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			if bodySize == 0 {
 				break // start over from the beginning of file if ammo size is 0
 			}
+			if !confutil.IsChosenCase(tag, p.Config.ChosenCases) {
+				continue
+			}
 			buff := make([]byte, bodySize)
 			if n, err := io.ReadFull(reader, buff); err != nil {
 				return errors.Wrapf(err, "failed to read ammo at position: %v; tried to read: %v; have read: %v", filePosition(ammoFile), bodySize, n)
@@ -104,21 +108,13 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 				// http.Request.Write sends Host header based on req.URL.Host
 				if k == "Host" {
 					req.Host = v[0]
-					req.URL.Host = v[0]
 				} else {
 					req.Header[k] = v
 				}
 			}
 
-			// redefine request Headers from config
-			for _, header := range decodedConfigHeaders {
-				// special behavior for `Host` header
-				if header.key == "Host" {
-					req.URL.Host = header.value
-				} else {
-					req.Header.Set(header.key, header.value)
-				}
-			}
+			// add new Headers to request from config
+			simple.UpdateRequestWithHeaders(req, decodedConfigHeaders)
 
 			sh := p.Pool.Get().(*simple.Ammo)
 			sh.Reset(req, tag)

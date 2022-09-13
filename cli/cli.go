@@ -17,15 +17,14 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/engine"
 	"github.com/yandex/pandora/lib/zaputil"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-const Version = "0.3.5"
+const Version = "0.4.0"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 
@@ -129,30 +128,41 @@ func Run() {
 	errs := make(chan error)
 	go runEngine(ctx, pandora, errs)
 
+	// waiting for signal or error message from engine
+	awaitPandoraTermination(pandora, cancel, errs, log)
+	log.Info("Engine run successfully finished")
+}
+
+// helper function that awaits pandora run
+func awaitPandoraTermination(pandora *engine.Engine, gracefulShutdown func(), errs chan error, log *zap.Logger) {
 	sigs := make(chan os.Signal, 2)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	// waiting for signal or error message from engine
 	select {
 	case sig := <-sigs:
+		var interruptTimeout = 3 * time.Second
 		switch sig {
 		case syscall.SIGINT:
-			const interruptTimeout = 5 * time.Second
-			log.Info("SIGINT received. Trying to stop gracefully.", zap.Duration("timeout", interruptTimeout))
-			cancel()
-			select {
-			case <-time.After(interruptTimeout):
-				log.Fatal("Interrupt timeout exceeded")
-			case sig := <-sigs:
-				log.Fatal("Another signal received. Quiting.", zap.Stringer("signal", sig))
-			case err := <-errs:
-				log.Fatal("Engine interrupted", zap.Error(err))
-			}
+			// await gun timeout but no longer than 30 sec.
+			interruptTimeout = 30 * time.Second
+			log.Info("SIGINT received. Graceful shutdown.", zap.Duration("timeout", interruptTimeout))
+			gracefulShutdown()
 		case syscall.SIGTERM:
-			log.Fatal("SIGTERM received. Quiting.")
+			log.Info("SIGTERM received. Trying to stop gracefully.", zap.Duration("timeout", interruptTimeout))
+			gracefulShutdown()
 		default:
 			log.Fatal("Unexpected signal received. Quiting.", zap.Stringer("signal", sig))
 		}
+
+		select {
+		case <-time.After(interruptTimeout):
+			log.Fatal("Interrupt timeout exceeded")
+		case sig := <-sigs:
+			log.Fatal("Another signal received. Quiting.", zap.Stringer("signal", sig))
+		case err := <-errs:
+			log.Fatal("Engine interrupted", zap.Error(err))
+		}
+
 	case err := <-errs:
 		switch err {
 		case nil:
@@ -160,7 +170,7 @@ func Run() {
 		case err:
 			const awaitTimeout = 3 * time.Second
 			log.Error("Engine run failed. Awaiting started tasks.", zap.Error(err), zap.Duration("timeout", awaitTimeout))
-			cancel()
+			gracefulShutdown()
 			time.AfterFunc(awaitTimeout, func() {
 				log.Fatal("Engine tasks timeout exceeded.")
 			})
@@ -168,7 +178,6 @@ func Run() {
 			log.Fatal("Engine run failed. Pandora graceful shutdown successfully finished")
 		}
 	}
-	log.Info("Engine run successfully finished")
 }
 
 func runEngine(ctx context.Context, engine *engine.Engine, errs chan error) {

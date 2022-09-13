@@ -10,7 +10,6 @@ import (
 	"os"
 
 	"github.com/spf13/afero"
-
 	"github.com/yandex/pandora/core"
 )
 

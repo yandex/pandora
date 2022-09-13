@@ -3,7 +3,6 @@ package aggregatemock
 
 import (
 	mock "github.com/stretchr/testify/mock"
-
 	core "github.com/yandex/pandora/core"
 )
 

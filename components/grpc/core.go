@@ -8,22 +8,20 @@ import (
 	"log"
 	"time"
 
-	"github.com/jhump/protoreflect/grpcreflect"
-	"github.com/yandex/pandora/core/warmup"
-	"google.golang.org/grpc/credentials"
-	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
-
-	"github.com/yandex/pandora/components/grpc/ammo"
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/aggregator/netsample"
-
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
+	"github.com/jhump/protoreflect/grpcreflect"
+	"github.com/yandex/pandora/components/grpc/ammo"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/aggregator/netsample"
+	"github.com/yandex/pandora/core/warmup"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 	"google.golang.org/grpc/status"
 )
 
@@ -33,7 +31,8 @@ type Sample struct {
 }
 
 type grpcDialOptions struct {
-	Authority string `config:"authority"`
+	Authority string        `config:"authority"`
+	Timeout   time.Duration `config:"timeout"`
 }
 
 type GunConfig struct {
@@ -186,7 +185,11 @@ func makeGRPCConnect(target string, isTLS bool, dialOptions grpcDialOptions) (co
 	} else {
 		opts = append(opts, grpc.WithInsecure())
 	}
-	opts = append(opts, grpc.WithTimeout(time.Second))
+	timeout := time.Second
+	if dialOptions.Timeout != 0 {
+		timeout = dialOptions.Timeout
+	}
+	opts = append(opts, grpc.WithTimeout(timeout))
 	opts = append(opts, grpc.WithUserAgent("load test, pandora universal grpc shooter"))
 
 	if dialOptions.Authority != "" {

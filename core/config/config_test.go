@@ -6,12 +6,14 @@
 package config
 
 import (
+	"net"
 	"testing"
 	"time"
 
 	"github.com/facebookgo/stack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yandex/pandora/lib/confutil"
 )
 
 type M map[string]interface{}
@@ -230,4 +232,32 @@ func TestNextSquash(t *testing.T) {
 	}, &data)
 	require.NoError(t, err)
 	assert.Equal(t, "baz", data.Level1.Level2.Foo)
+}
+
+func TestConfigEnvVarReplacement(t *testing.T) {
+	confutil.RegisterTagResolver("", confutil.EnvTagResolver)
+	confutil.RegisterTagResolver("ENV", confutil.EnvTagResolver)
+
+	t.Setenv("ENV_VAR_1", "value1")
+	t.Setenv("VAR_2", "value2")
+	t.Setenv("INT_VAR_3", "15")
+	t.Setenv("IP_SEQ", "1.2")
+	var l1 struct {
+		Val1 string
+		Val2 string
+		Val3 int
+		Val4 net.IP
+	}
+
+	err := Decode(M{
+		"val1": "aa-${ENV_VAR_1}",
+		"val2": "${ENV:VAR_2}",
+		"val3": "${INT_VAR_3}",
+		"val4": "1.1.${ENV:IP_SEQ}",
+	}, &l1)
+	assert.NoError(t, err)
+	assert.Equal(t, "aa-value1", l1.Val1)
+	assert.Equal(t, "value2", l1.Val2)
+	assert.Equal(t, 15, l1.Val3)
+	assert.Equal(t, net.IPv4(1, 1, 1, 2), l1.Val4)
 }

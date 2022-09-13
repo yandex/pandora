@@ -7,7 +7,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coretest"
 	"github.com/yandex/pandora/lib/ginkgoutil"
@@ -202,6 +201,21 @@ var _ = Describe("step", func() {
 		}
 		testee := NewStepConf(conf)
 		Expect(testee.Left()).To(Equal(6))
+
+	})
+
+})
+
+var _ = Describe("instance_step", func() {
+	It("", func() {
+		conf := InstanceStepConfig{
+			From:         1,
+			To:           3,
+			Step:         1,
+			StepDuration: 2 * time.Second,
+		}
+		testee := NewInstanceStepConf(conf)
+		Expect(testee.Left()).To(Equal(3))
 
 	})
 
