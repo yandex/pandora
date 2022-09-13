@@ -79,7 +79,7 @@ func preResolveTargetAddr(clientConf *phttp.ClientConfig, target string) (target
 		clientConf.Dialer.DNSCache = false
 		return
 	}
-	resolved, err := netutil.LookupReachable(target)
+	resolved, err := netutil.LookupReachable(target, clientConf.Dialer.Timeout)
 	if err != nil {
 		zap.L().Warn("DNS target pre resolve failed",
 			zap.String("target", target), zap.Error(err))

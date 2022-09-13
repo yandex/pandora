@@ -31,7 +31,8 @@ type Sample struct {
 }
 
 type grpcDialOptions struct {
-	Authority string `config:"authority"`
+	Authority string        `config:"authority"`
+	Timeout   time.Duration `config:"timeout"`
 }
 
 type GunConfig struct {
@@ -184,7 +185,11 @@ func makeGRPCConnect(target string, isTLS bool, dialOptions grpcDialOptions) (co
 	} else {
 		opts = append(opts, grpc.WithInsecure())
 	}
-	opts = append(opts, grpc.WithTimeout(time.Second))
+	timeout := time.Second
+	if dialOptions.Timeout != 0 {
+		timeout = dialOptions.Timeout
+	}
+	opts = append(opts, grpc.WithTimeout(timeout))
 	opts = append(opts, grpc.WithUserAgent("load test, pandora universal grpc shooter"))
 
 	if dialOptions.Authority != "" {
