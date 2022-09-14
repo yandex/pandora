@@ -7,7 +7,6 @@ require (
 	github.com/c2h5oh/datasize v0.0.0-20171227191756-4eba002a5eae
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052
 	github.com/facebookgo/stackerr v0.0.0-20150612192056-c2fcf88613f4
-	github.com/fatih/structs v1.0.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/hashicorp/go-multierror v0.0.0-20171204182908-b7773ae21874
 	github.com/jhump/protoreflect v1.10.1

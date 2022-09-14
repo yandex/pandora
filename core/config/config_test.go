@@ -186,7 +186,6 @@ func TestMapTagged(t *testing.T) {
 	Map(n, &M{SomeOtherFieldName: MultiStrings{A: "a"}})
 	assert.Equal(t, &N{A: "a", MultiStrings: MultiStrings{A: "a"}}, n)
 }
-
 func TestDeltaUpdate(t *testing.T) {
 	var l2 Level2
 	err := Decode(M{

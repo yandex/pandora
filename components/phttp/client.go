@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/lib/netutil"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
@@ -64,8 +63,12 @@ func DefaultDialerConfig() DialerConfig {
 }
 
 func NewDialer(conf DialerConfig) netutil.Dialer {
-	d := &net.Dialer{}
-	config.Map(d, conf)
+	d := &net.Dialer{
+		Timeout:       conf.Timeout,
+		DualStack:     conf.DualStack,
+		FallbackDelay: conf.FallbackDelay,
+		KeepAlive:     conf.KeepAlive,
+	}
 	if !conf.DNSCache {
 		return d
 	}
@@ -96,12 +99,20 @@ func DefaultTransportConfig() TransportConfig {
 }
 
 func NewTransport(conf TransportConfig, dial netutil.DialerFunc) *http.Transport {
-	tr := &http.Transport{}
+	tr := &http.Transport{
+		TLSHandshakeTimeout:   conf.TLSHandshakeTimeout,
+		DisableKeepAlives:     conf.DisableKeepAlives,
+		DisableCompression:    conf.DisableCompression,
+		MaxIdleConns:          conf.MaxIdleConns,
+		MaxIdleConnsPerHost:   conf.MaxIdleConnsPerHost,
+		IdleConnTimeout:       conf.IdleConnTimeout,
+		ResponseHeaderTimeout: conf.ResponseHeaderTimeout,
+		ExpectContinueTimeout: conf.ExpectContinueTimeout,
+	}
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,                 // We should not spend time for this stuff.
 		NextProtos:         []string{"http/1.1"}, // Disable HTTP/2. Use HTTP/2 transport explicitly, if needed.
 	}
-	config.Map(tr, conf)
 	tr.DialContext = dial
 	return tr
 }
