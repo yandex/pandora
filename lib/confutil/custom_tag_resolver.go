@@ -70,13 +70,15 @@ func ResolveCustomTags(s string, targetType reflect.Type) (interface{}, error) {
 		res = strings.ReplaceAll(res, t.string, resolved)
 	}
 
-	// cast to target kind only if the whole value is a tag
-	// otherwise let other hooks process result
+	// try to cast result to target type, because mapstructure will not attempt to cast strings to bool, int and floats
+	// if target type is unknown, we still let other hooks process result (time.Duration, ipv4 and other hooks will do)
 	if len(tokens) == 1 && strings.TrimSpace(s) == tokens[0].string {
-		return cast(res, targetType)
-	} else {
-		return res, nil
+		castedRes, err := cast(res, targetType)
+		if err == nil || !errors.Is(err, ErrCantCastVariableToTargetType) {
+			return castedRes, err
+		}
 	}
+	return res, nil
 }
 
 func findTags(s string) ([]*tagEntry, error) {
