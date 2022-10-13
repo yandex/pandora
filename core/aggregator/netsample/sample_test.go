@@ -68,7 +68,7 @@ func TestCustomSets(t *testing.T) {
 	s.SetRequestBytes(reqBytes)
 
 	respBytes := 8
-	s.SetResponceBytes(respBytes)
+	s.SetResponseBytes(respBytes)
 
 	expectedTimeStamp := fmt.Sprintf("%v.%3.f",
 		s.timeStamp.Unix(),

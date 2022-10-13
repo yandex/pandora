@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptrace"
 	"net/http/httputil"
 	"net/url"
 
@@ -26,8 +27,9 @@ const (
 )
 
 type BaseGunConfig struct {
-	AutoTag AutoTagConfig `config:"auto-tag"`
-	AnswLog AnswLogConfig `config:"answlog"`
+	AutoTag   AutoTagConfig   `config:"auto-tag"`
+	AnswLog   AnswLogConfig   `config:"answlog"`
+	HTTPTrace HTTPTraceConfig `config:"httptrace"`
 }
 
 // AutoTagConfig configure automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
@@ -44,6 +46,11 @@ type AnswLogConfig struct {
 	Filter  string `config:"filter" valid:"oneof=all warning error"`
 }
 
+type HTTPTraceConfig struct {
+	DumpEnabled  bool `config:"dump"`
+	TraceEnabled bool `config:"trace"`
+}
+
 func DefaultBaseGunConfig() BaseGunConfig {
 	return BaseGunConfig{
 		AutoTagConfig{
@@ -55,6 +62,10 @@ func DefaultBaseGunConfig() BaseGunConfig {
 			Enabled: false,
 			Path:    "answ.log",
 			Filter:  "error",
+		},
+		HTTPTraceConfig{
+			DumpEnabled:  false,
+			TraceEnabled: false,
 		},
 	}
 }
@@ -136,8 +147,41 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 		err = errors.WithStack(err)
 	}()
 
+	var timings *TraceTimings
+	if b.Config.HTTPTrace.TraceEnabled {
+		var clientTracer *httptrace.ClientTrace
+		clientTracer, timings = createHTTPTrace()
+		req = req.WithContext(httptrace.WithClientTrace(req.Context(), clientTracer))
+	}
+	if b.Config.HTTPTrace.DumpEnabled {
+		requestDump, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			b.Log.Error("DumpRequest error", zap.Error(err))
+		} else {
+			sample.SetRequestBytes(len(requestDump))
+		}
+	}
 	var res *http.Response
 	res, err = b.Do(req)
+
+	if b.Config.HTTPTrace.TraceEnabled && timings != nil {
+		sample.SetReceiveTime(timings.GetReceiveTime())
+	}
+
+	if b.Config.HTTPTrace.DumpEnabled && res != nil {
+		responseDump, err := httputil.DumpResponse(res, true)
+		if err != nil {
+			b.Log.Error("DumpResponse error", zap.Error(err))
+		} else {
+			sample.SetResponseBytes(len(responseDump))
+		}
+	}
+	if b.Config.HTTPTrace.TraceEnabled && timings != nil {
+		sample.SetConnectTime(timings.GetConnectTime())
+		sample.SetSendTime(timings.GetSendTime())
+		sample.SetLatency(timings.GetLatency())
+	}
+
 	if err != nil {
 		b.Log.Warn("Request fail", zap.Error(err))
 		return
