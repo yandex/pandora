@@ -30,7 +30,7 @@ const (
 	compositeScheduleKey = "composite"
 )
 
-//getter for fs to avoid afero dependency in custom guns
+// getter for fs to avoid afero dependency in custom guns
 func GetFs() afero.Fs {
 	return afero.NewOsFs()
 }

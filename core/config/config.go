@@ -6,7 +6,6 @@
 package config
 
 import (
-	"github.com/fatih/structs"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 )
@@ -39,18 +38,36 @@ func DecodeAndValidate(conf interface{}, result interface{}) error {
 // in such case you can from this subset of fields struct Single, decode config
 // into it, and map it on Multi.
 func Map(dst, src interface{}) {
-	conf := &mapstructure.DecoderConfig{
+	// dst and src conf for compatibility with old fatih/structs.
+	// src map from "map:" tags -> tmp -> map to "mapstructure:" tags in dst
+	dstConf := &mapstructure.DecoderConfig{
 		ErrorUnused: true,
 		ZeroFields:  true,
 		Result:      dst,
 	}
-	d, err := mapstructure.NewDecoder(conf)
+	d, err := mapstructure.NewDecoder(dstConf)
 	if err != nil {
 		panic(err)
 	}
-	s := structs.New(src)
-	s.TagName = "map"
-	err = d.Decode(s.Map())
+
+	tmp := make(map[string]interface{})
+	srcConf := &mapstructure.DecoderConfig{
+		ErrorUnused: true,
+		ZeroFields:  true,
+		Result:      &tmp,
+		TagName:     "map",
+	}
+	s, err := mapstructure.NewDecoder(srcConf)
+	if err != nil {
+		panic(err)
+	}
+
+	err = s.Decode(src)
+	if err != nil {
+		panic(err)
+	}
+
+	err = d.Decode(tmp)
 	if err != nil {
 		panic(err)
 	}

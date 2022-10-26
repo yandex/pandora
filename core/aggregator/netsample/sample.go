@@ -103,15 +103,27 @@ func (s *Sample) SetUserNet(code int) {
 	s.set(keyErrno, code)
 }
 
+func (s *Sample) SetConnectTime(d time.Duration) {
+	s.setDuration(keyConnectMicro, d)
+}
+
+func (s *Sample) SetSendTime(d time.Duration) {
+	s.setDuration(keySendMicro, d)
+}
+
 func (s *Sample) SetLatency(d time.Duration) {
 	s.setDuration(keyLatencyMicro, d)
+}
+
+func (s *Sample) SetReceiveTime(d time.Duration) {
+	s.setDuration(keyReceiveMicro, d)
 }
 
 func (s *Sample) SetRequestBytes(b int) {
 	s.set(keyRequestBytes, b)
 }
 
-func (s *Sample) SetResponceBytes(b int) {
+func (s *Sample) SetResponseBytes(b int) {
 	s.set(keyResponseBytes, b)
 }
 
