@@ -25,6 +25,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const defaultTimeout = time.Second * 15
+
 type Sample struct {
 	URL              string
 	ShootTimeSeconds float64
@@ -149,21 +151,14 @@ func (g *Gun) shoot(ammo *ammo.Ammo) {
 		return
 	}
 
-	meta := make(metadata.MD)
-	if ammo.Metadata != nil && len(ammo.Metadata) > 0 {
-		for key, value := range ammo.Metadata {
-			meta = metadata.Pairs(key, value)
-		}
-	}
-
-	timeout := time.Second * 15
+	timeout := defaultTimeout
 	if g.conf.Timeout != 0 {
 		timeout = time.Second * g.conf.Timeout
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	ctx = metadata.NewOutgoingContext(ctx, meta)
+	ctx = metadata.NewOutgoingContext(ctx, metadata.New(ammo.Metadata))
 	out, err := g.stub.InvokeRpc(ctx, &method, message)
 	code = convertGrpcStatus(err)
 
