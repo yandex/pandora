@@ -29,7 +29,7 @@ type HTTP2GunConfig struct {
 }
 
 func NewHTTPGun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string) *HTTPGun {
-	transport := NewTransport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext)
+	transport := NewTransport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext, conf.Gun.Target)
 	client := newClient(transport, conf.Client.Redirect)
 	return NewClientGun(client, conf.Gun, answLog, targetResolved)
 }
@@ -40,7 +40,7 @@ func NewHTTP2Gun(conf HTTP2GunConfig, answLog *zap.Logger, targetResolved string
 		// Open issue on github if you really need this feature.
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
 	}
-	transport := NewHTTP2Transport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext)
+	transport := NewHTTP2Transport(conf.Client.Transport, NewDialer(conf.Client.Dialer).DialContext, conf.Gun.Target)
 	client := newClient(transport, conf.Client.Redirect)
 	// Will panic and cancel shooting whet target doesn't support HTTP/2.
 	client = &panicOnHTTP1Client{client}

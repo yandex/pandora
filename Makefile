@@ -36,7 +36,7 @@ fmt:
 
 tools:
 	@echo "$(OK_COLOR)Install tools$(NO_COLOR)"
-	go install golang.org/x/tools/cmd/goimports
+	go install golang.org/x/tools/cmd/goimports@latest
 	go get golang.org/x/tools/cmd/cover
 	go get github.com/modocache/gover
 	go get github.com/mattn/goveralls

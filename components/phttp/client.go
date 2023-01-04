@@ -98,7 +98,7 @@ func DefaultTransportConfig() TransportConfig {
 	}
 }
 
-func NewTransport(conf TransportConfig, dial netutil.DialerFunc) *http.Transport {
+func NewTransport(conf TransportConfig, dial netutil.DialerFunc, target string) *http.Transport {
 	tr := &http.Transport{
 		TLSHandshakeTimeout:   conf.TLSHandshakeTimeout,
 		DisableKeepAlives:     conf.DisableKeepAlives,
@@ -112,13 +112,14 @@ func NewTransport(conf TransportConfig, dial netutil.DialerFunc) *http.Transport
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,                 // We should not spend time for this stuff.
 		NextProtos:         []string{"http/1.1"}, // Disable HTTP/2. Use HTTP/2 transport explicitly, if needed.
+		ServerName:         strings.Split(target, ":")[0],
 	}
 	tr.DialContext = dial
 	return tr
 }
 
-func NewHTTP2Transport(conf TransportConfig, dial netutil.DialerFunc) *http.Transport {
-	tr := NewTransport(conf, dial)
+func NewHTTP2Transport(conf TransportConfig, dial netutil.DialerFunc, target string) *http.Transport {
+	tr := NewTransport(conf, dial, target)
 	err := http2.ConfigureTransport(tr)
 	if err != nil {
 		zap.L().Panic("HTTP/2 transport configure fail", zap.Error(err))
