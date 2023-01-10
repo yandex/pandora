@@ -21,7 +21,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/atomic v1.3.1
 	go.uber.org/zap v1.7.1
-	golang.org/x/net v0.3.0
+	golang.org/x/net v0.0.0-20200822124328-c89045814202
 	google.golang.org/grpc v1.41.0
 	gopkg.in/bluesuncorp/validator.v9 v9.10.0
 )
@@ -42,8 +42,8 @@ require (
 	github.com/spf13/pflag v1.0.0 // indirect
 	github.com/stretchr/objx v0.1.0 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
-	golang.org/x/sys v0.3.0 // indirect
-	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/sys v0.0.0-20220926163933-8cfa568d3c25 // indirect
+	golang.org/x/text v0.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.25.1-0.20200805231151-a709e31e5d12 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect

@@ -109,10 +109,14 @@ func NewTransport(conf TransportConfig, dial netutil.DialerFunc, target string) 
 		ResponseHeaderTimeout: conf.ResponseHeaderTimeout,
 		ExpectContinueTimeout: conf.ExpectContinueTimeout,
 	}
+	host, _, err := net.SplitHostPort(target)
+	if err != nil {
+		zap.L().Panic("HTTP transport configure fail", zap.Error(err))
+	}
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,                 // We should not spend time for this stuff.
 		NextProtos:         []string{"http/1.1"}, // Disable HTTP/2. Use HTTP/2 transport explicitly, if needed.
-		ServerName:         strings.Split(target, ":")[0],
+		ServerName:         host,
 	}
 	tr.DialContext = dial
 	return tr
