@@ -10,11 +10,9 @@ import (
 	"io"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/yandex/pandora/lib/ioutil2"
-
 	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/coreutil"
+	"github.com/yandex/pandora/lib/ioutil2"
 )
 
 type JSONLineAggregatorConfig struct {
@@ -52,8 +50,11 @@ func NewJSONLinesAggregator(conf JSONLineAggregatorConfig) core.Aggregator {
 }
 
 func NewJSONEncoder(w io.Writer, conf JSONLineEncoderConfig) SampleEncoder {
-	var apiConfig jsoniter.Config
-	config.Map(&apiConfig, conf.JSONIterConfig)
+	apiConfig := jsoniter.Config{
+		SortMapKeys:             conf.JSONIterConfig.SortMapKeys,
+		MarshalFloatWith6Digits: conf.JSONIterConfig.MarshalFloatWith6Digits,
+	}
+
 	api := apiConfig.Froze()
 	// NOTE(skipor): internal buffering is not working really. Don't know why
 	// OPTIMIZE(skipor): don't wrap into buffer, if already ioutil2.ByteWriter
@@ -75,6 +76,6 @@ func (e *jsonEncoder) Encode(s core.Sample) error {
 
 func (e *jsonEncoder) Flush() error {
 	err := e.Stream.Flush()
-	e.buf.Flush()
+	_ = e.buf.Flush()
 	return err
 }

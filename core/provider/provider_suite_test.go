@@ -12,5 +12,5 @@ func TestProvider(t *testing.T) {
 }
 
 func testDeps() core.ProviderDeps {
-	return core.ProviderDeps{ginkgoutil.NewLogger()}
+	return core.ProviderDeps{Log: ginkgoutil.NewLogger()}
 }

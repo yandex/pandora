@@ -18,7 +18,7 @@ Pay attention to special header `Host` defined ``outside`` of Headers dictionary
 Ammofile sample:
 ::
 
-  {"uri": "/", "method": "GET", "headers": {"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "User-Agent": "Pandora"}, "host": "example.com"}
+  {"tag": "tag1", "uri": "/", "method": "GET", "headers": {"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "User-Agent": "Pandora"}, "host": "example.com"}
 
 Config sample:
 
@@ -70,7 +70,7 @@ Config sample:
         type: raw                      # ammo format
         file: ./ammofile               # ammo file path
 
-You can redefine any headers using special config option `headers`. Format: list of strings.
+You can define common headers using special config option `headers`. Headers in ammo file have priority. Format: list of strings.
 
 Example:
 
@@ -111,7 +111,7 @@ Config sample:
         file: ./ammofile               # ammo file path
 
 
-You can redefine any headers using special config option `headers`. Format: list of strings.
+You can define common headers using special config option `headers`. Headers in ammo file have priority. Format: list of strings.
 
 Example:
 
@@ -124,3 +124,32 @@ Example:
         headers:
           - "[Host: yourhost.tld]"
           - "[User-Agent: some user agent]"
+
+Ammo filters
+------------
+
+Each http ammo provider lets you choose specific ammo for your test from ammo file with `chosencases` setting:
+.. code-block:: yaml
+
+  pools:
+    - ammo:
+        type: uri                      # ammo format
+        chosencases: ["tag1", "tag2"]  # use only "tag1" and "tag2" ammo for this test
+        file: ./ammofile               # ammo file path
+
+Tags are defined in ammo files as shown below:
+
+http/json:
+::
+  {"tag": "tag1", "uri": "/",
+
+raw (request-style):
+::
+  73 tag1
+  GET / HTTP/1.0
+
+uri-style:
+::
+  /?drg tag1
+  /
+  /buy tag2

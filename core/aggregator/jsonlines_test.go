@@ -12,10 +12,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/datasink"
+	"go.uber.org/zap"
 )
 
 type jsonTestData struct {
@@ -38,7 +37,7 @@ func TestNewJSONLinesAggregator(t *testing.T) {
 
 	runErr := make(chan error)
 	go func() {
-		runErr <- testee.Run(ctx, core.AggregatorDeps{zap.L()})
+		runErr <- testee.Run(ctx, core.AggregatorDeps{Log: zap.L()})
 	}()
 
 	for _, sample := range samples {

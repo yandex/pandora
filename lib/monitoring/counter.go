@@ -9,7 +9,7 @@ import (
 	"expvar"
 	"strconv"
 
-	"github.com/uber-go/atomic"
+	"go.uber.org/atomic"
 )
 
 // TODO: use one rcrowley/go-metrics instead.

@@ -9,18 +9,20 @@ import (
 	"net"
 
 	"github.com/spf13/afero"
-	"go.uber.org/zap"
-
-	. "github.com/yandex/pandora/components/phttp"
+	"github.com/yandex/pandora/components/phttp"
 	"github.com/yandex/pandora/components/phttp/ammo/simple/jsonline"
 	"github.com/yandex/pandora/components/phttp/ammo/simple/raw"
 	"github.com/yandex/pandora/components/phttp/ammo/simple/uri"
+	"github.com/yandex/pandora/components/phttp/ammo/simple/uripost"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/register"
+	"github.com/yandex/pandora/lib/answlog"
 	"github.com/yandex/pandora/lib/netutil"
+	"go.uber.org/zap"
 )
 
 func Import(fs afero.Fs) {
+
 	register.Provider("http/json", func(conf jsonline.Config) core.Provider {
 		return jsonline.NewProvider(fs, conf)
 	})
@@ -29,29 +31,36 @@ func Import(fs afero.Fs) {
 		return uri.NewProvider(fs, conf)
 	})
 
+	register.Provider("uripost", func(conf uripost.Config) core.Provider {
+		return uripost.NewProvider(fs, conf)
+	})
+
 	register.Provider("raw", func(conf raw.Config) core.Provider {
 		return raw.NewProvider(fs, conf)
 	})
 
-	register.Gun("http", func(conf HTTPGunConfig) func() core.Gun {
-		preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
-		return func() core.Gun { return WrapGun(NewHTTPGun(conf)) }
-	}, DefaultHTTPGunConfig)
+	register.Gun("http", func(conf phttp.HTTPGunConfig) func() core.Gun {
+		targetResolved, _ := preResolveTargetAddr(&conf.Client, conf.Gun.Target)
+		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path)
+		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTPGun(conf, answLog, targetResolved)) }
+	}, phttp.DefaultHTTPGunConfig)
 
-	register.Gun("http2", func(conf HTTP2GunConfig) func() (core.Gun, error) {
-		preResolveTargetAddr(&conf.Client, &conf.Gun.Target)
+	register.Gun("http2", func(conf phttp.HTTP2GunConfig) func() (core.Gun, error) {
+		targetResolved, _ := preResolveTargetAddr(&conf.Client, conf.Gun.Target)
+		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path)
 		return func() (core.Gun, error) {
-			gun, err := NewHTTP2Gun(conf)
-			return WrapGun(gun), err
+			gun, err := phttp.NewHTTP2Gun(conf, answLog, targetResolved)
+			return phttp.WrapGun(gun), err
 		}
-	}, DefaultHTTP2GunConfig)
+	}, phttp.DefaultHTTP2GunConfig)
 
-	register.Gun("connect", func(conf ConnectGunConfig) func() core.Gun {
-		preResolveTargetAddr(&conf.Client, &conf.Target)
+	register.Gun("connect", func(conf phttp.ConnectGunConfig) func() core.Gun {
+		conf.Target, _ = preResolveTargetAddr(&conf.Client, conf.Target)
+		answLog := answlog.Init(conf.BaseGunConfig.AnswLog.Path)
 		return func() core.Gun {
-			return WrapGun(NewConnectGun(conf))
+			return phttp.WrapGun(phttp.NewConnectGun(conf, answLog))
 		}
-	}, DefaultConnectGunConfig)
+	}, phttp.DefaultConnectGunConfig)
 }
 
 // DNS resolve optimisation.
@@ -60,22 +69,24 @@ func Import(fs afero.Fs) {
 // If we can resolve accessible target addr - use it as target, not use caching.
 // Otherwise just use DNS cache - we should not fail shooting, we should try to
 // connect on every shoot. DNS cache will save resolved addr after first successful connect.
-func preResolveTargetAddr(clientConf *ClientConfig, target *string) (err error) {
+func preResolveTargetAddr(clientConf *phttp.ClientConfig, target string) (targetAddr string, err error) {
+	targetAddr = target
+
 	if !clientConf.Dialer.DNSCache {
 		return
 	}
-	if endpointIsResolved(*target) {
+	if endpointIsResolved(target) {
 		clientConf.Dialer.DNSCache = false
 		return
 	}
-	resolved, err := netutil.LookupReachable(*target)
+	resolved, err := netutil.LookupReachable(target, clientConf.Dialer.Timeout)
 	if err != nil {
 		zap.L().Warn("DNS target pre resolve failed",
-			zap.String("target", *target), zap.Error(err))
+			zap.String("target", target), zap.Error(err))
 		return
 	}
 	clientConf.Dialer.DNSCache = false
-	*target = resolved
+	targetAddr = resolved
 	return
 }
 

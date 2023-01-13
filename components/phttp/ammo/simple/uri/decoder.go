@@ -13,8 +13,8 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"github.com/yandex/pandora/lib/confutil"
 )
 
 type decoder struct {
@@ -24,20 +24,17 @@ type decoder struct {
 
 	ammoNum       int
 	header        http.Header
-	configHeaders []ConfigHeader
+	configHeaders []simple.Header
+	chosenCases   []string
 }
 
-type ConfigHeader struct {
-	key   string
-	value string
-}
-
-func newDecoder(ctx context.Context, sink chan<- *simple.Ammo, pool *sync.Pool) *decoder {
+func newDecoder(ctx context.Context, sink chan<- *simple.Ammo, pool *sync.Pool, chosenCases []string) *decoder {
 	return &decoder{
-		sink:   sink,
-		header: http.Header{},
-		pool:   pool,
-		ctx:    ctx,
+		sink:        sink,
+		header:      http.Header{},
+		pool:        pool,
+		ctx:         ctx,
+		chosenCases: chosenCases,
 	}
 }
 
@@ -48,13 +45,11 @@ func (d *decoder) Decode(line []byte) error {
 		return errors.New("empty line")
 	}
 	line = bytes.TrimSpace(line)
-	switch line[0] {
-	case '/':
-		return d.decodeURI(line)
-	case '[':
+	if line[0] == '[' {
 		return d.decodeHeader(line)
+	} else {
+		return d.decodeURI(line)
 	}
-	return errors.New("every line should begin with '[' or '/'")
 }
 
 func (d *decoder) decodeURI(line []byte) error {
@@ -64,6 +59,9 @@ func (d *decoder) decodeURI(line []byte) error {
 	if len(parts) > 1 {
 		tag = parts[1]
 	}
+	if !confutil.IsChosenCase(tag, d.chosenCases) {
+		return nil
+	}
 	req, err := http.NewRequest("GET", string(url), nil)
 	if err != nil {
 		return errors.Wrap(err, "uri decode")
@@ -72,20 +70,13 @@ func (d *decoder) decodeURI(line []byte) error {
 		// http.Request.Write sends Host header based on req.URL.Host
 		if k == "Host" {
 			req.Host = v[0]
-			req.URL.Host = v[0]
 		} else {
 			req.Header[k] = v
 		}
 	}
-	// redefine request Headers from config
-	for _, configHeader := range d.configHeaders {
-		if configHeader.key == "Host" {
-			req.Host = configHeader.value
-			req.URL.Host = configHeader.value
-		} else {
-			req.Header.Set(configHeader.key, configHeader.value)
-		}
-	}
+
+	// add new Headers to request from config
+	simple.UpdateRequestWithHeaders(req, d.configHeaders)
 
 	sh := d.pool.Get().(*simple.Ammo)
 	sh.Reset(req, tag)
@@ -120,24 +111,4 @@ func (d *decoder) ResetHeader() {
 	for k := range d.header {
 		delete(d.header, k)
 	}
-}
-
-func decodeHTTPConfigHeaders(headers []string) (configHTTPHeaders []ConfigHeader, err error) {
-	for _, header := range headers {
-		line := []byte(header)
-		if len(line) < 3 || line[0] != '[' || line[len(line)-1] != ']' {
-			return nil, errors.New("header line should be like '[key: value]")
-		}
-		line = line[1 : len(line)-1]
-		colonIdx := bytes.IndexByte(line, ':')
-		if colonIdx < 0 {
-			return nil, errors.New("missing colon")
-		}
-		preparedHeader := ConfigHeader{
-			string(bytes.TrimSpace(line[:colonIdx])),
-			string(bytes.TrimSpace(line[colonIdx+1:])),
-		}
-		configHTTPHeaders = append(configHTTPHeaders, preparedHeader)
-	}
-	return
 }

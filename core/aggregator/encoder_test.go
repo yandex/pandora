@@ -12,18 +12,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	aggregatemock "github.com/yandex/pandora/core/aggregator/mocks"
 	coremock "github.com/yandex/pandora/core/mocks"
 	iomock "github.com/yandex/pandora/lib/ioutil2/mocks"
 	"github.com/yandex/pandora/lib/testutil"
+	"go.uber.org/zap"
 )
 
 type EncoderAggregatorTester struct {
@@ -70,7 +69,7 @@ func NewEncoderAggregatorTester(t testutil.TestingT) *EncoderAggregatorTester {
 		ReporterConfig: ReporterConfig{100},
 	}
 	tr.ctx, tr.cancel = context.WithCancel(context.Background())
-	tr.deps = core.AggregatorDeps{zap.L()}
+	tr.deps = core.AggregatorDeps{Log: zap.L()}
 	return tr
 }
 
@@ -234,7 +233,7 @@ func TestEncoderAggregator_ManualFlush(t *testing.T) {
 		defer writeTicker.Stop()
 		for {
 			select {
-			case _ = <-writeTicker.C:
+			case <-writeTicker.C:
 				testee.Report(0)
 			case <-tr.ctx.Done():
 				return

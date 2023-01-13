@@ -10,10 +10,9 @@ import (
 	"fmt"
 	"sync"
 
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
+	"go.uber.org/zap"
 )
 
 type Ammo struct {

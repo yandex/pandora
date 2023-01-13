@@ -11,7 +11,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coretest"
 	"go.uber.org/atomic"

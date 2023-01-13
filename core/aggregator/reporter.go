@@ -8,11 +8,10 @@ package aggregator
 import (
 	"fmt"
 
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coreutil"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
 )
 
 type ReporterConfig struct {

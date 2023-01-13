@@ -18,12 +18,12 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-
 	ammomock "github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coretest"
 	"github.com/yandex/pandora/lib/ginkgoutil"
+	"go.uber.org/zap"
 )
 
 func testDeps() core.GunDeps {
@@ -45,15 +45,15 @@ var _ = Describe("BaseGun", func() {
 	Context("BindResultTo", func() {
 		It("nil panics", func() {
 			Expect(func() {
-				base.Bind(nil, testDeps())
+				_ = base.Bind(nil, testDeps())
 			}).To(Panic())
 		})
 		It("second time panics", func() {
 			res := &netsample.TestAggregator{}
-			base.Bind(res, testDeps())
+			_ = base.Bind(res, testDeps())
 			Expect(base.Aggregator).To(Equal(res))
 			Expect(func() {
-				base.Bind(&netsample.TestAggregator{}, testDeps())
+				_ = base.Bind(&netsample.TestAggregator{}, testDeps())
 			}).To(Panic())
 		})
 	})
@@ -90,7 +90,7 @@ var _ = Describe("BaseGun", func() {
 			req = httptest.NewRequest("GET", "/1/2/3/4", nil)
 			tag = ""
 			results = &netsample.TestAggregator{}
-			base.Bind(results, testDeps())
+			_ = base.Bind(results, testDeps())
 		})
 
 		JustBeforeEach(func() {
@@ -109,6 +109,7 @@ var _ = Describe("BaseGun", func() {
 		Context("Do ok", func() {
 			BeforeEach(func() {
 				body = ioutil.NopCloser(strings.NewReader("aaaaaaa"))
+				base.AnswLog = zap.NewNop()
 				base.Do = func(doReq *http.Request) (*http.Response, error) {
 					Expect(doReq).To(Equal(req))
 					return res, nil

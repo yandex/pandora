@@ -6,11 +6,11 @@
 package example
 
 import (
-	. "github.com/yandex/pandora/components/example"
+	"github.com/yandex/pandora/components/example"
 	"github.com/yandex/pandora/core/register"
 )
 
 func Import() {
-	register.Provider("example", NewProvider, DefaultProviderConfig)
-	register.Gun("example", NewGun)
+	register.Provider("example", example.NewProvider, example.DefaultProviderConfig)
+	register.Gun("example", example.NewGun)
 }

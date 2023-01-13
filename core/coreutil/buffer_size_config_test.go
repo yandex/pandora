@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/c2h5oh/datasize"
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBufferSizeConfig_BufferSizeOrDefault(t *testing.T) {

@@ -15,8 +15,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"github.com/yandex/pandora/core/aggregator/netsample"
+	"go.uber.org/zap"
 )
 
 var _ = Describe("connect", func() {
@@ -35,8 +35,8 @@ var _ = Describe("connect", func() {
 				"Current implementation should not send requested data before got response.")
 			_, err = io.WriteString(conn, "HTTP/1.1 200 Connection established\r\n\r\n")
 			Expect(err).To(BeNil())
-			go func() { io.Copy(toOrigin, conn) }()
-			go func() { io.Copy(conn, toOrigin) }()
+			go func() { _, _ = io.Copy(toOrigin, conn) }()
+			go func() { _, _ = io.Copy(conn, toOrigin) }()
 		})
 	}
 
@@ -85,12 +85,13 @@ var _ = Describe("connect", func() {
 		proxy := httptest.NewServer(tunnelHandler(origin.URL))
 		defer proxy.Close()
 
+		log := zap.NewNop()
 		conf := DefaultConnectGunConfig()
 		conf.Target = proxy.Listener.Addr().String()
-		connectGun := NewConnectGun(conf)
+		connectGun := NewConnectGun(conf, log)
 
 		results := &netsample.TestAggregator{}
-		connectGun.Bind(results, testDeps())
+		_ = connectGun.Bind(results, testDeps())
 
 		connectGun.Shoot(newAmmoURL(origin.URL))
 		Expect(results.Samples[0].Err()).To(BeNil())

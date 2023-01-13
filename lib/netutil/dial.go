@@ -9,6 +9,7 @@ import (
 	"context"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -42,7 +43,7 @@ func NewDNSCachingDialer(dialer Dialer, cache DNSCache) DialerFunc {
 		remoteAddr := conn.RemoteAddr().(*net.TCPAddr)
 		_, port, err := net.SplitHostPort(addr)
 		if err != nil {
-			conn.Close()
+			_ = conn.Close()
 			return nil, errors.Wrap(err, "invalid address, but successful dial - should not happen")
 		}
 		cache.Add(addr, net.JoinHostPort(remoteAddr.IP.String(), port))
@@ -56,8 +57,8 @@ var DefaultDNSCache = &SimpleDNSCache{}
 // This method has much more overhead, but get guaranteed reachable resolved addr.
 // Example: host is resolved to IPv4 and IPv6, but IPv4 is not working on machine.
 // LookupReachable will return IPv6 in that case.
-func LookupReachable(addr string) (string, error) {
-	d := net.Dialer{DualStack: true}
+func LookupReachable(addr string, timeout time.Duration) (string, error) {
+	d := net.Dialer{DualStack: true, Timeout: timeout}
 	conn, err := d.Dial("tcp", addr)
 	if err != nil {
 		return "", err
@@ -78,7 +79,7 @@ func WarmDNSCache(c DNSCache, addr string) error {
 	if err != nil {
 		return err
 	}
-	conn.Close()
+	_ = conn.Close()
 	return nil
 }
 

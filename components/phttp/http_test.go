@@ -14,13 +14,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-
 	ammomock "github.com/yandex/pandora/components/phttp/mocks"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/config"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"golang.org/x/net/http2"
 )
 
 var _ = Describe("BaseGun", func() {
@@ -45,11 +44,13 @@ var _ = Describe("BaseGun", func() {
 			actualReq = req
 		}))
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTPGunConfig()
-		conf.Gun.Target = strings.TrimPrefix(server.URL, "http://")
+		conf.Gun.Target = host + ":80"
+		targetResolved := strings.TrimPrefix(server.URL, "http://")
 		results := &netsample.TestAggregator{}
-		httpGun := NewHTTPGun(conf)
-		httpGun.Bind(results, testDeps())
+		httpGun := NewHTTPGun(conf, log, targetResolved)
+		_ = httpGun.Bind(results, testDeps())
 
 		am := newAmmoReq(expectedReq)
 		httpGun.Shoot(am)
@@ -58,9 +59,9 @@ var _ = Describe("BaseGun", func() {
 		Expect(*actualReq).To(MatchFields(IgnoreExtras, Fields{
 			"Method": Equal("GET"),
 			"Proto":  Equal("HTTP/1.1"),
-			"Host":   Equal(host), // Not server host, but host from ammo.
+			"Host":   Equal(host), // Server host
 			"URL": PointTo(MatchFields(IgnoreExtras, Fields{
-				"Host": BeEmpty(), // Server request.
+				"Host": BeEmpty(), // Set in Do().
 				"Path": Equal(path),
 			})),
 		}))
@@ -94,12 +95,13 @@ var _ = Describe("HTTP", func() {
 			server.Start()
 		}
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTPGunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Gun.SSL = https
-		gun := NewHTTPGun(conf)
+		gun := NewHTTPGun(conf, log, conf.Gun.Target)
 		var aggr netsample.TestAggregator
-		gun.Bind(&aggr, testDeps())
+		_ = gun.Bind(&aggr, testDeps())
 		gun.Shoot(newAmmoURL("/"))
 
 		Expect(aggr.Samples).To(HaveLen(1))
@@ -119,12 +121,13 @@ var _ = Describe("HTTP", func() {
 			}
 		}))
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTPGunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Client.Redirect = redirect
-		gun := NewHTTPGun(conf)
+		gun := NewHTTPGun(conf, log, conf.Gun.Target)
 		var aggr netsample.TestAggregator
-		gun.Bind(&aggr, testDeps())
+		_ = gun.Bind(&aggr, testDeps())
 		gun.Shoot(newAmmoURL("/redirect"))
 
 		Expect(aggr.Samples).To(HaveLen(1))
@@ -156,12 +159,13 @@ var _ = Describe("HTTP", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res.StatusCode).To(Equal(http.StatusForbidden))
 
+		log := zap.NewNop()
 		conf := DefaultHTTPGunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Gun.SSL = true
-		gun := NewHTTPGun(conf)
+		gun := NewHTTPGun(conf, log, conf.Gun.Target)
 		var results netsample.TestAggregator
-		gun.Bind(&results, testDeps())
+		_ = gun.Bind(&results, testDeps())
 		gun.Shoot(newAmmoURL("/"))
 
 		Expect(results.Samples).To(HaveLen(1))
@@ -180,11 +184,12 @@ var _ = Describe("HTTP/2", func() {
 			}
 		}))
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTP2GunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
-		gun, _ := NewHTTP2Gun(conf)
+		gun, _ := NewHTTP2Gun(conf, log, conf.Gun.Target)
 		var results netsample.TestAggregator
-		gun.Bind(&results, testDeps())
+		_ = gun.Bind(&results, testDeps())
 		gun.Shoot(newAmmoURL("/"))
 		Expect(results.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
 	})
@@ -194,11 +199,12 @@ var _ = Describe("HTTP/2", func() {
 			zap.S().Info("Served")
 		}))
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTP2GunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
-		gun, _ := NewHTTP2Gun(conf)
+		gun, _ := NewHTTP2Gun(conf, log, conf.Gun.Target)
 		var results netsample.TestAggregator
-		gun.Bind(&results, testDeps())
+		_ = gun.Bind(&results, testDeps())
 		var r interface{}
 		func() {
 			defer func() {
@@ -215,10 +221,11 @@ var _ = Describe("HTTP/2", func() {
 			zap.S().Info("Served")
 		}))
 		defer server.Close()
+		log := zap.NewNop()
 		conf := DefaultHTTP2GunConfig()
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Gun.SSL = false
-		_, err := NewHTTP2Gun(conf)
+		_, err := NewHTTP2Gun(conf, log, conf.Gun.Target)
 		Expect(err).To(HaveOccurred())
 	})
 
@@ -230,7 +237,7 @@ func isHTTP2Request(req *http.Request) bool {
 
 func newHTTP2TestServer(handler http.Handler) *httptest.Server {
 	server := httptest.NewUnstartedServer(handler)
-	http2.ConfigureServer(server.Config, nil)
+	_ = http2.ConfigureServer(server.Config, nil)
 	server.TLS = server.Config.TLSConfig // StartTLS takes TLS configuration from that field.
 	server.StartTLS()
 	return server

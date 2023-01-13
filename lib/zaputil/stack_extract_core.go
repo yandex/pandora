@@ -75,7 +75,7 @@ func (c *errStackExtractCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry)
 
 func (c *errStackExtractCore) cloneBuffer() zapBuffer {
 	clone := getBuffer()
-	clone.Write(c.stacksBuff.Bytes())
+	_, _ = clone.Write(c.stacksBuff.Bytes())
 	return clone
 }
 

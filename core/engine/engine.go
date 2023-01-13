@@ -11,12 +11,12 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coreutil"
+	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/lib/errutil"
 	"github.com/yandex/pandora/lib/monitoring"
+	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -24,13 +24,14 @@ type Config struct {
 }
 
 type InstancePoolConfig struct {
-	Id              string
+	ID              string
 	Provider        core.Provider                 `config:"ammo" validate:"required"`
 	Aggregator      core.Aggregator               `config:"result" validate:"required"`
 	NewGun          func() (core.Gun, error)      `config:"gun" validate:"required"`
 	RPSPerInstance  bool                          `config:"rps-per-instance"`
 	NewRPSSchedule  func() (core.Schedule, error) `config:"rps" validate:"required"`
 	StartupSchedule core.Schedule                 `config:"startup" validate:"required"`
+	DiscardOverflow bool                          `config:"discard_overflow"`
 }
 
 // TODO(skipor): use something github.com/rcrowley/go-metrics based.
@@ -67,18 +68,18 @@ func (e *Engine) Run(ctx context.Context) error {
 
 	runRes := make(chan poolRunResult, 1)
 	for i, conf := range e.config.Pools {
-		if conf.Id == "" {
-			conf.Id = fmt.Sprintf("pool_%v", i)
+		if conf.ID == "" {
+			conf.ID = fmt.Sprintf("pool_%v", i)
 		}
 		e.wait.Add(1)
 		pool := newPool(e.log, e.metrics, e.wait.Done, conf)
 		go func() {
 			err := pool.Run(ctx)
 			select {
-			case runRes <- poolRunResult{pool.Id, err}:
+			case runRes <- poolRunResult{pool.ID, err}:
 			case <-ctx.Done():
 				pool.log.Info("Pool run result suppressed",
-					zap.String("id", pool.Id), zap.Error(err))
+					zap.String("id", pool.ID), zap.Error(err))
 			}
 		}()
 	}
@@ -87,14 +88,14 @@ func (e *Engine) Run(ctx context.Context) error {
 		select {
 		case res := <-runRes:
 			e.log.Debug("Pool awaited", zap.Int("awaited", i),
-				zap.String("id", res.Id), zap.Error(res.Err))
+				zap.String("id", res.ID), zap.Error(res.Err))
 			if res.Err != nil {
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
 				default:
 				}
-				return errors.WithMessage(res.Err, fmt.Sprintf("%q pool run failed", res.Id))
+				return errors.WithMessage(res.Err, fmt.Sprintf("%q pool run failed", res.ID))
 			}
 		case <-ctx.Done():
 			e.log.Info("Engine run canceled")
@@ -111,8 +112,8 @@ func (e *Engine) Wait() {
 }
 
 func newPool(log *zap.Logger, m Metrics, onWaitDone func(), conf InstancePoolConfig) *instancePool {
-	log = log.With(zap.String("pool", conf.Id))
-	return &instancePool{log, m, onWaitDone, conf}
+	log = log.With(zap.String("pool", conf.ID))
+	return &instancePool{log, m, onWaitDone, conf, nil}
 }
 
 type instancePool struct {
@@ -120,6 +121,7 @@ type instancePool struct {
 	metrics    Metrics
 	onWaitDone func()
 	InstancePoolConfig
+	gunWarmUpResult interface{}
 }
 
 // Run start instance pool. Run blocks until fail happen, or all instances finish.
@@ -140,6 +142,11 @@ func (p *instancePool) Run(ctx context.Context) error {
 		p.log.Info("Pool run finished")
 		cancel()
 	}()
+
+	if err := p.warmUpGun(ctx); err != nil {
+		p.onWaitDone()
+		return err
+	}
 
 	rh, err := p.runAsync(ctx)
 	if err != nil {
@@ -162,6 +169,23 @@ func (p *instancePool) Run(ctx context.Context) error {
 	}
 }
 
+func (p *instancePool) warmUpGun(ctx context.Context) error {
+	dummyGun, err := p.NewGun()
+	if err != nil {
+		return fmt.Errorf("can't initiate a gun: %w", err)
+	}
+	if gunWithWarmUp, ok := dummyGun.(warmup.WarmedUp); ok {
+		p.gunWarmUpResult, err = gunWithWarmUp.WarmUp(&warmup.Options{
+			Log: p.log,
+			Ctx: ctx,
+		})
+		if err != nil {
+			return fmt.Errorf("gun warm up failed: %w", err)
+		}
+	}
+	return nil
+}
+
 type poolAsyncRunHandle struct {
 	runCtx              context.Context
 	runCancel           context.CancelFunc
@@ -178,6 +202,7 @@ type poolAsyncRunHandle struct {
 func (p *instancePool) runAsync(runCtx context.Context) (*poolAsyncRunHandle, error) {
 	// Canceled in case all instances finish, fail or run runCancel.
 	runCtx, runCancel := context.WithCancel(runCtx)
+	_ = runCancel
 	// Canceled also on out of ammo, and finish of shared RPS schedule.
 	instanceStartCtx, instanceStartCancel := context.WithCancel(runCtx)
 	newInstanceSchedule, err := p.buildNewInstanceSchedule(instanceStartCtx, instanceStartCancel)
@@ -194,11 +219,11 @@ func (p *instancePool) runAsync(runCtx context.Context) (*poolAsyncRunHandle, er
 		runRes        = make(chan instanceRunResult, runResultBufSize)
 	)
 	go func() {
-		deps := core.ProviderDeps{p.log}
+		deps := core.ProviderDeps{Log: p.log, PoolID: p.ID}
 		providerErr <- p.Provider.Run(runCtx, deps)
 	}()
 	go func() {
-		deps := core.AggregatorDeps{p.log}
+		deps := core.AggregatorDeps{Log: p.log}
 		aggregatorErr <- p.Aggregator.Run(runCtx, deps)
 	}()
 	go func() {
@@ -265,10 +290,6 @@ func (ah *runAwaitHandle) awaitRun() {
 			if errutil.IsNotCtxError(ah.runCtx, err) {
 				ah.onErrAwaited(errors.WithMessage(err, "provider failed"))
 			}
-			if err == nil && !ah.isStartFinished() {
-				ah.log.Debug("Canceling instance start because out of ammo")
-				ah.instanceStartCancel()
-			}
 		case err := <-ah.aggregatorErr:
 			ah.aggregatorErr = nil
 			ah.toWait--
@@ -288,10 +309,16 @@ func (ah *runAwaitHandle) awaitRun() {
 		case res := <-ah.runRes:
 			ah.awaitedInstances++
 			if ent := ah.log.Check(zap.DebugLevel, "Instance run awaited"); ent != nil {
-				ent.Write(zap.Int("id", res.Id), zap.Int("awaited", ah.awaitedInstances), zap.Error(res.Err))
+				ent.Write(zap.Int("id", res.ID), zap.Int("awaited", ah.awaitedInstances), zap.Error(res.Err))
 			}
-			if errutil.IsNotCtxError(ah.runCtx, res.Err) {
-				ah.onErrAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.Id)))
+
+			if res.Err == outOfAmmoErr {
+				if !ah.isStartFinished() {
+					ah.log.Debug("Canceling instance start because out of ammo")
+					ah.instanceStartCancel()
+				}
+			} else if errutil.IsNotCtxError(ah.runCtx, res.Err) {
+				ah.onErrAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.ID)))
 			}
 			ah.checkAllInstancesAreFinished()
 		}
@@ -336,10 +363,9 @@ func (p *instancePool) startInstances(
 	newInstanceSchedule func() (core.Schedule, error),
 	runRes chan<- instanceRunResult) (started int, err error) {
 	deps := instanceDeps{
-		p.Aggregator,
 		newInstanceSchedule,
 		p.NewGun,
-		instanceSharedDeps{p.Provider, p.metrics},
+		instanceSharedDeps{p.Provider, p.metrics, p.gunWarmUpResult, p.Aggregator, p.DiscardOverflow},
 	}
 
 	waiter := coreutil.NewWaiter(p.StartupSchedule, startCtx)
@@ -350,20 +376,22 @@ func (p *instancePool) startInstances(
 		err = startCtx.Err()
 		return
 	}
-	firstInstance, err := newInstance(runCtx, p.log, 0, deps)
+	firstInstance, err := newInstance(runCtx, p.log, p.ID, 0, deps)
 	if err != nil {
 		return
 	}
 	started++
 	go func() {
-		defer firstInstance.Close()
-		runRes <- instanceRunResult{0, firstInstance.Run(runCtx)}
+		runRes <- instanceRunResult{0, func() error {
+			defer firstInstance.Close()
+			return firstInstance.Run(runCtx)
+		}()}
 	}()
 
 	for ; waiter.Wait(); started++ {
 		id := started
 		go func() {
-			runRes <- instanceRunResult{id, runNewInstance(runCtx, p.log, id, deps)}
+			runRes <- instanceRunResult{id, runNewInstance(runCtx, p.log, p.ID, id, deps)}
 		}()
 	}
 	err = startCtx.Err()
@@ -398,8 +426,8 @@ func (p *instancePool) buildNewInstanceSchedule(startCtx context.Context, cancel
 	return
 }
 
-func runNewInstance(ctx context.Context, log *zap.Logger, id int, deps instanceDeps) error {
-	instance, err := newInstance(ctx, log, id, deps)
+func runNewInstance(ctx context.Context, log *zap.Logger, poolID string, id int, deps instanceDeps) error {
+	instance, err := newInstance(ctx, log, poolID, id, deps)
 	if err != nil {
 		return err
 	}
@@ -408,12 +436,12 @@ func runNewInstance(ctx context.Context, log *zap.Logger, id int, deps instanceD
 }
 
 type poolRunResult struct {
-	Id  string
+	ID  string
 	Err error
 }
 
 type instanceRunResult struct {
-	Id  int
+	ID  int
 	Err error
 }
 

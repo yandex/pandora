@@ -8,11 +8,11 @@ package ginkgoutil
 import (
 	"reflect"
 
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 func ExpectFuncsEqual(f1, f2 interface{}) {
 	val1 := reflect.ValueOf(f1)
 	val2 := reflect.ValueOf(f2)
-	Expect(val1.Pointer()).To(Equal(val2.Pointer()))
+	gomega.Expect(val1.Pointer()).To(gomega.Equal(val2.Pointer()))
 }

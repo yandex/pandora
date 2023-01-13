@@ -9,8 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
-	"go.uber.org/atomic"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator"
 	"github.com/yandex/pandora/core/config"
@@ -18,6 +16,7 @@ import (
 	"github.com/yandex/pandora/core/provider"
 	"github.com/yandex/pandora/core/schedule"
 	"github.com/yandex/pandora/lib/ginkgoutil"
+	"go.uber.org/atomic"
 )
 
 var _ = Describe("config validation", func() {
@@ -211,6 +210,21 @@ var _ = Describe("multiple instance", func() {
 		err := pool.Run(ctx)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(pool.metrics.InstanceStart.Get()).To(BeNumerically("<=", 3))
+	}, 1)
+
+	It("when provider run done it does not mean out of ammo; instance start is not canceled", func() {
+		conf, _ := newTestPoolConf()
+		conf.Provider = provider.NewNumBuffered(3)
+		conf.NewRPSSchedule = func() (core.Schedule, error) {
+			return schedule.NewOnce(1), nil
+		}
+		conf.StartupSchedule = schedule.NewOnce(3)
+		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
+		ctx := context.Background()
+
+		err := pool.Run(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pool.metrics.InstanceStart.Get()).To(BeNumerically("==", 3))
 	}, 1)
 
 	It("out of RPS - instance start is canceled", func() {

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/spf13/afero"
-
 	"github.com/yandex/pandora/core/coretest"
 )
 

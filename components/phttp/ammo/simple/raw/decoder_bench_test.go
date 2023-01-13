@@ -1,6 +1,10 @@
 package raw
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/yandex/pandora/components/phttp/ammo/simple"
+)
 
 var (
 	benchTestConfigHeaders = []string{
@@ -21,22 +25,16 @@ const (
 
 func BenchmarkRawDecoder(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		decodeRequest([]byte(benchTestRequest))
+		_, _ = decodeRequest([]byte(benchTestRequest))
 	}
 }
 
 func BenchmarkRawDecoderWithHeaders(b *testing.B) {
 	b.StopTimer()
-	decodedHTTPConfigHeaders, _ := decodeHTTPConfigHeaders(benchTestConfigHeaders)
+	decodedHTTPConfigHeaders, _ := simple.DecodeHTTPConfigHeaders(benchTestConfigHeaders)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		req, _ := decodeRequest([]byte(benchTestRequest))
-		for _, header := range decodedHTTPConfigHeaders {
-			if header.key == "Host" {
-				req.URL.Host = header.value
-			} else {
-				req.Header.Set(header.key, header.value)
-			}
-		}
+		simple.UpdateRequestWithHeaders(req, decodedHTTPConfigHeaders)
 	}
 }

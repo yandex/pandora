@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
 	"github.com/yandex/pandora/core"
 )
@@ -22,7 +21,7 @@ func newAmmoPool() *sync.Pool {
 var _ = Describe("Decoder", func() {
 	It("uri decode ctx cancel", func() {
 		ctx, cancel := context.WithCancel(context.Background())
-		decoder := newDecoder(ctx, make(chan *simple.Ammo), newAmmoPool())
+		decoder := newDecoder(ctx, make(chan *simple.Ammo), newAmmoPool(), nil)
 		cancel()
 		err := decoder.Decode([]byte("/some/path"))
 		Expect(err).To(Equal(context.Canceled))
@@ -33,7 +32,7 @@ var _ = Describe("Decoder", func() {
 	)
 	BeforeEach(func() {
 		ammoCh = make(chan *simple.Ammo, 10)
-		decoder = newDecoder(context.Background(), ammoCh, newAmmoPool())
+		decoder = newDecoder(context.Background(), ammoCh, newAmmoPool(), nil)
 	})
 	DescribeTable("invalid input",
 		func(line string) {
@@ -43,7 +42,6 @@ var _ = Describe("Decoder", func() {
 			Expect(decoder.header).To(BeEmpty())
 		},
 		Entry("empty line", ""),
-		Entry("line start", "test"),
 		Entry("empty header", "[  ]"),
 		Entry("no closing brace", "[key: val "),
 		Entry("no header key", "[ : val ]"),
@@ -70,7 +68,6 @@ var _ = Describe("Decoder", func() {
 		req, sample := sh.Request()
 		Expect(*req.URL).To(MatchFields(IgnoreExtras, Fields{
 			"Path":   Equal(line),
-			"Host":   Equal(host),
 			"Scheme": BeEmpty(),
 		}))
 		Expect(req.Host).To(Equal(host))
@@ -96,7 +93,6 @@ var _ = Describe("Decoder", func() {
 		req, sample := sh.Request()
 		Expect(*req.URL).To(MatchFields(IgnoreExtras, Fields{
 			"Path":   Equal("/some/path"),
-			"Host":   Equal(host),
 			"Scheme": BeEmpty(),
 		}))
 		Expect(req.Host).To(Equal(host))
@@ -142,18 +138,6 @@ var _ = Describe("Decoder", func() {
 			Expect(decoder.header).To(Equal(http.Header{
 				"C": []string{""},
 			}))
-		})
-		It("overwrite by config", func() {
-			decodedConfigHeaders, _ := decodeHTTPConfigHeaders([]string{
-				"[Host: youhost.tld]",
-				"[SomeHeader: somevalue]",
-			})
-			decoder.configHeaders = decodedConfigHeaders
-			cfgHeaders := []ConfigHeader{
-				{"Host", "youhost.tld"},
-				{"SomeHeader", "somevalue"},
-			}
-			Expect(decoder.configHeaders).To(Equal(cfgHeaders))
 		})
 	})
 	It("Reset", func() {

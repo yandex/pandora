@@ -10,11 +10,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
-
 	coremock "github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/lib/testutil"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestReporter_DroppedErr(t *testing.T) {
@@ -24,7 +23,7 @@ func TestReporter_DroppedErr(t *testing.T) {
 	reporter := NewReporter(ReporterConfig{1})
 	reporter.Report(1)
 
-	assert.Nil(t, reporter.DroppedErr())
+	assert.NoError(t, reporter.DroppedErr())
 	reporter.Report(2)
 	err := reporter.DroppedErr()
 	require.Error(t, err)

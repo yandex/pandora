@@ -8,29 +8,59 @@ package uri
 import (
 	"bufio"
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"go.uber.org/zap"
 )
 
 type Config struct {
-	File string `validate:"required"`
+	File string
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
-	// Redefine HTTP headers
+	// Additional HTTP headers
 	Headers []string
 	// Passes limits ammo file passes. Unlimited if zero.
-	Passes int `validate:"min=0"`
+	Passes      int `validate:"min=0"`
+	Uris        []string
+	ChosenCases []string
 }
 
 // TODO: pass logger and metricsRegistry
 func NewProvider(fs afero.Fs, conf Config) *Provider {
+	if len(conf.Uris) > 0 {
+		if conf.File != "" {
+			panic(`One should specify either 'file' or 'uris', but not both of them.`)
+		}
+		file, err := afero.TempFile(fs, "", "generated_ammo_")
+		if err != nil {
+			panic(fmt.Sprintf(`failed to create tmp ammo file: %v`, err))
+		}
+		for _, uri := range conf.Uris {
+			_, err := file.WriteString(fmt.Sprintf("%s\n", uri))
+			if err != nil {
+				panic(fmt.Sprintf(`failed to write ammo in tmp file: %v`, err))
+			}
+		}
+		conf.File = file.Name()
+	}
+	if conf.File == "" {
+		panic(`One should specify either 'file' or 'uris'.`)
+	}
 	var p Provider
 	p = Provider{
 		Provider: simple.NewProvider(fs, conf.File, p.start),
 		Config:   conf,
+	}
+	p.Close = func() {
+		if len(conf.Uris) > 0 {
+			err := fs.Remove(conf.File)
+			if err != nil {
+				zap.L().Error("failed to delete temp file", zap.String("file name", conf.File))
+			}
+		}
 	}
 	return &p
 }
@@ -38,14 +68,15 @@ func NewProvider(fs afero.Fs, conf Config) *Provider {
 type Provider struct {
 	simple.Provider
 	Config
+	log *zap.Logger
 
 	decoder *decoder // Initialized on start.
 }
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
-	p.decoder = newDecoder(ctx, p.Sink, &p.Pool)
+	p.decoder = newDecoder(ctx, p.Sink, &p.Pool, p.Config.ChosenCases)
 	// parse and prepare Headers from config
-	decodedConfigHeaders, err := decodeHTTPConfigHeaders(p.Config.Headers)
+	decodedConfigHeaders, err := simple.DecodeHTTPConfigHeaders(p.Config.Headers)
 	if err != nil {
 		return err
 	}
@@ -70,7 +101,10 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		if p.Passes != 0 && passNum >= p.Passes {
 			break
 		}
-		ammoFile.Seek(0, 0)
+		_, err := ammoFile.Seek(0, 0)
+		if err != nil {
+			p.log.Info("Failed to seek ammo file", zap.Error(err))
+		}
 		p.decoder.ResetHeader()
 	}
 	return nil

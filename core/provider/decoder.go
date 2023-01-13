@@ -11,11 +11,10 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/lib/errutil"
 	"github.com/yandex/pandora/lib/ioutil2"
+	"go.uber.org/zap"
 )
 
 type NewAmmoDecoder func(deps core.ProviderDeps, source io.Reader) (AmmoDecoder, error)
@@ -77,7 +76,7 @@ func (p *DecodeProvider) Run(ctx context.Context, deps core.ProviderDeps) (err e
 		return errors.WithMessage(err, "data source open failed")
 	}
 	defer func() {
-		errutil.Join(err, errors.Wrap(source.Close(), "data source close failed"))
+		_ = errutil.Join(err, errors.Wrap(source.Close(), "data source close failed"))
 	}()
 
 	// Problem: can't use decoder after io.EOF, because decoder is invalidated. But decoder recreation

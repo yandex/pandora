@@ -14,11 +14,10 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/plugin"
 	"github.com/yandex/pandora/lib/tag"
+	"go.uber.org/zap"
 )
 
 func AddHooks() {

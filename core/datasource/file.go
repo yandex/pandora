@@ -10,7 +10,6 @@ import (
 	"os"
 
 	"github.com/spf13/afero"
-
 	"github.com/yandex/pandora/core"
 )
 
@@ -21,7 +20,7 @@ type FileConfig struct {
 }
 
 func NewFile(fs afero.Fs, conf FileConfig) core.DataSource {
-	return &fileSource{afero.Afero{fs}, conf}
+	return &fileSource{afero.Afero{Fs: fs}, conf}
 }
 
 type fileSource struct {

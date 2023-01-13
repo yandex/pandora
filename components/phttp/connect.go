@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/lib/netutil"
+	"go.uber.org/zap"
 )
 
 type ConnectGunConfig struct {
@@ -26,7 +27,7 @@ type ConnectGunConfig struct {
 	BaseGunConfig `config:",squash"`
 }
 
-func NewConnectGun(conf ConnectGunConfig) *ConnectGun {
+func NewConnectGun(conf ConnectGunConfig, answLog *zap.Logger) *ConnectGun {
 	scheme := "http"
 	if conf.SSL {
 		scheme = "https"
@@ -41,6 +42,7 @@ func NewConnectGun(conf ConnectGunConfig) *ConnectGun {
 				client.CloseIdleConnections()
 				return nil
 			},
+			AnswLog: answLog,
 		},
 		scheme: scheme,
 		client: client,
@@ -75,7 +77,7 @@ func newConnectClient(conf ConnectGunConfig) Client {
 			conf.Target,
 			conf.ConnectSSL,
 			NewDialer(conf.Client.Dialer),
-		))
+		), conf.Target)
 	return newClient(transport, conf.Client.Redirect)
 }
 
@@ -88,7 +90,7 @@ func newConnectDialFunc(target string, connectSSL bool, dialer netutil.Dialer) n
 		}
 		defer func() {
 			if err != nil && conn != nil {
-				conn.Close()
+				_ = conn.Close()
 				conn = nil
 			}
 		}()

@@ -10,14 +10,13 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/coretest"
 	"github.com/yandex/pandora/core/plugin"
 	"github.com/yandex/pandora/lib/ginkgoutil"
 	"github.com/yandex/pandora/lib/testutil"
+	"go.uber.org/zap"
 )
 
 func TestImport(t *testing.T) {
@@ -121,7 +120,7 @@ func TestProviderJSONLine(t *testing.T) {
 	conf.Aggregator.Report([]int{0, 1, 2})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err = conf.Aggregator.Run(ctx, core.AggregatorDeps{zap.L()})
+	err = conf.Aggregator.Run(ctx, core.AggregatorDeps{Log: zap.L()})
 	require.NoError(t, err)
 
 	testutil.AssertFileEqual(t, fs, filename, "[0,1,2]\n")

@@ -9,14 +9,13 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/yandex/pandora/lib/netutil"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
-
-	"github.com/pkg/errors"
-	"github.com/yandex/pandora/core/config"
-	"github.com/yandex/pandora/lib/netutil"
 )
 
 //go:generate mockery -name=Client -case=underscore -inpkg -testonly
@@ -64,8 +63,12 @@ func DefaultDialerConfig() DialerConfig {
 }
 
 func NewDialer(conf DialerConfig) netutil.Dialer {
-	d := &net.Dialer{}
-	config.Map(d, conf)
+	d := &net.Dialer{
+		Timeout:       conf.Timeout,
+		DualStack:     conf.DualStack,
+		FallbackDelay: conf.FallbackDelay,
+		KeepAlive:     conf.KeepAlive,
+	}
 	if !conf.DNSCache {
 		return d
 	}
@@ -95,19 +98,32 @@ func DefaultTransportConfig() TransportConfig {
 	}
 }
 
-func NewTransport(conf TransportConfig, dial netutil.DialerFunc) *http.Transport {
-	tr := &http.Transport{}
+func NewTransport(conf TransportConfig, dial netutil.DialerFunc, target string) *http.Transport {
+	tr := &http.Transport{
+		TLSHandshakeTimeout:   conf.TLSHandshakeTimeout,
+		DisableKeepAlives:     conf.DisableKeepAlives,
+		DisableCompression:    conf.DisableCompression,
+		MaxIdleConns:          conf.MaxIdleConns,
+		MaxIdleConnsPerHost:   conf.MaxIdleConnsPerHost,
+		IdleConnTimeout:       conf.IdleConnTimeout,
+		ResponseHeaderTimeout: conf.ResponseHeaderTimeout,
+		ExpectContinueTimeout: conf.ExpectContinueTimeout,
+	}
+	host, _, err := net.SplitHostPort(target)
+	if err != nil {
+		zap.L().Panic("HTTP transport configure fail", zap.Error(err))
+	}
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,                 // We should not spend time for this stuff.
 		NextProtos:         []string{"http/1.1"}, // Disable HTTP/2. Use HTTP/2 transport explicitly, if needed.
+		ServerName:         host,
 	}
-	config.Map(tr, conf)
 	tr.DialContext = dial
 	return tr
 }
 
-func NewHTTP2Transport(conf TransportConfig, dial netutil.DialerFunc) *http.Transport {
-	tr := NewTransport(conf, dial)
+func NewHTTP2Transport(conf TransportConfig, dial netutil.DialerFunc, target string) *http.Transport {
+	tr := NewTransport(conf, dial, target)
 	err := http2.ConfigureTransport(tr)
 	if err != nil {
 		zap.L().Panic("HTTP/2 transport configure fail", zap.Error(err))
@@ -145,6 +161,11 @@ const notHTTP2PanicMsg = "Non HTTP/2 connection established. Seems that target d
 func (c *panicOnHTTP1Client) Do(req *http.Request) (*http.Response, error) {
 	res, err := c.Client.Do(req)
 	if err != nil {
+		var opError *net.OpError
+		// Unfortunately, Go doesn't expose tls.alert (https://github.com/golang/go/issues/35234), so we make decisions based on the error message
+		if errors.As(err, &opError) && opError.Op == "remote error" && strings.Contains(err.Error(), "no application protocol") {
+			zap.L().Panic(notHTTP2PanicMsg, zap.Error(err))
+		}
 		return nil, err
 	}
 	err = checkHTTP2(res.TLS)
@@ -165,4 +186,12 @@ func checkHTTP2(state *tls.ConnectionState) error {
 		return errors.New("http2: could not negotiate protocol mutually")
 	}
 	return nil
+}
+
+func getHostWithoutPort(target string) string {
+	host, _, err := net.SplitHostPort(target)
+	if err != nil {
+		host = target
+	}
+	return host
 }

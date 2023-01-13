@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-
 	"github.com/yandex/pandora/core"
 	coremock "github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/core/schedule"
@@ -48,15 +47,18 @@ var _ = Describe("Instance", func() {
 
 	JustBeforeEach(func() {
 		deps := instanceDeps{
-			aggregator,
+
 			newSchedule,
 			newGun,
 			instanceSharedDeps{
 				provider,
 				metrics,
+				nil,
+				aggregator,
+				false,
 			},
 		}
-		ins, insCreateErr = newInstance(ctx, ginkgoutil.NewLogger(), 0, deps)
+		ins, insCreateErr = newInstance(ctx, ginkgoutil.NewLogger(), "pool_0", 0, deps)
 	})
 
 	AfterEach(func() {
@@ -113,7 +115,7 @@ var _ = Describe("Instance", func() {
 
 	Context("context canceled after run", func() {
 		BeforeEach(func() {
-			ctx, _ = context.WithTimeout(ctx, 10*time.Millisecond)
+			ctx, _ = context.WithTimeout(context.Background(), 10*time.Millisecond)
 			sched := sched.(*coremock.Schedule)
 			sched.On("Next").Return(time.Now().Add(5*time.Second), true)
 			sched.On("Left").Return(1)

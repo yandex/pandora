@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"github.com/yandex/pandora/core"
 )
 
@@ -38,13 +37,13 @@ func AssertSinkEqualStdStream(t *testing.T, expectedPtr **os.File, getSink func(
 	err = wc.Close()
 	require.NoError(t, err)
 
-	temp.Seek(0, io.SeekStart)
-	data, err := ioutil.ReadAll(temp)
+	_, _ = temp.Seek(0, io.SeekStart)
+	data, _ := ioutil.ReadAll(temp)
 	assert.Equal(t, testdata, string(data))
 }
 
 func AssertSinkEqualFile(t *testing.T, fs afero.Fs, filename string, sink core.DataSink) {
-	afero.WriteFile(fs, filename, []byte("should be truncated"), 644)
+	_ = afero.WriteFile(fs, filename, []byte("should be truncated"), 0644)
 
 	wc, err := sink.OpenSink()
 	require.NoError(t, err)

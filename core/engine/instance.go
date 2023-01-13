@@ -7,14 +7,16 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
 	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coreutil"
+	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/lib/tag"
+	"go.uber.org/zap"
 )
 
 type instance struct {
@@ -25,9 +27,9 @@ type instance struct {
 	instanceSharedDeps
 }
 
-func newInstance(ctx context.Context, log *zap.Logger, id int, deps instanceDeps) (*instance, error) {
+func newInstance(ctx context.Context, log *zap.Logger, poolID string, id int, deps instanceDeps) (*instance, error) {
 	log = log.With(zap.Int("instance", id))
-	gunDeps := core.GunDeps{ctx, log, id}
+	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: poolID, InstanceID: id}
 	sched, err := deps.newSchedule()
 	if err != nil {
 		return nil, err
@@ -35,6 +37,11 @@ func newInstance(ctx context.Context, log *zap.Logger, id int, deps instanceDeps
 	gun, err := deps.newGun()
 	if err != nil {
 		return nil, err
+	}
+	if warmedUp, ok := gun.(warmup.WarmedUp); ok {
+		if err := warmedUp.AcceptWarmUpResult(deps.gunWarmUpResult); err != nil {
+			return nil, fmt.Errorf("gun failed to accept warmup result: %w", err)
+		}
 	}
 	err = gun.Bind(deps.aggregator, gunDeps)
 	if err != nil {
@@ -45,7 +52,6 @@ func newInstance(ctx context.Context, log *zap.Logger, id int, deps instanceDeps
 }
 
 type instanceDeps struct {
-	aggregator  core.Aggregator
 	newSchedule func() (core.Schedule, error)
 	newGun      func() (core.Gun, error)
 	instanceSharedDeps
@@ -54,6 +60,9 @@ type instanceDeps struct {
 type instanceSharedDeps struct {
 	provider core.Provider
 	Metrics
+	gunWarmUpResult interface{}
+	aggregator      core.Aggregator
+	discardOverflow bool
 }
 
 // Run blocks until ammo finish, error or context cancel.
@@ -81,24 +90,34 @@ func (i *instance) shoot(ctx context.Context) (err error) {
 	// Checking, that schedule is not finished, required, to not consume extra ammo,
 	// on finish in case of per instance schedule.
 	for !waiter.IsFinished() {
-		ammo, ok := i.provider.Acquire()
-		if !ok {
-			i.log.Debug("Out of ammo")
-			break
+		err := func() error {
+			ammo, ok := i.provider.Acquire()
+			if !ok {
+				i.log.Debug("Out of ammo")
+				return outOfAmmoErr
+			}
+			defer i.provider.Release(ammo)
+			if tag.Debug {
+				i.log.Debug("Ammo acquired", zap.Any("ammo", ammo))
+			}
+			if !waiter.Wait() {
+				return nil
+			}
+			if !i.discardOverflow || !waiter.IsSlowDown() {
+				i.Metrics.Request.Add(1)
+				if tag.Debug {
+					i.log.Debug("Shooting", zap.Any("ammo", ammo))
+				}
+				i.gun.Shoot(ammo)
+				i.Metrics.Response.Add(1)
+			} else {
+				i.aggregator.Report(netsample.DiscardedShootSample())
+			}
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
-		if tag.Debug {
-			i.log.Debug("Ammo acquired", zap.Any("ammo", ammo))
-		}
-		if !waiter.Wait() {
-			break
-		}
-		i.Metrics.Request.Add(1)
-		if tag.Debug {
-			i.log.Debug("Shooting", zap.Any("ammo", ammo))
-		}
-		i.gun.Shoot(ammo)
-		i.Metrics.Response.Add(1)
-		i.provider.Release(ammo)
 	}
 	return ctx.Err()
 }
@@ -115,3 +134,5 @@ func (i *instance) Close() error {
 	i.log.Debug("Gun closed")
 	return err
 }
+
+var outOfAmmoErr = errors.New("Out of ammo")

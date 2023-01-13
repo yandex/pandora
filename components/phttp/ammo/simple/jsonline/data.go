@@ -8,7 +8,7 @@ type data struct {
 	// Request endpoint is defied by gun config.
 	Host   string `json:"host"`
 	Method string `json:"method"`
-	Uri    string `json:"uri"`
+	URI    string `json:"uri"`
 	// Headers defines headers to send.
 	// NOTE: Host header will be silently ignored.
 	Headers map[string]string `json:"headers"`

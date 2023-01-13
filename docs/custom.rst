@@ -361,7 +361,7 @@ Websockets
         } else {
             code = 200
         }
-        defer func() {
+        func() {
             sample.SetProtoCode(code)
             g.aggr.Report(sample)
         }()

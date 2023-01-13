@@ -7,6 +7,7 @@ package netsample
 
 import (
 	"net"
+	"net/url"
 	"os"
 	"sync"
 	"syscall"
@@ -16,7 +17,9 @@ import (
 )
 
 const (
-	ProtoCodeError = 999
+	ProtoCodeError          = 999
+	DiscardedShootCodeError = 777
+	DiscardedShootTag       = "discarded"
 )
 
 const (
@@ -63,8 +66,8 @@ func (s *Sample) AddTag(tag string) {
 	s.tags += "|" + tag
 }
 
-func (s *Sample) Id() int      { return s.id }
-func (s *Sample) SetId(id int) { s.id = id }
+func (s *Sample) ID() int      { return s.id }
+func (s *Sample) SetID(id int) { s.id = id }
 
 func (s *Sample) ProtoCode() int { return s.get(keyProtoCode) }
 func (s *Sample) SetProtoCode(code int) {
@@ -88,11 +91,51 @@ func (s *Sample) setRTT() {
 	}
 }
 
+func (s *Sample) SetUserDuration(d time.Duration) {
+	s.setDuration(keyRTTMicro, d)
+}
+
+func (s *Sample) SetUserProto(code int) {
+	s.set(keyProtoCode, code)
+}
+
+func (s *Sample) SetUserNet(code int) {
+	s.set(keyErrno, code)
+}
+
+func (s *Sample) SetConnectTime(d time.Duration) {
+	s.setDuration(keyConnectMicro, d)
+}
+
+func (s *Sample) SetSendTime(d time.Duration) {
+	s.setDuration(keySendMicro, d)
+}
+
+func (s *Sample) SetLatency(d time.Duration) {
+	s.setDuration(keyLatencyMicro, d)
+}
+
+func (s *Sample) SetReceiveTime(d time.Duration) {
+	s.setDuration(keyReceiveMicro, d)
+}
+
+func (s *Sample) SetRequestBytes(b int) {
+	s.set(keyRequestBytes, b)
+}
+
+func (s *Sample) SetResponseBytes(b int) {
+	s.set(keyResponseBytes, b)
+}
+
 func (s *Sample) String() string {
 	return string(appendPhout(s, nil, true))
 }
 
 func getErrno(err error) int {
+	//
+	if e, ok := err.(net.Error); ok && e.Timeout() {
+		return 110 // Handle client Timeout as if it connection timeout
+	}
 	// stackerr.Error and etc.
 	type hasUnderlying interface {
 		Underlying() error
@@ -111,6 +154,8 @@ func getErrno(err error) int {
 			err = typed.Err
 		case *os.SyscallError:
 			err = typed.Err
+		case *url.Error:
+			err = typed.Err
 		case syscall.Errno:
 			return int(typed)
 		default:
@@ -118,4 +163,14 @@ func getErrno(err error) int {
 			return ProtoCodeError
 		}
 	}
+}
+
+func DiscardedShootSample() *Sample {
+	sample := &Sample{
+		timeStamp: time.Now(),
+		tags:      DiscardedShootTag,
+	}
+	sample.SetUserNet(DiscardedShootCodeError)
+
+	return sample
 }

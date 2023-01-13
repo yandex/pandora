@@ -8,7 +8,7 @@ package errutil
 import (
 	"context"
 
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 )
 

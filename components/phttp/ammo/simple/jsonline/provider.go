@@ -14,6 +14,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	"github.com/yandex/pandora/lib/confutil"
+	"go.uber.org/zap"
 )
 
 func NewProvider(fs afero.Fs, conf Config) *Provider {
@@ -28,6 +30,7 @@ func NewProvider(fs afero.Fs, conf Config) *Provider {
 type Provider struct {
 	simple.Provider
 	Config
+	log *zap.Logger
 }
 
 type Config struct {
@@ -35,19 +38,35 @@ type Config struct {
 	// Limit limits total num of ammo. Unlimited if zero.
 	Limit int `validate:"min=0"`
 	// Passes limits ammo file passes. Unlimited if zero.
-	Passes int `validate:"min=0"`
+	Passes          int `validate:"min=0"`
+	ContinueOnError bool
+	//Maximum number of byte in an ammo. Default is bufio.MaxScanTokenSize
+	MaxAmmoSize int
+	ChosenCases []string
 }
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 	var ammoNum, passNum int
+
 	for {
 		passNum++
 		scanner := bufio.NewScanner(ammoFile)
+		if p.Config.MaxAmmoSize != 0 {
+			var buffer []byte
+			scanner.Buffer(buffer, p.Config.MaxAmmoSize)
+		}
 		for line := 1; scanner.Scan() && (p.Limit == 0 || ammoNum < p.Limit); line++ {
 			data := scanner.Bytes()
 			a, err := decodeAmmo(data, p.Pool.Get().(*simple.Ammo))
 			if err != nil {
-				return errors.Wrapf(err, "failed to decode ammo at line: %v; data: %q", line, data)
+				if p.Config.ContinueOnError {
+					a.Invalidate()
+				} else {
+					return errors.Wrapf(err, "failed to decode ammo at line: %v; data: %q", line, data)
+				}
+			}
+			if !confutil.IsChosenCase(a.Tag(), p.Config.ChosenCases) {
+				continue
 			}
 			ammoNum++
 			select {
@@ -59,7 +78,10 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 		if p.Passes != 0 && passNum >= p.Passes {
 			break
 		}
-		ammoFile.Seek(0, 0)
+		_, err := ammoFile.Seek(0, 0)
+		if err != nil {
+			p.log.Info("Failed to seek ammo file", zap.Error(err))
+		}
 	}
 	return nil
 }
@@ -68,18 +90,18 @@ func decodeAmmo(jsonDoc []byte, am *simple.Ammo) (*simple.Ammo, error) {
 	var data data
 	err := data.UnmarshalJSON(jsonDoc)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return am, errors.WithStack(err)
 	}
 	req, err := data.ToRequest()
 	if err != nil {
-		return nil, err
+		return am, err
 	}
 	am.Reset(req, data.Tag)
 	return am, nil
 }
 
 func (d *data) ToRequest() (req *http.Request, err error) {
-	uri := "http://" + d.Host + d.Uri
+	uri := "http://" + d.Host + d.URI
 	req, err = http.NewRequest(d.Method, uri, strings.NewReader(d.Body))
 	if err != nil {
 		return nil, errors.WithStack(err)

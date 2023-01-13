@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/lib/testutil"
 )
@@ -38,14 +37,14 @@ func AssertSourceEqualStdStream(t *testing.T, expectedPtr **os.File, getSource f
 	err = rc.Close()
 	require.NoError(t, err, "std stream should not be closed")
 
-	temp.Seek(0, io.SeekStart)
-	data, err := ioutil.ReadAll(temp)
+	_, _ = temp.Seek(0, io.SeekStart)
+	data, _ := ioutil.ReadAll(temp)
 	assert.Equal(t, testdata, string(data))
 }
 
 func AssertSourceEqualFile(t *testing.T, fs afero.Fs, filename string, source core.DataSource) {
 	const testdata = "abcd"
-	afero.WriteFile(fs, filename, []byte(testdata), 644)
+	_ = afero.WriteFile(fs, filename, []byte(testdata), 0644)
 
 	rc, err := source.OpenSource()
 	require.NoError(t, err)

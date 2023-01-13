@@ -8,9 +8,8 @@ package schedule
 import (
 	"time"
 
-	"go.uber.org/atomic"
-
 	"github.com/yandex/pandora/core"
+	"go.uber.org/atomic"
 )
 
 // DoAt returns when i'th operation should be performed, assuming that schedule

@@ -3,9 +3,9 @@
 [![Join the chat at https://gitter.im/yandex/pandora](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/yandex/pandora?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/yandex/pandora.svg)](https://travis-ci.org/yandex/pandora)
 [![Coverage Status](https://coveralls.io/repos/yandex/pandora/badge.svg?branch=develop&service=github)](https://coveralls.io/github/yandex/pandora?branch=develop)
-[![Read the Docs](https://readthedocs.org/projects/yandexpandora/badge/)](https://readthedocs.org/projects/yandexpandora/)
+[![Documentation Status](https://readthedocs.org/projects/yandexpandora/badge/?version=develop)](https://yandexpandora.readthedocs.io/en/develop/?badge=develop)
 
-Pandora is a high-performance load generator in Go language. It has built-in HTTP(S) and HTTP/2 support and you can write your own load scenarios in Go, compiling them just before your test.
+Pandora is a high-performance load generator in Go language. It has built-in HTTP(S) and HTTP/2 support and you can write your own load scenarios in Go, compiling them just before your test. 
 
 ## How to start
 
@@ -42,5 +42,9 @@ Run the binary with your config (see config examples at [examples](https://githu
 pandora myconfig.yaml
 ```
 
-Or use Pandora with [Yandex.Tank](http://yandextank.readthedocs.org/en/latest/configuration.html#pandora) and
+Or use Pandora with [Yandex.Tank](https://yandextank.readthedocs.io/en/latest/core_and_modules.html#pandora) and
 [Overload](https://overload.yandex.net).
+
+### Documentation
+[ReadTheDocs](https://yandexpandora.readthedocs.io/en/develop/)
+

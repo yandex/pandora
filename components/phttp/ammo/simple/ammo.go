@@ -15,27 +15,44 @@ import (
 type Ammo struct {
 	// OPTIMIZE(skipor): reuse *http.Request.
 	// Need to research is it possible. http.Transport can hold reference to http.Request.
-	req *http.Request
-	tag string
-	id  int
+	req       *http.Request
+	tag       string
+	id        int
+	isInvalid bool
 }
 
 func (a *Ammo) Request() (*http.Request, *netsample.Sample) {
 	sample := netsample.Acquire(a.tag)
-	sample.SetId(a.id)
+	sample.SetID(a.id)
 	return a.req, sample
 }
 
 func (a *Ammo) Reset(req *http.Request, tag string) {
-	*a = Ammo{req, tag, -1}
+	*a = Ammo{req, tag, -1, false}
 }
 
-func (a *Ammo) SetId(id int) {
+func (a *Ammo) SetID(id int) {
 	a.id = id
 }
 
-func (a *Ammo) Id() int {
+func (a *Ammo) ID() int {
 	return a.id
+}
+
+func (a *Ammo) Invalidate() {
+	a.isInvalid = true
+}
+
+func (a *Ammo) IsInvalid() bool {
+	return a.isInvalid
+}
+
+func (a *Ammo) IsValid() bool {
+	return !a.isInvalid
+}
+
+func (a *Ammo) Tag() string {
+	return a.tag
 }
 
 var _ phttp.Ammo = (*Ammo)(nil)

@@ -11,14 +11,13 @@ import (
 	"github.com/c2h5oh/datasize"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coreutil"
 )
 
 type PhoutConfig struct {
 	Destination     string                    // Destination file name
-	Id              bool                      // Print ammo ids if true.
+	ID              bool                      // Print ammo ids if true.
 	FlushTime       time.Duration             `config:"flush-time"`
 	SampleQueueSize int                       `config:"sample-queue-size"`
 	Buffer          coreutil.BufferSizeConfig `config:",squash"`
@@ -67,8 +66,8 @@ func (a *phoutAggregator) Report(s *Sample) { a.sink <- s }
 func (a *phoutAggregator) Run(ctx context.Context, _ core.AggregatorDeps) error {
 	shouldFlush := time.NewTicker(1 * time.Second)
 	defer func() {
-		a.writer.Flush()
-		a.file.Close()
+		_ = a.writer.Flush()
+		_ = a.file.Close()
 		shouldFlush.Stop()
 	}()
 loop:
@@ -80,11 +79,11 @@ loop:
 			}
 			select {
 			case <-shouldFlush.C:
-				a.writer.Flush()
+				_ = a.writer.Flush()
 			default:
 			}
 		case <-time.After(1 * time.Second):
-			a.writer.Flush()
+			_ = a.writer.Flush()
 		case <-ctx.Done():
 			// Context is done, but we should read all data from sink
 			for {
@@ -103,7 +102,7 @@ loop:
 }
 
 func (a *phoutAggregator) handle(s *Sample) error {
-	a.buf = appendPhout(s, a.buf, a.config.Id)
+	a.buf = appendPhout(s, a.buf, a.config.ID)
 	a.buf = append(a.buf, '\n')
 	_, err := a.writer.Write(a.buf)
 	a.buf = a.buf[:0]
@@ -119,7 +118,7 @@ func appendPhout(s *Sample, dst []byte, id bool) []byte {
 	dst = append(dst, s.tags...)
 	if id {
 		dst = append(dst, '#')
-		dst = strconv.AppendInt(dst, int64(s.Id()), 10)
+		dst = strconv.AppendInt(dst, int64(s.ID()), 10)
 	}
 	for _, v := range s.fields {
 		dst = append(dst, phoutDelimiter)

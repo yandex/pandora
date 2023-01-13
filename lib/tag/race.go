@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
+//go:build race
 // +build race
 
 package tag

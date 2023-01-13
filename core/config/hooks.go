@@ -17,9 +17,9 @@ import (
 	"github.com/c2h5oh/datasize"
 	"github.com/facebookgo/stack"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
+	"github.com/yandex/pandora/lib/confutil"
 	"github.com/yandex/pandora/lib/tag"
+	"go.uber.org/zap"
 )
 
 var InvalidURLError = errors.New("string is not valid URL")
@@ -53,7 +53,7 @@ func StringToURLHook(f reflect.Type, t reflect.Type, data interface{}) (interfac
 	return urlPtr, nil
 }
 
-var InvalidIPError = stderrors.New("string is not valid IP")
+var ErrInvalidIP = stderrors.New("string is not valid IP")
 
 // StringToIPHook converts string to net.IP
 func StringToIPHook(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
@@ -66,7 +66,7 @@ func StringToIPHook(f reflect.Type, t reflect.Type, data interface{}) (interface
 	str := data.(string)
 	ip := net.ParseIP(str)
 	if ip == nil {
-		return nil, errors.WithStack(InvalidIPError)
+		return nil, errors.WithStack(ErrInvalidIP)
 	}
 	return ip, nil
 }
@@ -111,7 +111,7 @@ func TextUnmarshallerHook(f reflect.Type, t reflect.Type, data interface{}) (int
 
 func unmarhsallText(v reflect.Value, data interface{}) error {
 	unmarshaller := v.Interface().(encoding.TextUnmarshaler)
-	unmarshaller.UnmarshalText([]byte(data.(string)))
+	// unmarshaller.UnmarshalText([]byte(data.(string)))
 	err := unmarshaller.UnmarshalText([]byte(data.(string)))
 	return err
 }
@@ -137,4 +137,23 @@ func DebugHook(f reflect.Type, t reflect.Type, data interface{}) (p interface{},
 		zap.String("data", fmt.Sprint(data)),
 	)
 	return
+}
+
+// VariableInjectHook injects values into ${VAR_NAME} placeholders
+func VariableInjectHook(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	if f.Kind() != reflect.String {
+		return data, nil
+	}
+
+	str := data.(string)
+	res, err := confutil.ResolveCustomTags(str, t)
+	if err == confutil.ErrNoTagsFound {
+		return data, nil
+	}
+
+	if err != nil {
+		return data, err
+	}
+
+	return res, nil
 }

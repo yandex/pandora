@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coreutil"
 	"github.com/yandex/pandora/lib/errutil"
@@ -120,7 +119,7 @@ HandleLoop:
 			if err != nil {
 				return
 			}
-		case _ = <-flushTick:
+		case <-flushTick:
 			if previousFlushes == flushes {
 				a.Log.Debug("Flushing")
 				err = encoder.Flush()

@@ -17,19 +17,17 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/engine"
 	"github.com/yandex/pandora/lib/zaputil"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-const Version = "0.3.0"
+const Version = "0.5.1"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 
-var useStdinConfig = false
 var configSearchDirs = []string{"./", "./config", "/etc/pandora"}
 
 type cliConfig struct {
@@ -90,13 +88,26 @@ func Run() {
 	}
 	var (
 		example bool
+		expvar  bool
+		version bool
 	)
 	flag.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
+	flag.BoolVar(&version, "version", false, "print pandora core version")
+	flag.BoolVar(&expvar, "expvar", false, "enable expvar service (DEPRECATED, use monitoring config section instead)")
 	flag.Parse()
+
+	if expvar {
+		fmt.Fprintf(os.Stderr, "-expvar flag is DEPRECATED. Use monitoring config section instead\n")
+	}
 
 	if example {
 		panic("Not implemented yet")
 		// TODO: print example config file content
+	}
+
+	if version {
+		fmt.Fprintf(os.Stderr, "Pandora core/%s\n", Version)
+		return
 	}
 
 	conf := readConfig()
@@ -117,30 +128,41 @@ func Run() {
 	errs := make(chan error)
 	go runEngine(ctx, pandora, errs)
 
+	// waiting for signal or error message from engine
+	awaitPandoraTermination(pandora, cancel, errs, log)
+	log.Info("Engine run successfully finished")
+}
+
+// helper function that awaits pandora run
+func awaitPandoraTermination(pandora *engine.Engine, gracefulShutdown func(), errs chan error, log *zap.Logger) {
 	sigs := make(chan os.Signal, 2)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	// waiting for signal or error message from engine
 	select {
 	case sig := <-sigs:
+		var interruptTimeout = 3 * time.Second
 		switch sig {
 		case syscall.SIGINT:
-			const interruptTimeout = 5 * time.Second
-			log.Info("SIGINT received. Trying to stop gracefully.", zap.Duration("timeout", interruptTimeout))
-			cancel()
-			select {
-			case <-time.After(interruptTimeout):
-				log.Fatal("Interrupt timeout exceeded")
-			case sig := <-sigs:
-				log.Fatal("Another signal received. Quiting.", zap.Stringer("signal", sig))
-			case err := <-errs:
-				log.Fatal("Engine interrupted", zap.Error(err))
-			}
+			// await gun timeout but no longer than 30 sec.
+			interruptTimeout = 30 * time.Second
+			log.Info("SIGINT received. Graceful shutdown.", zap.Duration("timeout", interruptTimeout))
+			gracefulShutdown()
 		case syscall.SIGTERM:
-			log.Fatal("SIGTERM received. Quiting.")
+			log.Info("SIGTERM received. Trying to stop gracefully.", zap.Duration("timeout", interruptTimeout))
+			gracefulShutdown()
 		default:
 			log.Fatal("Unexpected signal received. Quiting.", zap.Stringer("signal", sig))
 		}
+
+		select {
+		case <-time.After(interruptTimeout):
+			log.Fatal("Interrupt timeout exceeded")
+		case sig := <-sigs:
+			log.Fatal("Another signal received. Quiting.", zap.Stringer("signal", sig))
+		case err := <-errs:
+			log.Fatal("Engine interrupted", zap.Error(err))
+		}
+
 	case err := <-errs:
 		switch err {
 		case nil:
@@ -148,7 +170,7 @@ func Run() {
 		case err:
 			const awaitTimeout = 3 * time.Second
 			log.Error("Engine run failed. Awaiting started tasks.", zap.Error(err), zap.Duration("timeout", awaitTimeout))
-			cancel()
+			gracefulShutdown()
 			time.AfterFunc(awaitTimeout, func() {
 				log.Fatal("Engine tasks timeout exceeded.")
 			})
@@ -156,7 +178,6 @@ func Run() {
 			log.Fatal("Engine run failed. Pandora graceful shutdown successfully finished")
 		}
 	}
-	log.Info("Engine run successfully finished")
 }
 
 func runEngine(ctx context.Context, engine *engine.Engine, errs chan error) {
@@ -176,6 +197,7 @@ func readConfig() *cliConfig {
 
 	v := newViper()
 
+	var useStdinConfig = false
 	args := flag.Args()
 	if len(args) > 0 {
 		switch {
@@ -262,10 +284,16 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 			zap.L().Fatal("CPU profile file create fail", zap.Error(err))
 		}
 		zap.L().Info("Starting CPU profiling")
-		pprof.StartCPUProfile(f)
+		err = pprof.StartCPUProfile(f)
+		if err != nil {
+			zap.L().Info("CPU profiling is already enabled")
+		}
 		stops = append(stops, func() {
 			pprof.StopCPUProfile()
-			f.Close()
+			err := f.Close()
+			if err != nil {
+				zap.L().Info("Error closing CPUProfile file")
+			}
 		})
 	}
 	if conf.MemProfile.Enabled {
@@ -276,8 +304,14 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 		stops = append(stops, func() {
 			zap.L().Info("Writing memory profile")
 			runtime.GC()
-			pprof.WriteHeapProfile(f)
-			f.Close()
+			err := pprof.WriteHeapProfile(f)
+			if err != nil {
+				zap.L().Info("Error writing HeapProfile file")
+			}
+			err = f.Close()
+			if err != nil {
+				zap.L().Info("Error closing HeapProfile file")
+			}
 		})
 	}
 	stop = func() {

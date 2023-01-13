@@ -47,11 +47,11 @@ var _ = Describe("stack_extract_core", func() {
 
 		testee = testee.With(noStackFields1())
 		entry := zapcore.Entry{Message: "test"}
-		testee.Write(entry, noStackFields2())
+		_ = testee.Write(entry, noStackFields2())
 
 		Expect(logs.Len()).To(Equal(1))
 		Expect(logs.All()[0]).To(Equal(
-			observer.LoggedEntry{entry, append(noStackFields1(), noStackFields2()...)},
+			observer.LoggedEntry{Entry: entry, Context: append(noStackFields1(), noStackFields2()...)},
 		))
 	})
 
@@ -67,15 +67,15 @@ var _ = Describe("stack_extract_core", func() {
 		fieldsCopy := make([]zapcore.Field, len(fields))
 		copy(fieldsCopy, fields)
 		entry := zapcore.Entry{Message: "test"}
-		testee.Write(entry, fields)
+		_ = testee.Write(entry, fields)
 
 		expectedEntry := entry
 		expectedEntry.Stack = "error stacktrace:" + sampleStack
 		Expect(logs.Len()).To(Equal(1))
 		Expect(logs.All()[0]).To(Equal(
 			observer.LoggedEntry{
-				expectedEntry,
-				append(noStackFields1(), zap.String("error", sampleErrMsg)),
+				Entry:   expectedEntry,
+				Context: append(noStackFields1(), zap.String("error", sampleErrMsg)),
 			},
 		))
 		Expect(fields).To(Equal(fieldsCopy))
@@ -95,15 +95,15 @@ var _ = Describe("stack_extract_core", func() {
 		copy(fieldsCopy, fields)
 		entry := zapcore.Entry{Message: "test"}
 		testee = testee.With(fields)
-		testee.Write(entry, nil)
+		_ = testee.Write(entry, nil)
 
 		expectedEntry := entry
 		expectedEntry.Stack = "error stacktrace:" + sampleStack
 		Expect(logs.Len()).To(Equal(1))
 		Expect(logs.All()[0]).To(Equal(
 			observer.LoggedEntry{
-				expectedEntry,
-				append(noStackFields1(), zap.Error(sampleCause)),
+				Entry:   expectedEntry,
+				Context: append(noStackFields1(), zap.Error(sampleCause)),
 			},
 		))
 		Expect(fields).To(Equal(fieldsCopy))
@@ -120,15 +120,15 @@ var _ = Describe("stack_extract_core", func() {
 		const entryStack = "entry stack"
 		entry := zapcore.Entry{Message: "test", Stack: entryStack}
 		const customKey = "custom-key"
-		testee.Write(entry, []zapcore.Field{zap.NamedError(customKey, sampleErr)})
+		_ = testee.Write(entry, []zapcore.Field{zap.NamedError(customKey, sampleErr)})
 
 		expectedEntry := entry
 		expectedEntry.Stack = entryStack + "\n" + customKey + " stacktrace:" + sampleStack
 		Expect(logs.Len()).To(Equal(1))
 		Expect(logs.All()[0]).To(Equal(
 			observer.LoggedEntry{
-				expectedEntry,
-				[]zapcore.Field{zap.String(customKey, sampleErrMsg)},
+				Entry:   expectedEntry,
+				Context: []zapcore.Field{zap.String(customKey, sampleErrMsg)},
 			},
 		))
 	})
