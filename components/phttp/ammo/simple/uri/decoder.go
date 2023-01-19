@@ -76,7 +76,7 @@ func (d *decoder) decodeURI(line []byte) error {
 	}
 
 	// add new Headers to request from config
-	simple.UpdateRequestWithHeaders(req, d.configHeaders)
+	simple.EnrichRequestWithHeaders(req, d.configHeaders)
 
 	sh := d.pool.Get().(*simple.Ammo)
 	sh.Reset(req, tag)

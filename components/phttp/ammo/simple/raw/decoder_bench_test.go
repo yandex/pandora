@@ -35,6 +35,6 @@ func BenchmarkRawDecoderWithHeaders(b *testing.B) {
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		req, _ := decodeRequest([]byte(benchTestRequest))
-		simple.UpdateRequestWithHeaders(req, decodedHTTPConfigHeaders)
+		simple.EnrichRequestWithHeaders(req, decodedHTTPConfigHeaders)
 	}
 }
