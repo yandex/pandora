@@ -171,7 +171,7 @@ func TestMapRecursive(t *testing.T) {
 	}
 	n := &N{MultiStrings: MultiStrings{B: "b"}, A: "a"}
 	Map(n, &M{MultiStrings: MultiStrings{A: "a"}})
-	assert.Equal(t, &N{A: "a", MultiStrings: MultiStrings{A: "a"}}, n)
+	assert.Equal(t, &N{A: "a", MultiStrings: MultiStrings{A: "a", B: ""}}, n)
 }
 
 func TestMapTagged(t *testing.T) {
@@ -184,7 +184,7 @@ func TestMapTagged(t *testing.T) {
 	}
 	n := &N{MultiStrings: MultiStrings{B: "b"}, A: "a"}
 	Map(n, &M{SomeOtherFieldName: MultiStrings{A: "a"}})
-	assert.Equal(t, &N{A: "a", MultiStrings: MultiStrings{A: "a"}}, n)
+	assert.Equal(t, &N{A: "a", MultiStrings: MultiStrings{A: "a", B: ""}}, n)
 }
 func TestDeltaUpdate(t *testing.T) {
 	var l2 Level2

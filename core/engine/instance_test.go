@@ -121,6 +121,7 @@ var _ = Describe("Instance", func() {
 			sched.On("Left").Return(1)
 			gun.On("Bind", aggregator, mock.Anything).Return(nil)
 			provider.On("Acquire").Return(struct{}{}, true)
+			provider.On("Release", mock.Anything).Return()
 		})
 		It("start fail", func() {
 			err := ins.Run(ctx)
