@@ -115,7 +115,7 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			}
 
 			// add new Headers to request from config
-			simple.UpdateRequestWithHeaders(req, decodedConfigHeaders)
+			simple.EnrichRequestWithHeaders(req, decodedConfigHeaders)
 
 			sh := p.Pool.Get().(*simple.Ammo)
 			sh.Reset(req, tag)

@@ -1,7 +1,6 @@
 package uripost
 
 import (
-	"reflect"
 	"strconv"
 	"testing"
 )
@@ -75,20 +74,6 @@ func TestDecodeBadURI(t *testing.T) {
 		if err.Error() != test.err_msg {
 			t.Errorf("Got: %v, expected: %v", err.Error(), test.err_msg)
 		}
-	}
-
-}
-
-func TestDecodeHTTPConfigHeaders(t *testing.T) {
-	headers := []string{
-		"[Host: some.host]",
-		"[User-Agent: Tank]",
-	}
-
-	header := []Header{{key: "Host", value: "some.host"}, {key: "User-Agent", value: "Tank"}}
-	configHeaders, err := decodeHTTPConfigHeaders(headers)
-	if err == nil && !reflect.DeepEqual(configHeaders, header) {
-		t.Errorf("Got: %v, expected: %v", configHeaders, header)
 	}
 
 }

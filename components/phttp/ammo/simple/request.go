@@ -38,7 +38,7 @@ func DecodeHTTPConfigHeaders(headers []string) (configHTTPHeaders []Header, err 
 	return
 }
 
-func UpdateRequestWithHeaders(req *http.Request, headers []Header) {
+func EnrichRequestWithHeaders(req *http.Request, headers []Header) {
 	origHeaders := req.Header.Clone()
 	for _, header := range headers {
 		if origHeaders.Get(header.key) != "" {
