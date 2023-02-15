@@ -92,6 +92,9 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 			}
 			err := p.decoder.Decode(data)
 			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					return context.Canceled
+				}
 				return errors.Wrapf(err, "failed to decode ammo at line: %v; data: %q", line, data)
 			}
 		}
