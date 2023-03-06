@@ -1,51 +1,61 @@
-package raw
+package uri
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	simple "github.com/yandex/pandora/components/providers/http"
 	"github.com/yandex/pandora/core"
 )
 
-const testFile = "./ammo.stpd"
-const testFileData = "../../../testdata/ammo.stpd"
+const testFile = "./ammo.uri"
+const testFileData = `/0
+[A:b]
+/1
+[Host : example.com]
+[ C : d ]
+/2
+[A:]
+[Host : other.net]
+
+/3
+/4 some tag
+`
 
 var testData = []ammoData{
-	{"GET", "www.ya.ru", "/", http.Header{"Connection": []string{"close"}}, "", ""},
-	{"GET", "www.ya.ru", "/test", http.Header{"Connection": []string{"close"}}, "", ""},
-	{"GET", "www.ya.ru", "/test2", http.Header{"Connection": []string{"close"}}, "tag", ""},
-	{"POST", "www.ya.ru", "/test3", http.Header{"Connection": []string{"close"}, "Content-Length": []string{"5"}}, "tag", "hello"},
+	{"", "/0", http.Header{}, ""},
+	{"", "/1", http.Header{"A": []string{"b"}}, ""},
+	{"example.com", "/2", http.Header{
+		"A": []string{"b"},
+		"C": []string{"d"},
+	}, ""},
+	{"other.net", "/3", http.Header{
+		"A": []string{""},
+		"C": []string{"d"},
+	}, ""},
+	{"other.net", "/4", http.Header{
+		"A": []string{""},
+		"C": []string{"d"},
+	}, "some tag"},
 }
 
 type ammoData struct {
-	method string
 	host   string
 	path   string
 	header http.Header
 	tag    string
-	body   string
 }
 
 var testFs = func() afero.Fs {
-	testFs := afero.NewOsFs()
-	testFileData, err := testFs.Open(testFileData)
-	if err != nil {
-		panic(err)
-	}
-	testDataBuffer, _ := ioutil.ReadAll(testFileData)
-	testFileData.Read(testDataBuffer)
 	fs := afero.NewMemMapFs()
-	err = afero.WriteFile(fs, testFile, testDataBuffer, 0)
+	err := afero.WriteFile(fs, testFile, []byte(testFileData), 0)
 	if err != nil {
 		panic(err)
 	}
@@ -66,12 +76,12 @@ var _ = Describe("provider start", func() {
 		cancel()
 		var err error
 		Eventually(errch).Should(Receive(&err))
-		Expect(err).To(Equal(ctx.Err()))
+		Expect(errors.Cause(err)).To(Equal(ctx.Err()))
 	})
 
 	It("fail", func() {
 		p := newTestProvider(Config{File: "no_such_file"})
-		Expect(p.Run(context.Background(), core.ProviderDeps{}), core.ProviderDeps{}).NotTo(BeNil())
+		Expect(p.Run(context.Background(), core.ProviderDeps{})).NotTo(BeNil())
 	})
 })
 var _ = Describe("provider decode", func() {
@@ -118,9 +128,9 @@ var _ = Describe("provider decode", func() {
 		var err error
 		Eventually(errch).Should(Receive(&err))
 		if expectedStartErr == nil {
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 		} else {
-			Expect(err).To(Equal(expectedStartErr))
+			Expect(errors.Cause(err)).To(Equal(expectedStartErr))
 		}
 		for i := 0; i < len(ammos); i++ {
 			expectedData := testData[i%len(testData)]
@@ -128,27 +138,19 @@ var _ = Describe("provider decode", func() {
 			req, ss := ammo.Request()
 			By(fmt.Sprintf("%v", i))
 			Expect(*req).To(MatchFields(IgnoreExtras, Fields{
-				"Method":     Equal(expectedData.method),
+				"Method":     Equal("GET"),
 				"Proto":      Equal("HTTP/1.1"),
 				"ProtoMajor": Equal(1),
 				"ProtoMinor": Equal(1),
+				"Body":       BeNil(),
 				"Host":       Equal(expectedData.host),
 				"URL": PointTo(MatchFields(IgnoreExtras, Fields{
 					"Scheme": BeEmpty(),
-					//"Host":   Equal(expectedData.host),
-					"Path": Equal(expectedData.path),
+					"Path":   Equal(expectedData.path),
 				})),
-				"Header":     Equal(expectedData.header),
-				"RequestURI": Equal(""),
+				"Header": Equal(expectedData.header),
 			}))
 			Expect(ss.Tags()).To(Equal(expectedData.tag))
-			var bout bytes.Buffer
-			if req.Body != nil {
-				_, err := io.Copy(&bout, req.Body)
-				Expect(err).To(BeNil())
-				req.Body.Close()
-			}
-			Expect(bout.String()).To(Equal(expectedData.body))
 		}
 	})
 

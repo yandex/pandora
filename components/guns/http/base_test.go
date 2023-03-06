@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-	ammomock "github.com/yandex/pandora/components/phttp/mocks"
+	ammomock "github.com/yandex/pandora/components/guns/http/mocks"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coretest"

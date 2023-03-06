@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	simple "github.com/yandex/pandora/components/providers/http"
 	"github.com/yandex/pandora/core"
 )
 

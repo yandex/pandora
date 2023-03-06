@@ -13,7 +13,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	simple "github.com/yandex/pandora/components/providers/http"
 	"github.com/yandex/pandora/lib/confutil"
 )
 

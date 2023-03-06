@@ -24,17 +24,17 @@ func TestDecoderHeader(t *testing.T) {
 
 func TestDecoderBadHeader(t *testing.T) {
 	var tests = []struct {
-		line    []byte
-		err_msg string
+		line   []byte
+		errMsg string
 	}{
-		{line: []byte("[Host some.host]"), err_msg: "missing colon"},
-		{line: []byte("[User-agent: Tank"), err_msg: "header line should be like '[key: value]'"},
-		{line: []byte("[: Tank]"), err_msg: "missing header key"},
+		{line: []byte("[Host some.host]"), errMsg: "missing colon"},
+		{line: []byte("[User-agent: Tank"), errMsg: "header line should be like '[key: value]'"},
+		{line: []byte("[: Tank]"), errMsg: "missing header key"},
 	}
 
 	for _, test := range tests {
-		if _, _, err := decodeHeader(test.line); err.Error() != test.err_msg {
-			t.Errorf("Got: %v, expected: %v", err.Error(), test.err_msg)
+		if _, _, err := decodeHeader(test.line); err.Error() != test.errMsg {
+			t.Errorf("Got: %v, expected: %v", err.Error(), test.errMsg)
 		}
 	}
 
@@ -51,9 +51,9 @@ func TestDecodeURI(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		d_size, d_uri, d_tag, _ := decodeURI(test.line)
-		if d_size != test.size && d_uri != test.uri && d_tag != test.tag {
-			t.Errorf("Got: %v %v %v, expected: %v %v %v", strconv.Itoa(d_size), d_uri, d_tag, test.size, test.uri, test.tag)
+		dSize, dURI, dTag, _ := decodeURI(test.line)
+		if dSize != test.size && dURI != test.uri && dTag != test.tag {
+			t.Errorf("Got: %v %v %v, expected: %v %v %v", strconv.Itoa(dSize), dURI, dTag, test.size, test.uri, test.tag)
 		}
 	}
 
@@ -61,18 +61,18 @@ func TestDecodeURI(t *testing.T) {
 
 func TestDecodeBadURI(t *testing.T) {
 	var tests = []struct {
-		line    []byte
-		err_msg string
+		line   []byte
+		errMsg string
 	}{
-		{line: []byte("3"), err_msg: "Wrong ammo format, should be like 'bodySize uri [tag]'"},
-		{line: []byte("a"), err_msg: "Wrong ammo body size, should be in bytes"},
+		{line: []byte("3"), errMsg: "Wrong ammo format, should be like 'bodySize uri [tag]'"},
+		{line: []byte("a"), errMsg: "Wrong ammo body size, should be in bytes"},
 	}
 
 	for _, test := range tests {
 
 		_, _, _, err := decodeURI(test.line)
-		if err.Error() != test.err_msg {
-			t.Errorf("Got: %v, expected: %v", err.Error(), test.err_msg)
+		if err.Error() != test.errMsg {
+			t.Errorf("Got: %v, expected: %v", err.Error(), test.errMsg)
 		}
 	}
 

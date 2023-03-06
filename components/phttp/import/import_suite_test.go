@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
-	. "github.com/yandex/pandora/components/phttp"
+	. "github.com/yandex/pandora/components/guns/http"
 	"github.com/yandex/pandora/lib/ginkgoutil"
 )
 

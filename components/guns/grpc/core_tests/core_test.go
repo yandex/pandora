@@ -3,7 +3,7 @@ package core
 import (
 	"testing"
 
-	"github.com/yandex/pandora/components/grpc"
+	"github.com/yandex/pandora/components/guns/grpc"
 	"github.com/yandex/pandora/core/warmup"
 )
 

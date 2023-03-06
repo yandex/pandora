@@ -12,7 +12,7 @@ import (
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
 	"github.com/jhump/protoreflect/grpcreflect"
-	"github.com/yandex/pandora/components/grpc/ammo"
+	ammo "github.com/yandex/pandora/components/providers/grpc"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/warmup"

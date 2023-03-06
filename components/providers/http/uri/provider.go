@@ -12,7 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	simple "github.com/yandex/pandora/components/providers/http"
 	"go.uber.org/zap"
 )
 

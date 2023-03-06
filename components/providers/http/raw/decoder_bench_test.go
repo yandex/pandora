@@ -3,7 +3,7 @@ package raw
 import (
 	"testing"
 
-	"github.com/yandex/pandora/components/phttp/ammo/simple"
+	simple "github.com/yandex/pandora/components/providers/http"
 )
 
 var (
