@@ -36,7 +36,7 @@ type ResettableAmmo interface {
 	Reset()
 }
 
-//go:generate mockery -name=Provider -case=underscore -outpkg=coremock
+//go:generate mockery --name=Provider --case=underscore --outpkg=coremock
 
 // Provider is routine that generates ammo for Instance shoots.
 // A Provider MUST be goroutine safe.
@@ -67,7 +67,7 @@ type ProviderDeps struct {
 	PoolID string
 }
 
-//go:generate mockery -name=Gun -case=underscore -outpkg=coremock
+//go:generate mockery --name=Gun --case=underscore --outpkg=coremock
 
 // Gun represents logic of making shoots sequentially.
 // A Gun is owned by only Instance that uses it for shooting in cycle: Acquire Ammo from Provider ->
@@ -115,7 +115,7 @@ type GunDeps struct {
 // Sample is data containing shoot report. Return code, timings, shoot meta information.
 type Sample interface{}
 
-//go:generate mockery -name=BorrowedSample -case=underscore -outpkg=coremock
+//go:generate mockery --name=BorrowedSample --case=underscore --outpkg=coremock
 
 // BorrowedSample is Sample that was borrowed from pool, and SHOULD be returned by Aggregator,
 // after it will handle Sample.
@@ -124,7 +124,7 @@ type BorrowedSample interface {
 	Return()
 }
 
-//go:generate mockery -name=Aggregator -case=underscore -outpkg=coremock
+//go:generate mockery --name=Aggregator --case=underscore --outpkg=coremock
 
 // Aggregator is routine that aggregates Samples from all Pool Instances.
 // Usually aggregator is shooting result reporter, that writes Reported Samples
@@ -160,7 +160,7 @@ type AggregatorDeps struct {
 	Log *zap.Logger
 }
 
-//go:generate mockery -name=Schedule -case=underscore -outpkg=coremock
+//go:generate mockery --name=Schedule --case=underscore --outpkg=coremock
 
 // Schedule represents operation schedule. Schedule MUST be goroutine safe.
 type Schedule interface {
@@ -185,7 +185,7 @@ type Schedule interface {
 	Left() int
 }
 
-//go:generate mockery -name=DataSource -case=underscore -outpkg=coremock
+//go:generate mockery --name=DataSource --case=underscore --outpkg=coremock
 
 // DataSource is abstract, ready to only open, source of data.
 // Returned source MUST implement io.ReadCloser at least, but can implement more wide interface,
@@ -214,7 +214,7 @@ type DataSource interface {
 	OpenSource() (rc io.ReadCloser, err error)
 }
 
-//go:generate mockery -name=DataSink -case=underscore -outpkg=coremock
+//go:generate mockery --name=DataSink --case=underscore --outpkg=coremock
 
 // DataSink is abstract ready to open sink of data.
 //

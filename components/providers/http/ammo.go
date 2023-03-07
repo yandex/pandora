@@ -8,7 +8,7 @@ package simple
 import (
 	"net/http"
 
-	"github.com/yandex/pandora/components/guns/http"
+	phttp "github.com/yandex/pandora/components/guns/http"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 )
 
@@ -17,7 +17,7 @@ type Ammo struct {
 	// Need to research is it possible. http.Transport can hold reference to http.Request.
 	req       *http.Request
 	tag       string
-	id        int
+	id        uint64
 	isInvalid bool
 }
 
@@ -28,14 +28,14 @@ func (a *Ammo) Request() (*http.Request, *netsample.Sample) {
 }
 
 func (a *Ammo) Reset(req *http.Request, tag string) {
-	*a = Ammo{req, tag, -1, false}
+	*a = Ammo{req, tag, 0, false}
 }
 
-func (a *Ammo) SetID(id int) {
+func (a *Ammo) SetID(id uint64) {
 	a.id = id
 }
 
-func (a *Ammo) ID() int {
+func (a *Ammo) ID() uint64 {
 	return a.id
 }
 

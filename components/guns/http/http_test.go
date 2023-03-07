@@ -76,7 +76,8 @@ func newAmmoURL(url string) Ammo {
 }
 
 func newAmmoReq(req *http.Request) Ammo {
-	ammo := &ammomock.Ammo{}
+	ammo := ammomock.NewAmmo(GinkgoT())
+	ammo.On("IsInvalid").Return(false)
 	ammo.On("Request").Return(req, netsample.Acquire("REQUEST"))
 	return ammo
 }

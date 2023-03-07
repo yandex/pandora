@@ -8,11 +8,11 @@ package simple
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/yandex/pandora/core"
-	"go.uber.org/atomic"
 )
 
 func NewProvider(fs afero.Fs, fileName string, start func(ctx context.Context, file afero.File) error) Provider {
@@ -32,7 +32,7 @@ type Provider struct {
 	start     func(ctx context.Context, file afero.File) error
 	Sink      chan *Ammo
 	Pool      sync.Pool
-	idCounter atomic.Int64
+	idCounter atomic.Uint64
 	Close     func()
 	core.ProviderDeps
 }
@@ -40,7 +40,7 @@ type Provider struct {
 func (p *Provider) Acquire() (core.Ammo, bool) {
 	ammo, ok := <-p.Sink
 	if ok {
-		ammo.SetID(int(p.idCounter.Inc() - 1))
+		ammo.SetID(p.idCounter.Add(1))
 	}
 	return ammo, ok
 }

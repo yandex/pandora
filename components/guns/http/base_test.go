@@ -63,11 +63,12 @@ var _ = Describe("BaseGun", func() {
 			Fail("should not be called")
 			return
 		}
-		am := &ammomock.Ammo{}
+		am := ammomock.NewAmmo(GinkgoT())
 		am.On("Request").Return(nil, nil).Run(
 			func(mock.Arguments) {
-				Fail("should not be caled")
+				Fail("should not be called")
 			})
+		am.On("IsInvalid").Return(false)
 		Expect(func() {
 			base.Shoot(am)
 		}).To(Panic())
@@ -86,7 +87,8 @@ var _ = Describe("BaseGun", func() {
 			shootErr error
 		)
 		BeforeEach(func() {
-			am = &ammomock.Ammo{}
+			am = ammomock.NewAmmo(GinkgoT())
+			am.On("IsInvalid").Return(false)
 			req = httptest.NewRequest("GET", "/1/2/3/4", nil)
 			tag = ""
 			results = &netsample.TestAggregator{}

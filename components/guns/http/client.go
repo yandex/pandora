@@ -18,7 +18,7 @@ import (
 	"golang.org/x/net/http2"
 )
 
-//go:generate mockery -name=Client -case=underscore -inpkg -testonly
+//go:generate mockery --name=Client --case=underscore --inpackage --testonly
 
 type Client interface {
 	Do(req *http.Request) (*http.Response, error)

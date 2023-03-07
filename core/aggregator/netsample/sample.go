@@ -52,7 +52,7 @@ var samplePool = &sync.Pool{New: func() interface{} { return &Sample{} }}
 type Sample struct {
 	timeStamp time.Time
 	tags      string
-	id        int
+	id        uint64
 	fields    [fieldsNum]int
 	err       error
 }
@@ -66,8 +66,8 @@ func (s *Sample) AddTag(tag string) {
 	s.tags += "|" + tag
 }
 
-func (s *Sample) ID() int      { return s.id }
-func (s *Sample) SetID(id int) { s.id = id }
+func (s *Sample) ID() uint64      { return s.id }
+func (s *Sample) SetID(id uint64) { s.id = id }
 
 func (s *Sample) ProtoCode() int { return s.get(keyProtoCode) }
 func (s *Sample) SetProtoCode(code int) {

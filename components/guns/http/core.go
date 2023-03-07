@@ -12,7 +12,7 @@ import (
 	"github.com/yandex/pandora/core/aggregator/netsample"
 )
 
-//go:generate mockery -name=Ammo -case=underscore -outpkg=ammomock
+//go:generate mockery --name=Ammo --case=underscore --outpkg=ammomock
 
 // Ammo ammo interface for http based guns.
 // http ammo providers should produce ammo that implements Ammo.
@@ -22,7 +22,7 @@ type Ammo interface {
 	// TODO(skipor): instead of sample use it wrapper with httptrace and more usable interface.
 	Request() (*http.Request, *netsample.Sample)
 	// Id unique ammo id. Usually equals to ammo num got from provider.
-	ID() int
+	ID() uint64
 	IsInvalid() bool
 }
 

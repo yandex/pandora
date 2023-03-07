@@ -18,7 +18,7 @@ import (
 
 type NewSampleEncoder func(w io.Writer, onFlush func()) SampleEncoder
 
-//go:generate mockery -name=SampleEncoder -case=underscore -outpkg=aggregatemock
+//go:generate mockery --name=SampleEncoder --case=underscore --outpkg=aggregatemock
 
 // SampleEncoder is efficient, buffered encoder of samples.
 // SampleEncoder MAY support only concrete type of sample.
@@ -32,7 +32,7 @@ type SampleEncoder interface {
 	// io.Closer
 }
 
-//go:generate mockery -name=SampleEncodeCloser -case=underscore -outpkg=aggregatemock
+//go:generate mockery --name=SampleEncodeCloser --case=underscore --outpkg=aggregatemock
 
 // SampleEncoderCloser is SampleEncoder that REQUIRE Close call to finish encoding.
 type SampleEncodeCloser interface {

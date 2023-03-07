@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate mockery -name=Dialer -case=underscore -outpkg=netmock
+//go:generate mockery --name=Dialer --case=underscore --outpkg=netmock
 
 type Dialer interface {
 	DialContext(ctx context.Context, net, addr string) (net.Conn, error)
@@ -83,7 +83,7 @@ func WarmDNSCache(c DNSCache, addr string) error {
 	return nil
 }
 
-//go:generate mockery -name=DNSCache -case=underscore -outpkg=netmock
+//go:generate mockery --name=DNSCache --case=underscore --outpkg=netmock
 
 type DNSCache interface {
 	Get(addr string) (string, bool)
