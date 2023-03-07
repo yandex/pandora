@@ -1,0 +1,28 @@
+54
+GET / HTTP/1.1
+Host: www.ya.ru
+Connection: close
+
+
+58
+GET /test HTTP/1.1
+Host: www.ya.ru
+Connection: close
+
+
+59 tag
+GET /test2 HTTP/1.1
+Host: www.ya.ru
+Connection: close
+
+
+84 tag
+POST /test3 HTTP/1.1
+Host: www.ya.ru
+Connection: close
+Content-Length: 5
+
+hello
+
+
+0

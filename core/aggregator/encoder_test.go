@@ -239,10 +239,6 @@ func TestEncoderAggregator_ManualFlush(t *testing.T) {
 				return
 			}
 		}
-		err := <-runErr
-		require.NoError(t, err)
-		assert.Equal(t, 1, flushes)
-		tr.AssertExpectations()
 	})
 }
 

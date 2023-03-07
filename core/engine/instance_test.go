@@ -115,7 +115,9 @@ var _ = Describe("Instance", func() {
 
 	Context("context canceled after run", func() {
 		BeforeEach(func() {
-			ctx, _ = context.WithTimeout(context.Background(), 10*time.Millisecond)
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
+			_ = cancel
 			sched := sched.(*coremock.Schedule)
 			sched.On("Next").Return(time.Now().Add(5*time.Second), true)
 			sched.On("Left").Return(1)

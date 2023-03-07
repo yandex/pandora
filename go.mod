@@ -7,7 +7,6 @@ require (
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052
 	github.com/facebookgo/stackerr v0.0.0-20150612192056-c2fcf88613f4
-	github.com/ghodss/yaml v1.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jhump/protoreflect v1.12.0
 	github.com/json-iterator/go v1.1.12
@@ -24,6 +23,7 @@ require (
 	golang.org/x/net v0.5.0
 	google.golang.org/grpc v1.50.1
 	gopkg.in/bluesuncorp/validator.v9 v9.10.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -60,6 +60,5 @@ require (
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

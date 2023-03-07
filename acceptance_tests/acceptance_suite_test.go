@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ghodss/yaml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -17,6 +16,7 @@ import (
 	"github.com/yandex/pandora/lib/ginkgoutil"
 	"github.com/yandex/pandora/lib/tag"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v2"
 )
 
 var pandoraBin string
@@ -61,38 +61,36 @@ func NewTestConfig() *TestConfig {
 	}
 }
 
-// PandoraConfig will be encoded to file via github.com/ghodss/yaml that supports json tags.
-// Or it can be encoded as JSON too, to test pandora JSON support.
 type PandoraConfig struct {
-	Pool             []*InstancePoolConfig `json:"pools"`
-	LogConfig        `json:"log,omitempty"`
-	MonitoringConfig `json:"monitoring,omitempty"`
+	Pool             []*InstancePoolConfig `yaml:"pools" json:"pools"`
+	LogConfig        `yaml:"log,omitempty" json:"log,omitempty"`
+	MonitoringConfig `yaml:"monitoring,omitempty" json:"monitoring,omitempty"`
 }
 
 type LogConfig struct {
-	Level string `json:"level,omitempty"`
-	File  string `json:"file,omitempty"`
+	Level string `yaml:"level,omitempty" json:"level,omitempty"`
+	File  string `yaml:"file,omitempty" json:"file,omitempty"`
 }
 
 type MonitoringConfig struct {
-	Expvar     *expvarConfig
-	CPUProfile *cpuprofileConfig
-	MemProfile *memprofileConfig
+	Expvar     *expvarConfig     `yaml:"Expvar"`
+	CPUProfile *cpuprofileConfig `yaml:"CPUProfile"`
+	MemProfile *memprofileConfig `yaml:"MemProfile"`
 }
 
 type expvarConfig struct {
-	Enabled bool `json:"enabled"`
-	Port    int  `json:"port"`
+	Enabled bool `yaml:"enabled" json:"enabled"`
+	Port    int  `yaml:"port" json:"port"`
 }
 
 type cpuprofileConfig struct {
-	Enabled bool   `json:"enabled"`
-	File    string `json:"file"`
+	Enabled bool   `yaml:"enabled" json:"enabled"`
+	File    string `yaml:"file" json:"file"`
 }
 
 type memprofileConfig struct {
-	Enabled bool   `json:"enabled"`
-	File    string `json:"file"`
+	Enabled bool   `yaml:"enabled" json:"enabled"`
+	File    string `yaml:"file" json:"file"`
 }
 
 func (pc *PandoraConfig) Append(ipc *InstancePoolConfig) {
@@ -112,12 +110,12 @@ func NewInstansePoolConfig() *InstancePoolConfig {
 
 type InstancePoolConfig struct {
 	ID              string
-	Provider        map[string]interface{} `json:"ammo"`
-	Aggregator      map[string]interface{} `json:"result"`
-	Gun             map[string]interface{} `json:"gun"`
-	RPSPerInstance  bool                   `json:"rps-per-instance"`
-	RPSSchedule     interface{}            `json:"rps"`
-	StartupSchedule interface{}            `json:"startup"`
+	Provider        map[string]interface{} `yaml:"ammo" json:"ammo"`
+	Aggregator      map[string]interface{} `yaml:"result" json:"result"`
+	Gun             map[string]interface{} `yaml:"gun" json:"gun"`
+	RPSPerInstance  bool                   `yaml:"rps-per-instance" json:"rps-per-instance"`
+	RPSSchedule     interface{}            `yaml:"rps" json:"rps"`
+	StartupSchedule interface{}            `yaml:"startup" json:"startup"`
 }
 
 type PandoraTester struct {
