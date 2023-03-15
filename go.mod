@@ -21,6 +21,7 @@ require (
 	go.uber.org/atomic v1.10.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/net v0.7.0
+	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
 	google.golang.org/grpc v1.50.1
 	gopkg.in/bluesuncorp/validator.v9 v9.10.0
 	gopkg.in/yaml.v2 v2.4.0

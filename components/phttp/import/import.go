@@ -10,10 +10,8 @@ import (
 
 	"github.com/spf13/afero"
 	phttp "github.com/yandex/pandora/components/guns/http"
-	"github.com/yandex/pandora/components/providers/http/jsonline"
-	"github.com/yandex/pandora/components/providers/http/raw"
-	"github.com/yandex/pandora/components/providers/http/uri"
-	"github.com/yandex/pandora/components/providers/http/uripost"
+	httpProvider "github.com/yandex/pandora/components/providers/http"
+	"github.com/yandex/pandora/components/providers/http/config"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/register"
 	"github.com/yandex/pandora/lib/answlog"
@@ -22,21 +20,28 @@ import (
 )
 
 func Import(fs afero.Fs) {
-
-	register.Provider("http/json", func(conf jsonline.Config) core.Provider {
-		return jsonline.NewProvider(fs, conf)
+	register.Provider("http", func(conf config.Config) (core.Provider, error) {
+		return httpProvider.NewProvider(fs, conf)
 	})
 
-	register.Provider("uri", func(conf uri.Config) core.Provider {
-		return uri.NewProvider(fs, conf)
+	register.Provider("http/json", func(conf config.Config) (core.Provider, error) {
+		conf.Decoder = config.DecoderJSONLine
+		return httpProvider.NewProvider(fs, conf)
 	})
 
-	register.Provider("uripost", func(conf uripost.Config) core.Provider {
-		return uripost.NewProvider(fs, conf)
+	register.Provider("uri", func(conf config.Config) (core.Provider, error) {
+		conf.Decoder = config.DecoderURI
+		return httpProvider.NewProvider(fs, conf)
 	})
 
-	register.Provider("raw", func(conf raw.Config) core.Provider {
-		return raw.NewProvider(fs, conf)
+	register.Provider("uripost", func(conf config.Config) (core.Provider, error) {
+		conf.Decoder = config.DecoderURIPost
+		return httpProvider.NewProvider(fs, conf)
+	})
+
+	register.Provider("raw", func(conf config.Config) (core.Provider, error) {
+		conf.Decoder = config.DecoderRaw
+		return httpProvider.NewProvider(fs, conf)
 	})
 
 	register.Gun("http", func(conf phttp.HTTPGunConfig) func() core.Gun {

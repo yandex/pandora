@@ -3,60 +3,61 @@
 // license that can be found in the LICENSE file.
 // Author: Vladimir Skipor <skipor@yandex-team.ru>
 
-package simple
+package http
 
 import (
-	"context"
+	"net/http"
+	"strings"
 	"sync"
-	"sync/atomic"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"github.com/yandex/pandora/components/providers/base"
+	"github.com/yandex/pandora/components/providers/http/config"
+	"github.com/yandex/pandora/components/providers/http/decoders"
+	"github.com/yandex/pandora/components/providers/http/provider"
 	"github.com/yandex/pandora/core"
+	"golang.org/x/xerrors"
 )
 
-func NewProvider(fs afero.Fs, fileName string, start func(ctx context.Context, file afero.File) error) Provider {
-	return Provider{
-		fs:       fs,
-		fileName: fileName,
-		start:    start,
-		Sink:     make(chan *Ammo, 128),
-		Pool:     sync.Pool{New: func() interface{} { return &Ammo{} }},
-		Close:    func() {},
+func NewProvider(fs afero.Fs, conf config.Config) (core.Provider, error) {
+	if !conf.Decoder.IsValid() {
+		return nil, xerrors.Errorf("unknown decoder type faced")
 	}
-}
-
-type Provider struct {
-	fs        afero.Fs
-	fileName  string
-	start     func(ctx context.Context, file afero.File) error
-	Sink      chan *Ammo
-	Pool      sync.Pool
-	idCounter atomic.Uint64
-	Close     func()
-	core.ProviderDeps
-}
-
-func (p *Provider) Acquire() (core.Ammo, bool) {
-	ammo, ok := <-p.Sink
-	if ok {
-		ammo.SetID(p.idCounter.Add(1))
+	if len(conf.Uris) > 0 {
+		if conf.Decoder != config.DecoderURI {
+			return nil, xerrors.Errorf("'uris' expect setted only for 'uri' decoder, but faced with '%s'", conf.Decoder)
+		}
+		if conf.File != "" {
+			return nil, xerrors.Errorf("one should specify either 'file' or 'uris', but not both of them")
+		}
+		fs = afero.NewMemMapFs()
+		conf.File = "ammo.uri"
+		err := afero.WriteFile(fs, conf.File, []byte(strings.Join(conf.Uris, "\n")), 0444)
+		if err != nil {
+			return nil, xerrors.Errorf("uri based ammo file create error: %w", err)
+		}
 	}
-	return ammo, ok
-}
+	if conf.File == "" {
+		return nil, xerrors.Errorf("one should specify either 'file' or 'uris'")
+	}
 
-func (p *Provider) Release(a core.Ammo) {
-	p.Pool.Put(a)
-}
-
-func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) error {
-	defer p.Close()
-	p.ProviderDeps = deps
-	defer close(p.Sink)
-	file, err := p.fs.Open(p.fileName)
+	file, err := fs.Open(conf.File)
 	if err != nil {
-		return errors.Wrap(err, "failed to open ammo file")
+		return nil, xerrors.Errorf("open file error: %w", err)
 	}
-	defer file.Close()
-	return p.start(ctx, file)
+	decoder, err := decoders.NewDecoder(conf, file)
+	if err != nil {
+		return nil, xerrors.Errorf("decoder init error: %w", err)
+	}
+	p := &provider.Provider{
+		ProviderBase: base.ProviderBase{
+			FS: fs,
+		},
+		Config:   conf,
+		Decoder:  decoder,
+		Close:    file.Close,
+		AmmoPool: sync.Pool{New: func() interface{} { return new(base.Ammo[http.Request]) }},
+		Sink:     make(chan *base.Ammo[http.Request]),
+	}
+	return p, err
 }

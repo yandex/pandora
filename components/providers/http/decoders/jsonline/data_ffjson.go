@@ -6,7 +6,6 @@ package jsonline
 import (
 	"bytes"
 	"fmt"
-
 	fflib "github.com/pquerna/ffjson/fflib/v1"
 )
 
@@ -18,7 +17,7 @@ const (
 
 	ffjtdataMethod
 
-	ffjtdataUri
+	ffjtdataURI
 
 	ffjtdataHeaders
 
@@ -31,7 +30,7 @@ var ffjKeydataHost = []byte("host")
 
 var ffjKeydataMethod = []byte("method")
 
-var ffjKeydataUri = []byte("uri")
+var ffjKeydataURI = []byte("uri")
 
 var ffjKeydataHeaders = []byte("headers")
 
@@ -139,8 +138,8 @@ mainparse:
 
 				case 'u':
 
-					if bytes.Equal(ffjKeydataUri, kn) {
-						currentKey = ffjtdataUri
+					if bytes.Equal(ffjKeydataURI, kn) {
+						currentKey = ffjtdataURI
 						state = fflib.FFParse_want_colon
 						goto mainparse
 					}
@@ -165,8 +164,8 @@ mainparse:
 					goto mainparse
 				}
 
-				if fflib.SimpleLetterEqualFold(ffjKeydataUri, kn) {
-					currentKey = ffjtdataUri
+				if fflib.SimpleLetterEqualFold(ffjKeydataURI, kn) {
+					currentKey = ffjtdataURI
 					state = fflib.FFParse_want_colon
 					goto mainparse
 				}
@@ -206,8 +205,8 @@ mainparse:
 				case ffjtdataMethod:
 					goto handle_Method
 
-				case ffjtdataUri:
-					goto handle_Uri
+				case ffjtdataURI:
+					goto handle_URI
 
 				case ffjtdataHeaders:
 					goto handle_Headers
@@ -284,9 +283,9 @@ handle_Method:
 	state = fflib.FFParse_after_value
 	goto mainparse
 
-handle_Uri:
+handle_URI:
 
-	/* handler: j.Uri type=string kind=string quoted=false*/
+	/* handler: j.URI type=string kind=string quoted=false*/
 
 	{
 
