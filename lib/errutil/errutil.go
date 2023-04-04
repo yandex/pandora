@@ -28,16 +28,9 @@ func Join(err1, err2 error) error {
 	}
 }
 
-func IsNotCtxError(ctx context.Context, err error) bool {
+func IsCtxError(ctx context.Context, err error) bool {
 	if err == nil {
-		return false
+		return true
 	}
-	select {
-	case <-ctx.Done():
-		if ctx.Err() == errors.Cause(err) { // Support github.com/pkg/errors wrapping
-			return false
-		}
-	default:
-	}
-	return true
+	return ctx.Err() == errors.Cause(err)
 }

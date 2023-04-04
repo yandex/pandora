@@ -135,7 +135,6 @@ type instancePool struct {
 // remaining results awaiting goroutine in background, that will call onWaitDone callback,
 // when all started subroutines will be finished.
 func (p *instancePool) Run(ctx context.Context) error {
-	originalCtx := ctx // Canceled only in case of other pool fail.
 	p.log.Info("Pool run started")
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
@@ -156,7 +155,7 @@ func (p *instancePool) Run(ctx context.Context) error {
 	awaitErr := p.awaitRunAsync(rh)
 
 	select {
-	case <-originalCtx.Done():
+	case <-ctx.Done():
 		p.log.Info("Pool execution canceled")
 		return ctx.Err()
 	case err, ok := <-awaitErr:
@@ -170,11 +169,11 @@ func (p *instancePool) Run(ctx context.Context) error {
 }
 
 func (p *instancePool) warmUpGun(ctx context.Context) error {
-	dummyGun, err := p.NewGun()
+	gun, err := p.NewGun()
 	if err != nil {
 		return fmt.Errorf("can't initiate a gun: %w", err)
 	}
-	if gunWithWarmUp, ok := dummyGun.(warmup.WarmedUp); ok {
+	if gunWithWarmUp, ok := gun.(warmup.WarmedUp); ok {
 		p.gunWarmUpResult, err = gunWithWarmUp.WarmUp(&warmup.Options{
 			Log: p.log,
 			Ctx: ctx,
@@ -287,14 +286,14 @@ func (ah *runAwaitHandle) awaitRun() {
 			// TODO(skipor): not wait for provider, to return success result?
 			ah.toWait--
 			ah.log.Debug("AmmoQueue awaited", zap.Error(err))
-			if errutil.IsNotCtxError(ah.runCtx, err) {
+			if !errutil.IsCtxError(ah.runCtx, err) {
 				ah.onErrAwaited(errors.WithMessage(err, "provider failed"))
 			}
 		case err := <-ah.aggregatorErr:
 			ah.aggregatorErr = nil
 			ah.toWait--
 			ah.log.Debug("Aggregator awaited", zap.Error(err))
-			if errutil.IsNotCtxError(ah.runCtx, err) {
+			if !errutil.IsCtxError(ah.runCtx, err) {
 				ah.onErrAwaited(errors.WithMessage(err, "aggregator failed"))
 			}
 		case res := <-ah.startRes:
@@ -302,7 +301,7 @@ func (ah *runAwaitHandle) awaitRun() {
 			ah.toWait--
 			ah.startedInstances = res.Started
 			ah.log.Debug("Instances start awaited", zap.Int("started", ah.startedInstances), zap.Error(res.Err))
-			if errutil.IsNotCtxError(ah.instanceStartCtx, res.Err) {
+			if !errutil.IsCtxError(ah.instanceStartCtx, res.Err) {
 				ah.onErrAwaited(errors.WithMessage(res.Err, "instances start failed"))
 			}
 			ah.checkAllInstancesAreFinished() // There is a race between run and start results.
@@ -317,7 +316,7 @@ func (ah *runAwaitHandle) awaitRun() {
 					ah.log.Debug("Canceling instance start because out of ammo")
 					ah.instanceStartCancel()
 				}
-			} else if errutil.IsNotCtxError(ah.runCtx, res.Err) {
+			} else if !errutil.IsCtxError(ah.runCtx, res.Err) {
 				ah.onErrAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.ID)))
 			}
 			ah.checkAllInstancesAreFinished()
@@ -399,16 +398,14 @@ func (p *instancePool) startInstances(
 }
 
 func (p *instancePool) buildNewInstanceSchedule(startCtx context.Context, cancelStart context.CancelFunc) (
-	newInstanceSchedule func() (core.Schedule, error), err error,
+	func() (core.Schedule, error), error,
 ) {
 	if p.RPSPerInstance {
-		newInstanceSchedule = p.NewRPSSchedule
-		return
+		return p.NewRPSSchedule, nil
 	}
-	var sharedRPSSchedule core.Schedule
-	sharedRPSSchedule, err = p.NewRPSSchedule()
+	sharedRPSSchedule, err := p.NewRPSSchedule()
 	if err != nil {
-		return
+		return nil, err
 	}
 	sharedRPSSchedule = coreutil.NewCallbackOnFinishSchedule(sharedRPSSchedule, func() {
 		select {
@@ -420,10 +417,9 @@ func (p *instancePool) buildNewInstanceSchedule(startCtx context.Context, cancel
 			cancelStart()
 		}
 	})
-	newInstanceSchedule = func() (core.Schedule, error) {
+	return func() (core.Schedule, error) {
 		return sharedRPSSchedule, err
-	}
-	return
+	}, nil
 }
 
 func runNewInstance(ctx context.Context, log *zap.Logger, poolID string, id int, deps instanceDeps) error {

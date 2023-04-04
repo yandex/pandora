@@ -58,8 +58,8 @@ type instanceDeps struct {
 }
 
 type instanceSharedDeps struct {
-	provider core.Provider
-	Metrics
+	provider        core.Provider
+	metrics         Metrics
 	gunWarmUpResult interface{}
 	aggregator      core.Aggregator
 	discardOverflow bool
@@ -69,10 +69,10 @@ type instanceSharedDeps struct {
 // Expects, that gun is already bind.
 func (i *instance) Run(ctx context.Context) error {
 	i.log.Debug("Instance started")
-	i.InstanceStart.Add(1)
+	i.metrics.InstanceStart.Add(1)
 	defer func() {
-		defer i.log.Debug("Instance finished")
-		i.InstanceFinish.Add(1)
+		i.metrics.InstanceFinish.Add(1)
+		i.log.Debug("Instance finished")
 	}()
 
 	return i.shoot(ctx)
@@ -104,12 +104,12 @@ func (i *instance) shoot(ctx context.Context) (err error) {
 				return nil
 			}
 			if !i.discardOverflow || !waiter.IsSlowDown() {
-				i.Metrics.Request.Add(1)
+				i.metrics.Request.Add(1)
 				if tag.Debug {
 					i.log.Debug("Shooting", zap.Any("ammo", ammo))
 				}
 				i.gun.Shoot(ammo)
-				i.Metrics.Response.Add(1)
+				i.metrics.Response.Add(1)
 			} else {
 				i.aggregator.Report(netsample.DiscardedShootSample())
 			}
