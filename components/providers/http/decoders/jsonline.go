@@ -17,11 +17,11 @@ type jsonlineDecoder struct {
 }
 
 func (d *jsonlineDecoder) Scan(ctx context.Context) bool {
-	if d.Limit != 0 && d.ammoNum >= d.Limit {
+	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
 		d.err = ErrAmmoLimit
 		return false
 	}
-	if d.Config.Limit != 0 && d.ammoNum >= d.Config.Limit {
+	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
 		d.err = ErrAmmoLimit
 		return false
 	}
@@ -36,7 +36,7 @@ func (d *jsonlineDecoder) Scan(ctx context.Context) bool {
 			if d.scanner.Err() == nil { // assume as io.EOF; FIXME: check possible nil error with other reason
 				d.line = 0
 				d.passNum++
-				if d.Passes != 0 && d.passNum >= d.Passes {
+				if d.config.Passes != 0 && d.passNum >= d.config.Passes {
 					d.err = ErrPassLimit
 					return false
 				}
@@ -50,9 +50,9 @@ func (d *jsonlineDecoder) Scan(ctx context.Context) bool {
 					return false
 				}
 				d.scanner = bufio.NewScanner(d.file)
-				if d.Config.MaxAmmoSize != 0 {
+				if d.config.MaxAmmoSize != 0 {
 					var buffer []byte
-					d.scanner.Buffer(buffer, d.Config.MaxAmmoSize)
+					d.scanner.Buffer(buffer, d.config.MaxAmmoSize)
 				}
 				continue
 			}
@@ -64,7 +64,7 @@ func (d *jsonlineDecoder) Scan(ctx context.Context) bool {
 		var err error
 		d.req, d.tag, err = jsonline.DecodeAmmo(data)
 		if err != nil {
-			if !d.Config.ContinueOnError {
+			if !d.config.ContinueOnError {
 				d.err = xerrors.Errorf("failed to decode ammo at line: %v; data: %q, with err: %w", d.line+1, data, err)
 				return false
 			}

@@ -31,8 +31,8 @@ type Decoder interface {
 }
 
 type protoDecoder struct {
-	file io.ReadSeeker
-	config.Config
+	file                 io.ReadSeeker
+	config               config.Config
 	decodedConfigHeaders http.Header
 	ammoNum              uint
 	passNum              uint
@@ -63,7 +63,7 @@ func NewDecoder(conf config.Config, file io.ReadSeeker) (d Decoder, err error) {
 
 	proto := protoDecoder{
 		file:                 file,
-		Config:               conf,
+		config:               conf,
 		decodedConfigHeaders: decodedConfigHeaders,
 	}
 

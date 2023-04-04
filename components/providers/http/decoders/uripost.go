@@ -24,7 +24,7 @@ func (d *uripostDecoder) Scan(ctx context.Context) bool {
 	var req *http.Request
 	var buffReader io.Reader
 
-	if d.Limit != 0 && d.ammoNum >= d.Limit {
+	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
 		d.err = ErrAmmoLimit
 		return false
 	}
@@ -38,7 +38,7 @@ func (d *uripostDecoder) Scan(ctx context.Context) bool {
 		data, err := d.reader.ReadString('\n')
 		if err == io.EOF {
 			d.passNum++
-			if d.Passes != 0 && d.passNum >= d.Passes {
+			if d.config.Passes != 0 && d.passNum >= d.config.Passes {
 				d.err = ErrPassLimit
 				return false
 			}

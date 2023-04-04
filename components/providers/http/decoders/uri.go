@@ -19,7 +19,7 @@ type uriDecoder struct {
 }
 
 func (d *uriDecoder) Scan(ctx context.Context) bool {
-	if d.Limit != 0 && d.ammoNum >= d.Limit {
+	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
 		d.err = ErrAmmoLimit
 		return false
 	}
@@ -34,7 +34,7 @@ func (d *uriDecoder) Scan(ctx context.Context) bool {
 			if d.scanner.Err() == nil { // assume as io.EOF; FIXME: check possible nil error with other reason
 				d.line = 0
 				d.passNum++
-				if d.Passes != 0 && d.passNum >= d.Passes {
+				if d.config.Passes != 0 && d.passNum >= d.config.Passes {
 					d.err = ErrPassLimit
 					return false
 				}
