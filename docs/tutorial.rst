@@ -50,7 +50,7 @@ You can enable debug information about gun (e.g. monitoring and additional loggi
       file: "cpuprofile.log"
     memprofile:                        # mem profiling
       enabled: true
-      memprofile: "memprofile.log"
+      file: "memprofile.log"
 
 
 `ammo.uri`:
