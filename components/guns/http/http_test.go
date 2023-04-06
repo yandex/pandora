@@ -1,7 +1,6 @@
 // Copyright (c) 2017 Yandex LLC. All rights reserved.
 // Use of this source code is governed by a MPL 2.0
 // license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
 
 package phttp
 
@@ -10,10 +9,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
+	"github.com/stretchr/testify/require"
 	ammomock "github.com/yandex/pandora/components/guns/http/mocks"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/config"
@@ -22,161 +20,170 @@ import (
 	"golang.org/x/net/http2"
 )
 
-var _ = Describe("BaseGun", func() {
-	It("GunClientConfig decode", func() {
-		conf := DefaultHTTPGunConfig()
-		data := map[interface{}]interface{}{
-			"target": "test-trbo01e.haze.yandex.net:3000",
-		}
-		err := config.DecodeAndValidate(data, &conf)
-		Expect(err).To(BeNil())
-	})
-
-	It("integration", func() {
-		const host = "example.com"
-		const path = "/smth"
-		expectedReq, err := http.NewRequest("GET", "http://"+host+path, nil)
-		expectedReq.Host = "" // Important. Ammo may have empty host.
-		Expect(err).To(BeNil())
-		var actualReq *http.Request
-		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			rw.WriteHeader(http.StatusOK)
-			actualReq = req
-		}))
-		defer server.Close()
-		log := zap.NewNop()
-		conf := DefaultHTTPGunConfig()
-		conf.Gun.Target = host + ":80"
-		targetResolved := strings.TrimPrefix(server.URL, "http://")
-		results := &netsample.TestAggregator{}
-		httpGun := NewHTTPGun(conf, log, targetResolved)
-		_ = httpGun.Bind(results, testDeps())
-
-		am := newAmmoReq(expectedReq)
-		httpGun.Shoot(am)
-		Expect(results.Samples[0].Err()).To(BeNil())
-
-		Expect(*actualReq).To(MatchFields(IgnoreExtras, Fields{
-			"Method": Equal("GET"),
-			"Proto":  Equal("HTTP/1.1"),
-			"Host":   Equal(host), // Server host
-			"URL": PointTo(MatchFields(IgnoreExtras, Fields{
-				"Host": BeEmpty(), // Set in Do().
-				"Path": Equal(path),
-			})),
-		}))
-	})
-
-})
-
-func newAmmoURL(url string) Ammo {
-	req, err := http.NewRequest("GET", url, nil)
-	Expect(err).NotTo(HaveOccurred())
-	return newAmmoReq(req)
+func TestBaseGun_GunClientConfig_decode(t *testing.T) {
+	conf := DefaultHTTPGunConfig()
+	data := map[interface{}]interface{}{
+		"target": "test-trbo01e.haze.yandex.net:3000",
+	}
+	err := config.DecodeAndValidate(data, &conf)
+	require.NoError(t, err)
 }
 
-func newAmmoReq(req *http.Request) Ammo {
-	ammo := ammomock.NewAmmo(GinkgoT())
-	ammo.On("IsInvalid").Return(false)
-	ammo.On("Request").Return(req, netsample.Acquire("REQUEST"))
-	return ammo
+func TestBaseGun_integration(t *testing.T) {
+	const host = "example.com"
+	const path = "/smth"
+	expectedReq, err := http.NewRequest("GET", "http://"+host+path, nil)
+	expectedReq.Host = "" // Important. Ammo may have empty host.
+	require.NoError(t, err)
+	var actualReq *http.Request
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		rw.WriteHeader(http.StatusOK)
+		actualReq = req
+	}))
+	defer server.Close()
+	log := zap.NewNop()
+	conf := DefaultHTTPGunConfig()
+	conf.Gun.Target = host + ":80"
+	targetResolved := strings.TrimPrefix(server.URL, "http://")
+	results := &netsample.TestAggregator{}
+	httpGun := NewHTTPGun(conf, log, targetResolved)
+	_ = httpGun.Bind(results, testDeps())
+
+	am := newAmmoReq(t, expectedReq)
+	httpGun.Shoot(am)
+	require.NoError(t, results.Samples[0].Err())
+	require.NotNil(t, actualReq)
+
+	require.Equal(t, actualReq.Method, "GET")
+	require.Equal(t, actualReq.Proto, "HTTP/1.1")
+	require.Equal(t, actualReq.Host, host)
+	require.NotNil(t, actualReq.URL)
+	require.Empty(t, actualReq.URL.Host)
+	require.Equal(t, actualReq.URL.Path, path)
 }
 
-var _ = Describe("HTTP", func() {
-	itOk := func(https bool) {
-		var isServed atomic.Bool
-		server := httptest.NewUnstartedServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			Expect(req.Header.Get("Accept-Encoding")).To(BeEmpty())
-			rw.WriteHeader(http.StatusOK)
-			isServed.Store(true)
-		}))
-		if https {
-			server.StartTLS()
+func TestHTTP(t *testing.T) {
+	tests := []struct {
+		name  string
+		https bool
+	}{
+		{
+			name:  "http ok",
+			https: false,
+		},
+		{
+			name:  "https ok",
+			https: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var isServed atomic.Bool
+			server := httptest.NewUnstartedServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				require.Empty(t, req.Header.Get("Accept-Encoding"))
+				rw.WriteHeader(http.StatusOK)
+				isServed.Store(true)
+			}))
+			if tt.https {
+				server.StartTLS()
+			} else {
+				server.Start()
+			}
+			defer server.Close()
+			log := zap.NewNop()
+			conf := DefaultHTTPGunConfig()
+			conf.Gun.Target = server.Listener.Addr().String()
+			conf.Gun.SSL = tt.https
+			gun := NewHTTPGun(conf, log, conf.Gun.Target)
+			var aggr netsample.TestAggregator
+			_ = gun.Bind(&aggr, testDeps())
+			gun.Shoot(newAmmoURL(t, "/"))
+
+			require.Equal(t, len(aggr.Samples), 1)
+			require.Equal(t, aggr.Samples[0].ProtoCode(), http.StatusOK)
+			require.True(t, isServed.Load())
+		})
+	}
+}
+
+func TestHTTP_Redirect(t *testing.T) {
+	tests := []struct {
+		name     string
+		redirect bool
+	}{
+		{
+			name:     "not follow redirects by default",
+			redirect: false,
+		},
+		{
+			name:     "follow redirects if option set",
+			redirect: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				if req.URL.Path == "/redirect" {
+					rw.Header().Add("Location", "/")
+					rw.WriteHeader(http.StatusMovedPermanently)
+				} else {
+					rw.WriteHeader(http.StatusOK)
+				}
+			}))
+			defer server.Close()
+			log := zap.NewNop()
+			conf := DefaultHTTPGunConfig()
+			conf.Gun.Target = server.Listener.Addr().String()
+			conf.Client.Redirect = tt.redirect
+			gun := NewHTTPGun(conf, log, conf.Gun.Target)
+			var aggr netsample.TestAggregator
+			_ = gun.Bind(&aggr, testDeps())
+			gun.Shoot(newAmmoURL(t, "/redirect"))
+
+			require.Equal(t, len(aggr.Samples), 1)
+			expectedCode := http.StatusMovedPermanently
+			if tt.redirect {
+				expectedCode = http.StatusOK
+			}
+			require.Equal(t, aggr.Samples[0].ProtoCode(), expectedCode)
+		})
+	}
+}
+
+func TestHTTP_notSupportHTTP2(t *testing.T) {
+	server := newHTTP2TestServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		if isHTTP2Request(req) {
+			rw.WriteHeader(http.StatusForbidden)
 		} else {
-			server.Start()
+			rw.WriteHeader(http.StatusOK)
 		}
-		defer server.Close()
-		log := zap.NewNop()
-		conf := DefaultHTTPGunConfig()
-		conf.Gun.Target = server.Listener.Addr().String()
-		conf.Gun.SSL = https
-		gun := NewHTTPGun(conf, log, conf.Gun.Target)
-		var aggr netsample.TestAggregator
-		_ = gun.Bind(&aggr, testDeps())
-		gun.Shoot(newAmmoURL("/"))
+	}))
+	defer server.Close()
 
-		Expect(aggr.Samples).To(HaveLen(1))
-		Expect(aggr.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
-		Expect(isServed.Load()).To(BeTrue())
-	}
-	It("http ok", func() { itOk(false) })
-	It("https ok", func() { itOk(true) })
+	// Test, that configured server serves HTTP2 well.
+	http2OnlyClient := http.Client{
+		Transport: &http2.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}}
+	res, err := http2OnlyClient.Get(server.URL)
+	require.NoError(t, err)
+	require.Equal(t, res.StatusCode, http.StatusForbidden)
 
-	itRedirect := func(redirect bool) {
-		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			if req.URL.Path == "/redirect" {
-				rw.Header().Add("Location", "/")
-				rw.WriteHeader(http.StatusMovedPermanently)
-			} else {
-				rw.WriteHeader(http.StatusOK)
-			}
-		}))
-		defer server.Close()
-		log := zap.NewNop()
-		conf := DefaultHTTPGunConfig()
-		conf.Gun.Target = server.Listener.Addr().String()
-		conf.Client.Redirect = redirect
-		gun := NewHTTPGun(conf, log, conf.Gun.Target)
-		var aggr netsample.TestAggregator
-		_ = gun.Bind(&aggr, testDeps())
-		gun.Shoot(newAmmoURL("/redirect"))
+	log := zap.NewNop()
+	conf := DefaultHTTPGunConfig()
+	conf.Gun.Target = server.Listener.Addr().String()
+	conf.Gun.SSL = true
+	gun := NewHTTPGun(conf, log, conf.Gun.Target)
+	var results netsample.TestAggregator
+	_ = gun.Bind(&results, testDeps())
+	gun.Shoot(newAmmoURL(t, "/"))
 
-		Expect(aggr.Samples).To(HaveLen(1))
-		expectedCode := http.StatusMovedPermanently
-		if redirect {
-			expectedCode = http.StatusOK
-		}
-		Expect(aggr.Samples[0].ProtoCode()).To(Equal(expectedCode))
-	}
-	It("not follow redirects by default", func() { itRedirect(false) })
-	It("follow redirects if option set ", func() { itRedirect(true) })
+	require.Equal(t, len(results.Samples), 1)
+	require.Equal(t, results.Samples[0].ProtoCode(), http.StatusOK)
+}
 
-	It("not support HTTP2", func() {
-		server := newHTTP2TestServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			if isHTTP2Request(req) {
-				rw.WriteHeader(http.StatusForbidden)
-			} else {
-				rw.WriteHeader(http.StatusOK)
-			}
-		}))
-		defer server.Close()
-
-		// Test, that configured server serves HTTP2 well.
-		http2OnlyClient := http.Client{
-			Transport: &http2.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			}}
-		res, err := http2OnlyClient.Get(server.URL)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(res.StatusCode).To(Equal(http.StatusForbidden))
-
-		log := zap.NewNop()
-		conf := DefaultHTTPGunConfig()
-		conf.Gun.Target = server.Listener.Addr().String()
-		conf.Gun.SSL = true
-		gun := NewHTTPGun(conf, log, conf.Gun.Target)
-		var results netsample.TestAggregator
-		_ = gun.Bind(&results, testDeps())
-		gun.Shoot(newAmmoURL("/"))
-
-		Expect(results.Samples).To(HaveLen(1))
-		Expect(results.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
-	})
-
-})
-
-var _ = Describe("HTTP/2", func() {
-	It("HTTP/2 ok", func() {
+func TestHTTP2(t *testing.T) {
+	t.Run("HTTP/2 ok", func(t *testing.T) {
 		server := newHTTP2TestServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			if isHTTP2Request(req) {
 				rw.WriteHeader(http.StatusOK)
@@ -191,11 +198,11 @@ var _ = Describe("HTTP/2", func() {
 		gun, _ := NewHTTP2Gun(conf, log, conf.Gun.Target)
 		var results netsample.TestAggregator
 		_ = gun.Bind(&results, testDeps())
-		gun.Shoot(newAmmoURL("/"))
-		Expect(results.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
+		gun.Shoot(newAmmoURL(t, "/"))
+		require.Equal(t, results.Samples[0].ProtoCode(), http.StatusOK)
 	})
 
-	It("HTTP/1.1 panic", func() {
+	t.Run("HTTP/1.1 panic", func(t *testing.T) {
 		server := httptest.NewTLSServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			zap.S().Info("Served")
 		}))
@@ -211,13 +218,13 @@ var _ = Describe("HTTP/2", func() {
 			defer func() {
 				r = recover()
 			}()
-			gun.Shoot(newAmmoURL("/"))
+			gun.Shoot(newAmmoURL(t, "/"))
 		}()
-		Expect(r).NotTo(BeNil())
-		Expect(r).To(ContainSubstring(notHTTP2PanicMsg))
+		require.NotNil(t, r)
+		require.Contains(t, r, notHTTP2PanicMsg)
 	})
 
-	It("no SSL construction fails", func() {
+	t.Run("no SSL construction fails", func(t *testing.T) {
 		server := httptest.NewTLSServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			zap.S().Info("Served")
 		}))
@@ -227,10 +234,22 @@ var _ = Describe("HTTP/2", func() {
 		conf.Gun.Target = server.Listener.Addr().String()
 		conf.Gun.SSL = false
 		_, err := NewHTTP2Gun(conf, log, conf.Gun.Target)
-		Expect(err).To(HaveOccurred())
+		require.Error(t, err)
 	})
+}
 
-})
+func newAmmoURL(t *testing.T, url string) Ammo {
+	req, err := http.NewRequest("GET", url, nil)
+	require.NoError(t, err)
+	return newAmmoReq(t, req)
+}
+
+func newAmmoReq(t *testing.T, req *http.Request) Ammo {
+	ammo := ammomock.NewAmmo(t)
+	ammo.On("IsInvalid").Return(false).Once()
+	ammo.On("Request").Return(req, netsample.Acquire("REQUEST")).Once()
+	return ammo
+}
 
 func isHTTP2Request(req *http.Request) bool {
 	return checkHTTP2(req.TLS) == nil

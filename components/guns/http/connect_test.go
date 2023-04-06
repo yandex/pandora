@@ -1,7 +1,6 @@
 // Copyright (c) 2017 Yandex LLC. All rights reserved.
 // Use of this source code is governed by a MPL 2.0
 // license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
 
 package phttp
 
@@ -12,36 +11,52 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"go.uber.org/zap"
 )
 
-var _ = Describe("connect", func() {
-	tunnelHandler := func(originURL string) http.Handler {
-		u, err := url.Parse(originURL)
-		Expect(err).To(BeNil())
-		originHost := u.Host
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			defer GinkgoRecover()
-			Expect(originHost).To(Equal(r.RequestURI))
-			toOrigin, err := net.Dial("tcp", originHost)
-			Expect(err).To(BeNil())
-			conn, bufReader, err := w.(http.Hijacker).Hijack()
-			Expect(err).To(BeNil())
-			Expect(bufReader.Reader.Buffered()).To(BeZero(),
-				"Current implementation should not send requested data before got response.")
-			_, err = io.WriteString(conn, "HTTP/1.1 200 Connection established\r\n\r\n")
-			Expect(err).To(BeNil())
-			go func() { _, _ = io.Copy(toOrigin, conn) }()
-			go func() { _, _ = io.Copy(conn, toOrigin) }()
-		})
-	}
+var tunnelHandler = func(t *testing.T, originURL string) http.Handler {
+	u, err := url.Parse(originURL)
+	require.NoError(t, err)
+	originHost := u.Host
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, originHost, r.RequestURI)
 
-	testClient := func(tunnelSSL bool) func() {
-		return func() {
+		toOrigin, err := net.Dial("tcp", originHost)
+		require.NoError(t, err)
+
+		conn, bufReader, err := w.(http.Hijacker).Hijack()
+		require.NoError(t, err)
+		require.Equal(t, bufReader.Reader.Buffered(), 0, "Current implementation should not send requested data before got response.")
+
+		_, err = io.WriteString(conn, "HTTP/1.1 200 Connection established\r\n\r\n")
+		require.NoError(t, err)
+
+		go func() { _, _ = io.Copy(toOrigin, conn) }()
+		go func() { _, _ = io.Copy(conn, toOrigin) }()
+	})
+}
+
+func TestDo(t *testing.T) {
+	tests := []struct {
+		name      string
+		tunnelSSL bool
+	}{
+		{
+			name:      "HTTP client",
+			tunnelSSL: false,
+		},
+		{
+			name:      "HTTPS client",
+			tunnelSSL: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tunnelSSL := tt.tunnelSSL
 			origin := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 				rw.WriteHeader(http.StatusOK)
 			}))
@@ -49,14 +64,14 @@ var _ = Describe("connect", func() {
 
 			var proxy *httptest.Server
 			if tunnelSSL {
-				proxy = httptest.NewTLSServer(tunnelHandler(origin.URL))
+				proxy = httptest.NewTLSServer(tunnelHandler(t, origin.URL))
 			} else {
-				proxy = httptest.NewServer(tunnelHandler(origin.URL))
+				proxy = httptest.NewServer(tunnelHandler(t, origin.URL))
 			}
 			defer proxy.Close()
 
 			req, err := http.NewRequest("GET", origin.URL, nil)
-			Expect(err).To(BeNil())
+			require.NoError(t, err)
 
 			conf := DefaultConnectGunConfig()
 			conf.ConnectSSL = tunnelSSL
@@ -69,34 +84,32 @@ var _ = Describe("connect", func() {
 			client := newConnectClient(conf)
 
 			res, err := client.Do(req)
-			Expect(err).To(BeNil())
-			Expect(res.StatusCode).To(Equal(http.StatusOK))
-		}
+			require.NoError(t, err)
+			require.Equal(t, res.StatusCode, http.StatusOK)
+		})
 	}
+}
 
-	It("HTTP client", testClient(false))
-	It("HTTPS client", testClient(true))
+func TestNewConnectGun(t *testing.T) {
 
-	It("gun", func() {
-		origin := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			rw.WriteHeader(http.StatusOK)
-		}))
-		defer origin.Close()
-		proxy := httptest.NewServer(tunnelHandler(origin.URL))
-		defer proxy.Close()
+	origin := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		rw.WriteHeader(http.StatusOK)
+	}))
+	defer origin.Close()
+	proxy := httptest.NewServer(tunnelHandler(t, origin.URL))
+	defer proxy.Close()
 
-		log := zap.NewNop()
-		conf := DefaultConnectGunConfig()
-		conf.Target = proxy.Listener.Addr().String()
-		connectGun := NewConnectGun(conf, log)
+	log := zap.NewNop()
+	conf := DefaultConnectGunConfig()
+	conf.Target = proxy.Listener.Addr().String()
+	connectGun := NewConnectGun(conf, log)
 
-		results := &netsample.TestAggregator{}
-		_ = connectGun.Bind(results, testDeps())
+	results := &netsample.TestAggregator{}
+	_ = connectGun.Bind(results, testDeps())
 
-		connectGun.Shoot(newAmmoURL(origin.URL))
-		Expect(results.Samples[0].Err()).To(BeNil())
+	connectGun.Shoot(newAmmoURL(t, origin.URL))
 
-		Expect(results.Samples).To(HaveLen(1))
-		Expect(results.Samples[0].ProtoCode()).To(Equal(http.StatusOK))
-	})
-})
+	require.Equal(t, len(results.Samples), 1)
+	require.NoError(t, results.Samples[0].Err())
+	require.Equal(t, results.Samples[0].ProtoCode(), http.StatusOK)
+}
