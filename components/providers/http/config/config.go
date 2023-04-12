@@ -1,5 +1,9 @@
 package config
 
+import (
+	"github.com/yandex/pandora/components/providers/http/middleware"
+)
+
 type Config struct {
 	Decoder DecoderType
 	File    string
@@ -15,4 +19,5 @@ type Config struct {
 	// Maximum number of byte in jsonline ammo. Default is bufio.MaxScanTokenSize
 	MaxAmmoSize int
 	ChosenCases []string
+	Middlewares []middleware.Middleware
 }

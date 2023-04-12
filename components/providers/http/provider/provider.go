@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/yandex/pandora/components/providers/http/decoders"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/lib/confutil"
+	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 )
 
@@ -30,6 +32,13 @@ func (p *Provider) Acquire() (core.Ammo, bool) {
 	if ok {
 		ammo.SetID(p.NextID())
 	}
+	for _, mw := range p.Middlewares {
+		err := mw.UpdateRequest(ammo.Req)
+		if err != nil {
+			p.Log.Error("error on Middleware.UpdateRequest", zap.Error(err))
+			return ammo, false
+		}
+	}
 	return ammo, ok
 }
 
@@ -46,7 +55,6 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 	var tag string
 
 	p.ProviderDeps = deps
-	// defer close(p.Sink)
 	defer func() {
 		// TODO: wrap in go 1.20
 		// err = errors.Join(err, p.Close())
@@ -59,6 +67,12 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 			}
 		}
 	}()
+
+	for _, mw := range p.Middlewares {
+		if err := mw.InitMiddleware(ctx, deps.Log); err != nil {
+			return fmt.Errorf("cant InitMiddleware %T, err: %w", mw, err)
+		}
+	}
 
 	for {
 		for p.Decoder.Scan(ctx) {
