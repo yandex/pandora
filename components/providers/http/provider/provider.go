@@ -58,6 +58,9 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 	defer func() {
 		// TODO: wrap in go 1.20
 		// err = errors.Join(err, p.Close())
+		if p.Close == nil {
+			return
+		}
 		closeErr := p.Close()
 		if closeErr != nil {
 			if err != nil {
@@ -91,28 +94,23 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 			case p.Sink <- a:
 			}
 		}
+
 		err = p.Decoder.Err()
 		if err != nil {
 			if errors.Is(err, decoders.ErrAmmoLimit) || errors.Is(err, decoders.ErrPassLimit) {
 				err = nil
 			}
-			break
+			return
 		}
 
-		select {
-		case <-ctx.Done():
-			err = ctx.Err()
-			if err != nil && !errors.Is(err, context.Canceled) {
+		err = ctx.Err()
+		if err != nil {
+			if !errors.Is(err, context.Canceled) {
 				err = xerrors.Errorf("error from context: %w", err)
 			}
-		default:
-		}
-		if err != nil {
-			break
+			return
 		}
 	}
-	// named empty return for future wrapping provider.Close error
-	return
 }
 
 var _ core.Provider = (*Provider)(nil)

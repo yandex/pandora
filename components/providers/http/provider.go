@@ -1,11 +1,12 @@
 // Copyright (c) 2017 Yandex LLC. All rights reserved.
 // Use of this source code is governed by a MPL 2.0
 // license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
 
 package http
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -23,41 +24,54 @@ func NewProvider(fs afero.Fs, conf config.Config) (core.Provider, error) {
 	if !conf.Decoder.IsValid() {
 		return nil, xerrors.Errorf("unknown decoder type faced")
 	}
+	var (
+		readSeeker io.ReadSeeker
+		closer     io.Closer
+		err        error
+	)
 	if len(conf.Uris) > 0 {
-		if conf.Decoder != config.DecoderURI {
-			return nil, xerrors.Errorf("'uris' expect setted only for 'uri' decoder, but faced with '%s'", conf.Decoder)
-		}
-		if conf.File != "" {
-			return nil, xerrors.Errorf("one should specify either 'file' or 'uris', but not both of them")
-		}
-		fs = afero.NewMemMapFs()
-		conf.File = "ammo.uri"
-		err := afero.WriteFile(fs, conf.File, []byte(strings.Join(conf.Uris, "\n")), 0444)
-		if err != nil {
-			return nil, xerrors.Errorf("uri based ammo file create error: %w", err)
-		}
+		readSeeker, closer, err = uriReadSeekCloser(conf)
+	} else {
+		readSeeker, closer, err = fileReadSeekCloser(fs, conf.File)
 	}
-	if conf.File == "" {
-		return nil, xerrors.Errorf("one should specify either 'file' or 'uris'")
-	}
-
-	file, err := fs.Open(conf.File)
 	if err != nil {
-		return nil, xerrors.Errorf("open file error: %w", err)
+		return nil, xerrors.Errorf("cant create ReadSeekCloser: %w", err)
 	}
-	decoder, err := decoders.NewDecoder(conf, file)
+	decoder, err := decoders.NewDecoder(conf, readSeeker)
 	if err != nil {
 		return nil, xerrors.Errorf("decoder init error: %w", err)
 	}
-	p := &provider.Provider{
+	return &provider.Provider{
 		ProviderBase: base.ProviderBase{
 			FS: fs,
 		},
 		Config:   conf,
 		Decoder:  decoder,
-		Close:    file.Close,
+		Close:    closer.Close,
 		AmmoPool: sync.Pool{New: func() interface{} { return new(base.Ammo[http.Request]) }},
 		Sink:     make(chan *base.Ammo[http.Request]),
+	}, nil
+}
+
+func fileReadSeekCloser(fs afero.Fs, path string) (io.ReadSeeker, io.Closer, error) {
+	if path == "" {
+		return nil, nil, xerrors.Errorf("one should specify either 'file' or 'uris'")
 	}
-	return p, err
+	file, err := fs.Open(path)
+	if err != nil {
+		return nil, nil, xerrors.Errorf("open file error: %w", err)
+	}
+	return file, file, nil
+}
+
+func uriReadSeekCloser(conf config.Config) (io.ReadSeeker, io.Closer, error) {
+	if conf.Decoder != config.DecoderURI {
+		return nil, nil, xerrors.Errorf("'uris' expect setted only for 'uri' decoder, but faced with '%s'", conf.Decoder)
+	}
+	if conf.File != "" {
+		return nil, nil, xerrors.Errorf("one should specify either 'file' or 'uris', but not both of them")
+	}
+	reader := bytes.NewReader([]byte(strings.Join(conf.Uris, "\n")))
+	readSeeker := io.ReadSeeker(reader)
+	return readSeeker, nil, nil
 }
