@@ -64,6 +64,13 @@ func fileReadSeekCloser(fs afero.Fs, path string) (io.ReadSeeker, io.Closer, err
 	return file, file, nil
 }
 
+type fakeCloser struct {
+}
+
+func (fc *fakeCloser) Close() error {
+	return nil
+}
+
 func uriReadSeekCloser(conf config.Config) (io.ReadSeeker, io.Closer, error) {
 	if conf.Decoder != config.DecoderURI {
 		return nil, nil, xerrors.Errorf("'uris' expect setted only for 'uri' decoder, but faced with '%s'", conf.Decoder)
@@ -73,5 +80,6 @@ func uriReadSeekCloser(conf config.Config) (io.ReadSeeker, io.Closer, error) {
 	}
 	reader := bytes.NewReader([]byte(strings.Join(conf.Uris, "\n")))
 	readSeeker := io.ReadSeeker(reader)
-	return readSeeker, nil, nil
+
+	return readSeeker, &fakeCloser{}, nil
 }
