@@ -1,7 +1,7 @@
-Ammo providers
+HTTP Ammo providers
 ==============
 
-Ammo provider is a source of test data: it makes ammo object.
+HTTP Ammo provider is a source of test data: it makes ammo object.
 
 There is a common rule for any (built-in) provider: data supplied by ammo provider are records that will be pushed via established connection to external host (defined in pandora config via `pool.gun.target` option). Thus, you cannot define in the ammofile to which `physical` host your ammo will be sent.
 
@@ -129,6 +129,7 @@ Ammo filters
 ------------
 
 Each http ammo provider lets you choose specific ammo for your test from ammo file with `chosencases` setting:
+
 .. code-block:: yaml
 
   pools:
@@ -153,3 +154,40 @@ uri-style:
   /?drg tag1
   /
   /buy tag2
+
+HTTP Ammo middlewares
+---------------------
+
+HTTP Ammo providers have the ability to modify HTTP request just before execution.
+Middlewares are used for this purpose. An example of Middleware that sets the Date header in a request.
+
+
+.. code-block:: yaml
+
+  pools:
+    - ammo:
+        type: uri
+        ...
+        middlewares:
+          - type: header/date
+            location: EST
+            headerName: Date
+
+List of built-in HTTP Ammo middleware:
+- header/date
+
+You can create your own middleware. But in order to do that you need to register them in custom pandora
+
+.. code-block:: go
+
+  import (
+    "github.com/yandex/pandora/components/providers/http/middleware"
+    "github.com/yandex/pandora/components/providers/http/middleware/headerdate"
+    httpRegister "github.com/yandex/pandora/components/providers/http/register"
+  )
+
+  httpRegister.HTTPMW("header/date", func(cfg headerdate.Config) (middleware.Middleware, error) {
+      return headerdate.NewMiddleware(cfg)
+  })
+
+For more on how to write custom pandora, see :ref:`custom`

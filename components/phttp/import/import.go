@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/afero"
 	phttp "github.com/yandex/pandora/components/guns/http"
 	httpProvider "github.com/yandex/pandora/components/providers/http"
-	"github.com/yandex/pandora/components/providers/http/config"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/register"
 	"github.com/yandex/pandora/lib/answlog"
@@ -20,29 +19,7 @@ import (
 )
 
 func Import(fs afero.Fs) {
-	register.Provider("http", func(conf config.Config) (core.Provider, error) {
-		return httpProvider.NewProvider(fs, conf)
-	})
-
-	register.Provider("http/json", func(conf config.Config) (core.Provider, error) {
-		conf.Decoder = config.DecoderJSONLine
-		return httpProvider.NewProvider(fs, conf)
-	})
-
-	register.Provider("uri", func(conf config.Config) (core.Provider, error) {
-		conf.Decoder = config.DecoderURI
-		return httpProvider.NewProvider(fs, conf)
-	})
-
-	register.Provider("uripost", func(conf config.Config) (core.Provider, error) {
-		conf.Decoder = config.DecoderURIPost
-		return httpProvider.NewProvider(fs, conf)
-	})
-
-	register.Provider("raw", func(conf config.Config) (core.Provider, error) {
-		conf.Decoder = config.DecoderRaw
-		return httpProvider.NewProvider(fs, conf)
-	})
+	httpProvider.Import(fs)
 
 	register.Gun("http", func(conf phttp.HTTPGunConfig) func() core.Gun {
 		targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Gun.Target)
