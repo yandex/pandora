@@ -20,8 +20,8 @@
 # -- Project information -----------------------------------------------------
 
 project = 'Pandora'
-copyright = '2018, Alexey Lavrenuke, Vladimir Skipor'
-author = 'Alexey Lavrenuke, Vladimir Skipor'
+copyright = '2023, Alexey Lavrenuke, Vladimir Skipor, Sergei Bevzenko'
+author = 'Alexey Lavrenuke, Vladimir Skipor, Sergei Bevzenko'
 
 # The short X.Y version
 version = ''
