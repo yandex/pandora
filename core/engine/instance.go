@@ -67,24 +67,18 @@ type instanceSharedDeps struct {
 
 // Run blocks until ammo finish, error or context cancel.
 // Expects, that gun is already bind.
-func (i *instance) Run(ctx context.Context) error {
-	i.log.Debug("Instance started")
-	i.metrics.InstanceStart.Add(1)
-	defer func() {
-		i.metrics.InstanceFinish.Add(1)
-		i.log.Debug("Instance finished")
-	}()
-
-	return i.shoot(ctx)
-}
-
-func (i *instance) shoot(ctx context.Context) (err error) {
+func (i *instance) Run(ctx context.Context) (recoverErr error) {
 	defer func() {
 		r := recover()
 		if r != nil {
-			err = errors.Errorf("shoot panic: %s", r)
+			recoverErr = errors.Errorf("shoot panic: %s", r)
 		}
+
+		i.log.Debug("Instance finished")
+		i.metrics.InstanceFinish.Add(1)
 	}()
+	i.log.Debug("Instance started")
+	i.metrics.InstanceStart.Add(1)
 
 	waiter := coreutil.NewWaiter(i.schedule, ctx)
 	// Checking, that schedule is not finished, required, to not consume extra ammo,

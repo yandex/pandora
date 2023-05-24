@@ -1,41 +1,38 @@
 // Copyright (c) 2018 Yandex LLC. All rights reserved.
 // Use of this source code is governed by a MPL 2.0
 // license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
 
 package coreutil
 
 import (
+	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/core/schedule"
 )
 
-var _ = Describe("callback on finish schedule", func() {
-	It("callback once", func() {
-		var callbackTimes int
-		wrapped := schedule.NewOnce(1)
-		testee := NewCallbackOnFinishSchedule(wrapped, func() {
-			callbackTimes++
-		})
-		startAt := time.Now()
-		testee.Start(startAt)
-		tx, ok := testee.Next()
-		Expect(ok).To(BeTrue())
-		Expect(tx).To(Equal(startAt))
-		Expect(callbackTimes).To(Equal(0))
-
-		tx, ok = testee.Next()
-		Expect(ok).To(BeFalse())
-		Expect(tx).To(Equal(startAt))
-		Expect(callbackTimes).To(Equal(1))
-
-		tx, ok = testee.Next()
-		Expect(ok).To(BeFalse())
-		Expect(tx).To(Equal(startAt))
-		Expect(callbackTimes).To(Equal(1))
+func TestCallbackOnFinishSchedule(t *testing.T) {
+	var callbackTimes int
+	wrapped := schedule.NewOnce(1)
+	testee := NewCallbackOnFinishSchedule(wrapped, func() {
+		callbackTimes++
 	})
+	startAt := time.Now()
+	testee.Start(startAt)
+	tx, ok := testee.Next()
 
-})
+	require.True(t, ok)
+	require.Equal(t, startAt, tx)
+	require.Equal(t, 0, callbackTimes)
+
+	tx, ok = testee.Next()
+	require.False(t, ok)
+	require.Equal(t, startAt, tx)
+	require.Equal(t, 1, callbackTimes)
+
+	tx, ok = testee.Next()
+	require.False(t, ok)
+	require.Equal(t, startAt, tx)
+	require.Equal(t, 1, callbackTimes)
+}
