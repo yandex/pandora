@@ -4,11 +4,30 @@ import (
 	"bufio"
 	"context"
 	"io"
+	"net/http"
+	"strings"
 
+	"github.com/yandex/pandora/components/providers/http/config"
 	"github.com/yandex/pandora/components/providers/http/decoders/jsonline"
 	"github.com/yandex/pandora/components/providers/http/util"
 	"golang.org/x/xerrors"
 )
+
+func newJsonlineDecoder(file io.ReadSeeker, cfg config.Config, decodedConfigHeaders http.Header) *jsonlineDecoder {
+	scanner := bufio.NewScanner(file)
+	if cfg.MaxAmmoSize != 0 {
+		var buffer []byte
+		scanner.Buffer(buffer, cfg.MaxAmmoSize)
+	}
+	return &jsonlineDecoder{
+		protoDecoder: protoDecoder{
+			file:                 file,
+			config:               cfg,
+			decodedConfigHeaders: decodedConfigHeaders,
+		},
+		scanner: scanner,
+	}
+}
 
 type jsonlineDecoder struct {
 	protoDecoder
@@ -17,10 +36,6 @@ type jsonlineDecoder struct {
 }
 
 func (d *jsonlineDecoder) Scan(ctx context.Context) bool {
-	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
-		d.err = ErrAmmoLimit
-		return false
-	}
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
 		d.err = ErrAmmoLimit
 		return false
@@ -60,6 +75,9 @@ func (d *jsonlineDecoder) Scan(ctx context.Context) bool {
 			return false
 		}
 		data := d.scanner.Bytes()
+		if len(strings.TrimSpace(string(data))) == 0 {
+			continue
+		}
 		d.ammoNum++
 		var err error
 		d.req, d.tag, err = jsonline.DecodeAmmo(data)

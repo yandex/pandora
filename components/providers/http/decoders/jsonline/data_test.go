@@ -8,10 +8,6 @@ import (
 	"testing"
 	"testing/iotest"
 
-	// . "github.com/onsi/ginkgo"
-	// . "github.com/onsi/gomega"
-	// . "github.com/onsi/gomega/gstruct"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/yandex/pandora/lib/testutil"
 )
@@ -33,24 +29,6 @@ var testData = []data{
 		Headers: map[string]string{"Accept": "*/*", "Accept-Encoding": "gzip, brotli", "User-Agent": "YaBro/0.1"},
 		Tag:     "head",
 	},
-}
-
-var testFs = newTestFs()
-
-func newTestFs() afero.Fs {
-	fs := afero.NewMemMapFs()
-	file, err := fs.Create(testFile)
-	if err != nil {
-		panic(err)
-	}
-	encoder := json.NewEncoder(file)
-	for _, d := range testData {
-		err := encoder.Encode(d)
-		if err != nil {
-			panic(err)
-		}
-	}
-	return afero.NewReadOnlyFs(fs)
 }
 
 type ToRequestWant struct {

@@ -12,18 +12,28 @@ import (
 	"github.com/yandex/pandora/components/providers/http/config"
 )
 
-func Test_jsonlineDecoder_Scan(t *testing.T) {
-	input := `{"host": "4bs65mu2kdulxmir.myt.yp-c.yandex.net", "method": "GET", "uri": "/?sleep=100", "tag": "sleep1", "headers": {"User-agent": "Tank", "Connection": "close"}}
-{"host": "4bs65mu2kdulxmir.myt.yp-c.yandex.net", "method": "POST", "uri": "/?sleep=200", "tag": "sleep2", "headers": {"User-agent": "Tank", "Connection": "close"}, "body": "body_data"}
+func Test_uripostDecoder_Scan(t *testing.T) {
+	input := `5 /0
+class
+[A:b]
+5 /1
+class
+[Host : example.com]
+[ C : d ]
+10 /2
+classclass
+[A:]
+[Host : other.net]
 
-
+15 /3 wantTag
+classclassclass
 `
 
-	decoder := newJsonlineDecoder(strings.NewReader(input), config.Config{
-		Limit: 4,
+	decoder := newURIPostDecoder(strings.NewReader(input), config.Config{
+		Limit: 8,
 	}, http.Header{"Content-Type": []string{"application/json"}})
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	tests := []struct {
@@ -32,14 +42,24 @@ func Test_jsonlineDecoder_Scan(t *testing.T) {
 		wantBody string
 	}{
 		{
-			wantTag:  "sleep1",
+			wantTag:  "",
 			wantErr:  false,
-			wantBody: "GET /?sleep=100 HTTP/1.1\r\nHost: 4bs65mu2kdulxmir.myt.yp-c.yandex.net\r\nConnection: close\r\nContent-Type: application/json\r\nUser-Agent: Tank\r\n\r\n",
+			wantBody: "POST /0 HTTP/1.1\r\nContent-Type: application/json\r\n\r\nclass",
 		},
 		{
-			wantTag:  "sleep2",
+			wantTag:  "",
 			wantErr:  false,
-			wantBody: "POST /?sleep=200 HTTP/1.1\r\nHost: 4bs65mu2kdulxmir.myt.yp-c.yandex.net\r\nConnection: close\r\nContent-Type: application/json\r\nUser-Agent: Tank\r\n\r\nbody_data",
+			wantBody: "POST /1 HTTP/1.1\r\nA: b\r\nContent-Type: application/json\r\n\r\nclass",
+		},
+		{
+			wantTag:  "",
+			wantErr:  false,
+			wantBody: "POST /2 HTTP/1.1\r\nHost: example.com\r\nA: b\r\nC: d\r\nContent-Type: application/json\r\n\r\nclassclass",
+		},
+		{
+			wantTag:  "wantTag",
+			wantErr:  false,
+			wantBody: "POST /3 HTTP/1.1\r\nHost: other.net\r\nA: \r\nC: d\r\nContent-Type: application/json\r\n\r\nclassclassclass",
 		},
 	}
 	for j := 0; j < 2; j++ {

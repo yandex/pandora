@@ -1,4 +1,4 @@
-//go:generate ffjson $GOFILE
+//go:generate github.com/pquerna/ffjson data_ffjson.go
 
 package jsonline
 

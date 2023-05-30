@@ -3,19 +3,66 @@ package decoders
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
+	"github.com/yandex/pandora/components/providers/http/config"
 	"github.com/yandex/pandora/components/providers/http/util"
-	"golang.org/x/xerrors"
 )
+
+func newURIDecoder(file io.ReadSeeker, cfg config.Config, decodedConfigHeaders http.Header) *uriDecoder {
+	return &uriDecoder{
+		protoDecoder: protoDecoder{
+			file:                 file,
+			config:               cfg,
+			decodedConfigHeaders: decodedConfigHeaders,
+		},
+		scanner: bufio.NewScanner(file),
+		Header:  http.Header{},
+	}
+}
 
 type uriDecoder struct {
 	protoDecoder
 	scanner *bufio.Scanner
-	http.Header
-	line uint
+	Header  http.Header
+	line    uint
+}
+
+func (d *uriDecoder) readLine(data string, commonHeader http.Header) (*http.Request, string, error) {
+	data = strings.TrimSpace(data)
+	if len(data) == 0 {
+		return nil, "", nil // skip empty line
+	}
+	var req *http.Request
+	var tag string
+	var err error
+	if data[0] == '[' {
+		key, val, err := util.DecodeHeader(data)
+		if err != nil {
+			err = fmt.Errorf("decoding header error: %w", err)
+			return nil, "", err
+		}
+		commonHeader.Set(key, val)
+	} else {
+		var rawURL string
+		rawURL, tag, _ = strings.Cut(data, " ")
+		req, err = http.NewRequest("GET", rawURL, nil)
+		if err != nil {
+			err = fmt.Errorf("failed to decode uri: %w", err)
+			return nil, "", err
+		}
+		if host, ok := commonHeader["Host"]; ok {
+			req.Host = host[0]
+		}
+		req.Header = commonHeader.Clone()
+
+		// add new Headers to request from config
+		util.EnrichRequestWithHeaders(req, d.decodedConfigHeaders)
+	}
+	return req, tag, nil
 }
 
 func (d *uriDecoder) Scan(ctx context.Context) bool {
@@ -42,7 +89,7 @@ func (d *uriDecoder) Scan(ctx context.Context) bool {
 					d.err = ErrNoAmmo
 					return false
 				}
-				d.Header = make(http.Header)
+				d.Header = http.Header{}
 				_, err := d.file.Seek(0, io.SeekStart)
 				if err != nil {
 					d.err = err
@@ -54,34 +101,16 @@ func (d *uriDecoder) Scan(ctx context.Context) bool {
 			d.err = d.scanner.Err()
 			return false
 		}
-		data := strings.TrimSpace(d.scanner.Text())
-		if len(data) == 0 {
-			continue // skip empty lines
+		data := d.scanner.Text()
+		req, tag, err := d.readLine(data, d.Header)
+		if err != nil {
+			d.err = fmt.Errorf("decode at line %d `%s` error: %w", d.line+1, data, err)
+			return false
 		}
-		if data[0] == '[' {
-			key, val, err := util.DecodeHeader(data)
-			if err != nil {
-				d.err = xerrors.Errorf("decoding header on line %d error: %w", d.line+1, err)
-				return false
-			}
-			d.Header.Set(key, val)
-		} else {
+		if req != nil {
 			d.ammoNum++
-			rawURL, tag, _ := strings.Cut(data, " ")
-			d.tag = tag
-			req, err := http.NewRequest("", rawURL, nil)
-			if err != nil {
-				d.err = xerrors.Errorf("failed to decode uri at line %d: %w", d.line+1, err)
-				return false
-			}
-			if host, ok := d.Header["Host"]; ok {
-				req.Host = host[0]
-			}
-			req.Header = d.Header.Clone()
-
-			// add new Headers to request from config
-			util.EnrichRequestWithHeaders(req, d.decodedConfigHeaders)
 			d.req = req
+			d.tag = tag
 			return true
 		}
 	}

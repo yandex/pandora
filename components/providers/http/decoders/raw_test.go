@@ -2,197 +2,101 @@ package decoders
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
+	"strings"
 	"testing"
+	"time"
 
-	// . "github.com/onsi/ginkgo"
-	// . "github.com/onsi/gomega"
-
-	// . "github.com/onsi/gomega/gstruct"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/yandex/pandora/components/providers/http/config"
 )
 
-const rawTestFile = "./ammo.stpd"
-const testFileData = "../testdata/ammo.stpd"
+func Test_rawDecoder_Scan(t *testing.T) {
+	input := `68 good50
+GET /?sleep=50 HTTP/1.0
+Host: 4bs65mu2kdulxmir.myt.yp-c.yandex.net
 
-var rawTestData = []ammoData{
-	{"GET", "www.ya.ru", "/", http.Header{"Connection": []string{"close"}}, "", ""},
-	{"GET", "www.ya.ru", "/test", http.Header{"Connection": []string{"close"}}, "", ""},
-	{"GET", "www.ya.ru", "/test2", http.Header{"Connection": []string{"close"}}, "tag", ""},
-	{"POST", "www.ya.ru", "/test3", http.Header{"Connection": []string{"close"}, "Content-Length": []string{"5"}}, "tag", "hello"},
-}
 
-type ammoData struct {
-	method string
-	host   string
-	path   string
-	header http.Header
-	tag    string
-	body   string
-}
+74 bad
+GET /abra HTTP/1.0
+Host: xxx.tanks.example.com
+User-Agent: xxx (shell 1)
 
-var rawTestFs = func() afero.Fs {
-	testFs := afero.NewOsFs()
-	testFileData, err := testFs.Open(testFileData)
-	if err != nil {
-		panic(err)
-	}
-	testDataBuffer, _ := ioutil.ReadAll(testFileData)
-	_, _ = testFileData.Read(testDataBuffer)
-	fs := afero.NewMemMapFs()
-	err = afero.WriteFile(fs, rawTestFile, testDataBuffer, 0)
-	if err != nil {
-		panic(err)
-	}
-	return afero.NewReadOnlyFs(fs)
-}()
+599
+POST /upload/2 HTTP/1.0
+Content-Length: 496
+Host: xxxxxxxxx.dev.example.com
+User-Agent: xxx (shell 1)
 
-func TestRawDecode(t *testing.T) {
-	var conf = config.Config{}
+^.^.1......W.j^1^.^.^.²..^^.i.^B.P..-!(.l/Y..V^.      ...L?...S'NR.^^vm...3Gg@s...d'.\^.5N.$NF^,.Z^.aTE^.
+._.[..k#L^ƨ'\RE.J.<.!,.q5.F^՚iΔĬq..^6..P..тH.'..i2
+.".uuzs^^F2...Rh.&.U.^^.2J.P@.A......x..lǝy^?.u.p{4..g...m.,..R^.^.^.3....].^^.^J...p.ifTF0<.s.9V.o5<..%!6ļS.ƐǢ..㱋....C^&.....^.^y...v]^YT.1.#K.ibc...^.26...   ..7.
+b.$...j6.٨f...W.R7.^1.3....K'%.&^.4d..{{      l0..^\..^X.g.^.r.(!.^^.5.4.1.$\ .%.8$(.n&..^^q.,.Q..^.D^.].^.R9.kE.^.$^.I..<..B^.6^.h^^C.^E.|....3o^.@..Z.^.s.$[v.
+305
+POST /upload/3 HTTP/1.0
+Content-Length: 202
+Host: xxxxxxxxx.dev.example.com
+User-Agent: xxx (shell 1)
+
+^.^.7......QMO.0^.++^zJw.ر^$^.^Ѣ.^V.J....vM.8r&.T+...{@pk%~C.G../z顲^.7....l...-.^W"cR..... .&^?u.U^^.^.8...{^.^.98.^.^.I.EĂ.p...'^.3.Tq..@R8....RAiBU..1.Bd*".7+.
+.Ol.j=^.3..n....wp..,Wg.y^.T..~^.0
+`
+
+	decoder := newRawDecoder(strings.NewReader(input), config.Config{
+		Limit: 8,
+	}, http.Header{"Content-Type": []string{"application/json"}})
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
 	tests := []struct {
-		name  string
-		input DecodeInput
-		want  DecodeWant
-	}{}
-	// var ans DecodeWant
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert := assert.New(t)
-			// sink := make(chan *base.Ammo[http.Request])
-			decoder, err := NewDecoder(conf, nil)
-			assert.NoError(err)
-			decoder.Scan(context.Background())
-			// ans.req = decoder.Next()
-		})
+		wantTag  string
+		wantErr  bool
+		wantBody string
+	}{
+		{
+			wantTag:  "good50",
+			wantErr:  false,
+			wantBody: "GET /?sleep=50 HTTP/1.0\r\nHost: 4bs65mu2kdulxmir.myt.yp-c.yandex.net\r\nContent-Type: application/json\r\n\r\n",
+		},
+		{
+			wantTag:  "bad",
+			wantErr:  false,
+			wantBody: "GET /abra HTTP/1.0\r\nHost: xxx.tanks.example.com\r\nContent-Type: application/json\r\nUser-Agent: xxx (shell 1)\r\n\r\n",
+		},
+		{
+			wantTag:  "",
+			wantErr:  false,
+			wantBody: "POST /upload/2 HTTP/1.0\r\nHost: xxxxxxxxx.dev.example.com\r\nContent-Length: 496\r\nContent-Type: application/json\r\nUser-Agent: xxx (shell 1)\r\n\r\n^.^.1......W.j^1^.^.^.²..^^.i.^B.P..-!(.l/Y..V^.      ...L?...S'NR.^^vm...3Gg@s...d'.\\^.5N.$NF^,.Z^.aTE^.\n._.[..k#L^ƨ'\\RE.J.<.!,.q5.F^՚iΔĬq..^6..P..тH.'..i2\n.\".uuzs^^F2...Rh.&.U.^^.2J.P@.A......x..lǝy^?.u.p{4..g...m.,..R^.^.^.3....].^^.^J...p.ifTF0<.s.9V.o5<..%!6ļS.ƐǢ..㱋....C^&.....^.^y...v]^YT.1.#K.ibc...^.26...   ..7.\nb.$...j6.٨f...W.R7.^1.3....K'%.&^.4d..{{      l0..^\\..^X.g.^.r.(!.^^.5.4.1.$\\ .%.8$(.n&..^^q.,.Q..^.D^.].^.R9.kE.^.$^.I..<..B^.6^.h^^C.^E.|....3o^.@..Z.^.s.$[v.\n",
+		},
+		{
+			wantTag:  "",
+			wantErr:  false,
+			wantBody: "POST /upload/3 HTTP/1.0\r\nHost: xxxxxxxxx.dev.example.com\r\nContent-Length: 202\r\nContent-Type: application/json\r\nUser-Agent: xxx (shell 1)\r\n\r\n^.^.7......QMO.0^.++^zJw.ر^$^.^Ѣ.^V.J....vM.8r&.T+...{@pk%~C.G../z顲^.7....l...-.^W\"cR..... .&^?u.U^^.^.8...{^.^.98.^.^.I.EĂ.p...'^.3.Tq..@R8....RAiBU..1.Bd*\".7+.\n.Ol.j=^.3..n....wp..,Wg.y^.T..~^.0\n",
+		},
 	}
+	for j := 0; j < 2; j++ {
+		for i, tt := range tests {
+			scan := decoder.Scan(ctx)
+			assert.True(t, scan)
+			if tt.wantErr {
+				assert.Error(t, decoder.err, "iteration %d-%d", j, i)
+				continue
+			} else {
+				assert.NoError(t, decoder.err, "iteration %d-%d", j, i)
+			}
+			assert.Equal(t, tt.wantTag, decoder.tag, "iteration %d-%d", j, i)
+
+			decoder.req.Close = false
+			body, _ := httputil.DumpRequest(decoder.req, true)
+			assert.Equal(t, tt.wantBody, string(body), "iteration %d-%d", j, i)
+		}
+	}
+
+	assert.False(t, decoder.Scan(ctx))
+
+	assert.Equal(t, decoder.ammoNum, uint(len(tests)*2))
+	assert.Equal(t, decoder.passNum, uint(1))
+	assert.Equal(t, decoder.err, ErrAmmoLimit)
 }
-
-// var _ = Describe("provider start", func() {
-// 	It("ok", func() {
-// 		p := newTestProvider(config.Config{File: rawTestFile})
-// 		ctx, cancel := context.WithCancel(context.Background())
-// 		errch := make(chan error)
-// 		go func() { errch <- p.Run(ctx, nil) }()
-// 		Expect(errch).NotTo(Receive())
-// 		cancel()
-// 		var err error
-// 		Eventually(errch).Should(Receive(&err))
-// 		Expect(err).To(Equal(ctx.Err()))
-// 	})
-
-// 	It("fail", func() {
-// 		p := newTestProvider(config.Config{File: "no_such_file"})
-// 		Expect(p.Run(context.Background(), nil), core.ProviderDeps{}).NotTo(BeNil())
-// 	})
-// })
-
-// var _ = Describe("provider decode", func() {
-// 	var (
-// 		// Configured in BeforeEach.
-// 		conf             config.Config // File always is rawTestFile.
-// 		expectedStartErr error
-// 		successReceives  int // How much ammo should be received.
-
-// 		provider *Decoder
-// 		cancel   context.CancelFunc
-// 		errch    chan error
-// 		ammos    []*base.Ammo[http.Request]
-// 	)
-
-// 	BeforeEach(func() {
-// 		conf = config.Config{}
-// 		expectedStartErr = nil
-// 		ammos = nil
-// 		successReceives = 0
-// 	})
-
-// 	JustBeforeEach(func() {
-// 		conf.File = rawTestFile
-// 		provider = newTestProvider(conf)
-// 		errch = make(chan error)
-// 		var ctx context.Context
-// 		ctx, cancel = context.WithCancel(context.Background())
-// 		go func() { errch <- provider.Run(ctx) }()
-// 		Expect(errch).NotTo(Receive())
-
-// 		for i := 0; i < successReceives; i++ {
-// 			By(fmt.Sprint(i))
-// 			am, ok := provider.Acquire()
-// 			Expect(ok).To(BeTrue())
-// 			ammos = append(ammos, am.(*base.Ammo[http.Request]))
-// 		}
-// 	})
-
-// 	AfterEach(func() {
-// 		_, ok := provider.Acquire()
-// 		Expect(ok).To(BeFalse(), "All ammo should be readed.")
-// 		defer cancel()
-// 		var err error
-// 		Eventually(errch).Should(Receive(&err))
-// 		if expectedStartErr == nil {
-// 			Expect(err).To(BeNil())
-// 		} else {
-// 			Expect(err).To(Equal(expectedStartErr))
-// 		}
-// 		for i := 0; i < len(ammos); i++ {
-// 			expectedData := rawTestData[i%len(rawTestData)]
-// 			ammo := ammos[i]
-// 			req, ss := ammo.Request()
-// 			By(fmt.Sprintf("%v", i))
-// 			Expect(*req).To(MatchFields(IgnoreExtras, Fields{
-// 				"Method":     Equal(expectedData.method),
-// 				"Proto":      Equal("HTTP/1.1"),
-// 				"ProtoMajor": Equal(1),
-// 				"ProtoMinor": Equal(1),
-// 				"Host":       Equal(expectedData.host),
-// 				"URL": PointTo(MatchFields(IgnoreExtras, Fields{
-// 					"Scheme": BeEmpty(),
-// 					//"Host":   Equal(expectedData.host),
-// 					"Path": Equal(expectedData.path),
-// 				})),
-// 				"Header":     Equal(expectedData.header),
-// 				"RequestURI": Equal(""),
-// 			}))
-// 			Expect(ss.Tags()).To(Equal(expectedData.tag))
-// 			var bout bytes.Buffer
-// 			if req.Body != nil {
-// 				_, err := io.Copy(&bout, req.Body)
-// 				Expect(err).To(BeNil())
-// 				_ = req.Body.Close()
-// 			}
-// 			Expect(bout.String()).To(Equal(expectedData.body))
-// 		}
-// 	})
-
-// 	Context("unlimited", func() {
-// 		BeforeEach(func() {
-// 			successReceives = 5 * len(rawTestData)
-// 		})
-// 		It("ok", func() {
-// 			cancel()
-// 			expectedStartErr = context.Canceled
-// 			Eventually(provider.Sink, time.Second, time.Millisecond).Should(BeClosed())
-// 		})
-// 	})
-
-// 	Context("limit set", func() {
-// 		BeforeEach(func() {
-// 			conf.Passes = 2
-// 			successReceives = len(rawTestData) * int(conf.Passes)
-// 		})
-// 		It("ok", func() {})
-// 	})
-
-// 	Context("passes set", func() {
-// 		BeforeEach(func() {
-// 			conf.Passes = 10
-// 			conf.Limit = 5
-// 			successReceives = int(conf.Limit)
-// 		})
-// 		It("ok", func() {})
-// 	})
-
-// })

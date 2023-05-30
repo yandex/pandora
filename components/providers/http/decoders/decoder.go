@@ -1,7 +1,6 @@
 package decoders
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -34,8 +33,8 @@ type protoDecoder struct {
 	file                 io.ReadSeeker
 	config               config.Config
 	decodedConfigHeaders http.Header
-	ammoNum              uint
-	passNum              uint
+	ammoNum              uint // number of ammo reads
+	passNum              uint // number of file reads
 
 	req *http.Request
 	tag string
@@ -50,10 +49,6 @@ func (d *protoDecoder) Err() error {
 	return d.err
 }
 
-type Request interface {
-	http.Request
-}
-
 func NewDecoder(conf config.Config, file io.ReadSeeker) (d Decoder, err error) {
 	var decodedConfigHeaders http.Header
 	decodedConfigHeaders, err = util.DecodeHTTPConfigHeaders(conf.Headers)
@@ -61,26 +56,15 @@ func NewDecoder(conf config.Config, file io.ReadSeeker) (d Decoder, err error) {
 		return
 	}
 
-	proto := protoDecoder{
-		file:                 file,
-		config:               conf,
-		decodedConfigHeaders: decodedConfigHeaders,
-	}
-
 	switch conf.Decoder {
 	case config.DecoderJSONLine:
-		scanner := bufio.NewScanner(file)
-		if conf.MaxAmmoSize != 0 {
-			var buffer []byte
-			scanner.Buffer(buffer, conf.MaxAmmoSize)
-		}
-		d = &jsonlineDecoder{protoDecoder: proto, scanner: scanner}
+		d = newJsonlineDecoder(file, conf, decodedConfigHeaders)
 	case config.DecoderRaw:
-		d = &rawDecoder{protoDecoder: proto, reader: bufio.NewReader(file)}
+		d = newRawDecoder(file, conf, decodedConfigHeaders)
 	case config.DecoderURI:
-		d = &uriDecoder{protoDecoder: proto, scanner: bufio.NewScanner(file), Header: make(http.Header)}
+		d = newURIDecoder(file, conf, decodedConfigHeaders)
 	case config.DecoderURIPost:
-		d = &uripostDecoder{protoDecoder: proto, reader: bufio.NewReader(file), header: make(http.Header)}
+		d = newURIPostDecoder(file, conf, decodedConfigHeaders)
 	default:
 		err = ErrUnknown
 	}

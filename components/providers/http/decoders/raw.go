@@ -7,10 +7,22 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/yandex/pandora/components/providers/http/config"
 	"github.com/yandex/pandora/components/providers/http/decoders/raw"
 	"github.com/yandex/pandora/components/providers/http/util"
 	"golang.org/x/xerrors"
 )
+
+func newRawDecoder(file io.ReadSeeker, cfg config.Config, decodedConfigHeaders http.Header) *rawDecoder {
+	return &rawDecoder{
+		protoDecoder: protoDecoder{
+			file:                 file,
+			config:               cfg,
+			decodedConfigHeaders: decodedConfigHeaders,
+		},
+		reader: bufio.NewReader(file),
+	}
+}
 
 /*
 Parses size-prefixed HTTP ammo files. Each ammo is prefixed with a header line (delimited with \n), which consists of
