@@ -78,24 +78,16 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 	}
 
 	for {
-		for p.Decoder.Scan(ctx) {
-			req, tag = p.Decoder.Next()
-			if !confutil.IsChosenCase(tag, p.Config.ChosenCases) {
-				continue
+		if err = ctx.Err(); err != nil {
+			if !errors.Is(err, context.Canceled) {
+				err = xerrors.Errorf("error from context: %w", err)
 			}
-			a := p.AmmoPool.Get().(*base.Ammo[http.Request])
-			a.Reset(req, tag)
-			select {
-			case <-ctx.Done():
-				err = ctx.Err()
-				if err != nil && !errors.Is(err, context.Canceled) {
-					err = xerrors.Errorf("error from context: %w", err)
-				}
-			case p.Sink <- a:
-			}
+			return
 		}
-
-		err = p.Decoder.Err()
+		req, tag, err = p.Decoder.Scan(ctx)
+		if !confutil.IsChosenCase(tag, p.Config.ChosenCases) {
+			continue
+		}
 		if err != nil {
 			if errors.Is(err, decoders.ErrAmmoLimit) || errors.Is(err, decoders.ErrPassLimit) {
 				err = nil
@@ -103,12 +95,16 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 			return
 		}
 
-		err = ctx.Err()
-		if err != nil {
-			if !errors.Is(err, context.Canceled) {
+		a := p.AmmoPool.Get().(*base.Ammo[http.Request])
+		a.Reset(req, tag)
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+			if err != nil && !errors.Is(err, context.Canceled) {
 				err = xerrors.Errorf("error from context: %w", err)
 			}
 			return
+		case p.Sink <- a:
 		}
 	}
 }

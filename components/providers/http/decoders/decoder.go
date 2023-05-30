@@ -24,9 +24,7 @@ var (
 
 type Decoder interface {
 	// Decode(context.Context, chan<- *base.Ammo[http.Request], io.ReadSeeker) error
-	Scan(context.Context) bool
-	Next() (*http.Request, string)
-	Err() error
+	Scan(context.Context) (*http.Request, string, error)
 }
 
 type protoDecoder struct {
@@ -35,18 +33,6 @@ type protoDecoder struct {
 	decodedConfigHeaders http.Header
 	ammoNum              uint // number of ammo reads
 	passNum              uint // number of file reads
-
-	req *http.Request
-	tag string
-	err error
-}
-
-func (d *protoDecoder) Next() (*http.Request, string) {
-	return d.req, d.tag
-}
-
-func (d *protoDecoder) Err() error {
-	return d.err
 }
 
 func NewDecoder(conf config.Config, file io.ReadSeeker) (d Decoder, err error) {

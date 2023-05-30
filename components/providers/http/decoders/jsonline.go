@@ -35,34 +35,28 @@ type jsonlineDecoder struct {
 	line    uint
 }
 
-func (d *jsonlineDecoder) Scan(ctx context.Context) bool {
+func (d *jsonlineDecoder) Scan(ctx context.Context) (*http.Request, string, error) {
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
-		d.err = ErrAmmoLimit
-		return false
+		return nil, "", ErrAmmoLimit
 	}
 	for ; ; d.line++ {
-		select {
-		case <-ctx.Done():
-			d.err = ctx.Err()
-			return false
-		default:
+		if ctx.Err() != nil {
+			return nil, "", ctx.Err()
 		}
+
 		if !d.scanner.Scan() {
 			if d.scanner.Err() == nil { // assume as io.EOF; FIXME: check possible nil error with other reason
 				d.line = 0
 				d.passNum++
 				if d.config.Passes != 0 && d.passNum >= d.config.Passes {
-					d.err = ErrPassLimit
-					return false
+					return nil, "", ErrPassLimit
 				}
 				if d.ammoNum == 0 {
-					d.err = ErrNoAmmo
-					return false
+					return nil, "", ErrNoAmmo
 				}
 				_, err := d.file.Seek(0, io.SeekStart)
 				if err != nil {
-					d.err = err
-					return false
+					return nil, "", err
 				}
 				d.scanner = bufio.NewScanner(d.file)
 				if d.config.MaxAmmoSize != 0 {
@@ -71,25 +65,23 @@ func (d *jsonlineDecoder) Scan(ctx context.Context) bool {
 				}
 				continue
 			}
-			d.err = d.scanner.Err()
-			return false
+			return nil, "", d.scanner.Err()
 		}
 		data := d.scanner.Bytes()
 		if len(strings.TrimSpace(string(data))) == 0 {
 			continue
 		}
 		d.ammoNum++
-		var err error
-		d.req, d.tag, err = jsonline.DecodeAmmo(data)
+
+		req, tag, err := jsonline.DecodeAmmo(data)
 		if err != nil {
 			if !d.config.ContinueOnError {
-				d.err = xerrors.Errorf("failed to decode ammo at line: %v; data: %q, with err: %w", d.line+1, data, err)
-				return false
+				return nil, "", xerrors.Errorf("failed to decode ammo at line: %v; data: %q, with err: %w", d.line+1, data, err)
 			}
 			// TODO: add log message about error
 			continue // skipping ammo
 		}
-		util.EnrichRequestWithHeaders(d.req, d.decodedConfigHeaders)
-		return true
+		util.EnrichRequestWithHeaders(req, d.decodedConfigHeaders)
+		return req, tag, err
 	}
 }

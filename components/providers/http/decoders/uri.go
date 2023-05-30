@@ -65,53 +65,42 @@ func (d *uriDecoder) readLine(data string, commonHeader http.Header) (*http.Requ
 	return req, tag, nil
 }
 
-func (d *uriDecoder) Scan(ctx context.Context) bool {
+func (d *uriDecoder) Scan(ctx context.Context) (*http.Request, string, error) {
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
-		d.err = ErrAmmoLimit
-		return false
+		return nil, "", ErrAmmoLimit
 	}
 	for ; ; d.line++ {
-		select {
-		case <-ctx.Done():
-			d.err = ctx.Err()
-			return false
-		default:
+		if ctx.Err() != nil {
+			return nil, "", ctx.Err()
 		}
 		if !d.scanner.Scan() {
 			if d.scanner.Err() == nil { // assume as io.EOF; FIXME: check possible nil error with other reason
 				d.line = 0
 				d.passNum++
 				if d.config.Passes != 0 && d.passNum >= d.config.Passes {
-					d.err = ErrPassLimit
-					return false
+					return nil, "", ErrPassLimit
 				}
 				if d.ammoNum == 0 {
-					d.err = ErrNoAmmo
-					return false
+					return nil, "", ErrNoAmmo
 				}
 				d.Header = http.Header{}
 				_, err := d.file.Seek(0, io.SeekStart)
 				if err != nil {
-					d.err = err
-					return false
+					return nil, "", err
 				}
 				d.scanner = bufio.NewScanner(d.file)
 				continue
 			}
-			d.err = d.scanner.Err()
-			return false
+			return nil, "", d.scanner.Err()
 		}
 		data := d.scanner.Text()
 		req, tag, err := d.readLine(data, d.Header)
 		if err != nil {
-			d.err = fmt.Errorf("decode at line %d `%s` error: %w", d.line+1, data, err)
-			return false
+			return nil, "", fmt.Errorf("decode at line %d `%s` error: %w", d.line+1, data, err)
 		}
 		if req != nil {
 			d.ammoNum++
-			d.req = req
-			d.tag = tag
-			return true
+			return req, tag, nil
 		}
 	}
 }

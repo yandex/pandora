@@ -44,25 +44,23 @@ func Test_jsonlineDecoder_Scan(t *testing.T) {
 	}
 	for j := 0; j < 2; j++ {
 		for i, tt := range tests {
-			scan := decoder.Scan(ctx)
-			assert.True(t, scan)
+			req, tag, err := decoder.Scan(ctx)
 			if tt.wantErr {
-				assert.Error(t, decoder.err, "iteration %d-%d", j, i)
+				assert.Error(t, err, "iteration %d-%d", j, i)
 				continue
 			} else {
-				assert.NoError(t, decoder.err, "iteration %d-%d", j, i)
+				assert.NoError(t, err, "iteration %d-%d", j, i)
 			}
-			assert.Equal(t, tt.wantTag, decoder.tag, "iteration %d-%d", j, i)
+			assert.Equal(t, tt.wantTag, tag, "iteration %d-%d", j, i)
 
-			decoder.req.Close = false
-			body, _ := httputil.DumpRequest(decoder.req, true)
+			req.Close = false
+			body, _ := httputil.DumpRequest(req, true)
 			assert.Equal(t, tt.wantBody, string(body), "iteration %d-%d", j, i)
 		}
 	}
 
-	assert.False(t, decoder.Scan(ctx))
-
+	_, _, err := decoder.Scan(ctx)
+	assert.Equal(t, err, ErrAmmoLimit)
 	assert.Equal(t, decoder.ammoNum, uint(len(tests)*2))
 	assert.Equal(t, decoder.passNum, uint(1))
-	assert.Equal(t, decoder.err, ErrAmmoLimit)
 }

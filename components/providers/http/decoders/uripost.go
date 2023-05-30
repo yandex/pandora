@@ -34,16 +34,14 @@ type uripostDecoder struct {
 	line   uint
 }
 
-func (d *uripostDecoder) Scan(ctx context.Context) bool {
+func (d *uripostDecoder) Scan(ctx context.Context) (*http.Request, string, error) {
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
-		d.err = ErrAmmoLimit
-		return false
+		return nil, "", ErrAmmoLimit
 	}
 	for i := 0; i < 2; i++ {
 		for {
 			if ctx.Err() != nil {
-				d.err = ctx.Err()
-				return false
+				return nil, "", ctx.Err()
 			}
 
 			req, tag, err := d.readBlock(d.reader, d.header)
@@ -51,14 +49,11 @@ func (d *uripostDecoder) Scan(ctx context.Context) bool {
 				break
 			}
 			if err != nil {
-				d.err = err
-				return false
+				return nil, "", err
 			}
 			if req != nil {
 				d.ammoNum++
-				d.req = req
-				d.tag = tag
-				return true
+				return req, tag, nil
 			}
 			// here only if read header
 		}
@@ -66,24 +61,20 @@ func (d *uripostDecoder) Scan(ctx context.Context) bool {
 		// seek file
 		d.passNum++
 		if d.config.Passes != 0 && d.passNum >= d.config.Passes {
-			d.err = ErrPassLimit
-			return false
+			return nil, "", ErrPassLimit
 		}
 		if d.ammoNum == 0 {
-			d.err = ErrNoAmmo
-			return false
+			return nil, "", ErrNoAmmo
 		}
 		d.header = make(http.Header)
 		_, err := d.file.Seek(0, io.SeekStart)
 		if err != nil {
-			d.err = err
-			return false
+			return nil, "", err
 		}
 		d.reader.Reset(d.file)
 	}
 
-	d.err = errors.New("unexpected behavior")
-	return false
+	return nil, "", errors.New("unexpected behavior")
 }
 
 // readBlock read one header at time and set to commonHeader or read full request
