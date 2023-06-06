@@ -110,7 +110,11 @@ func Run() {
 		return
 	}
 
-	conf := readConfig()
+	ReadConfigAndRunEngine()
+}
+
+func ReadConfigAndRunEngine() {
+	conf := readConfig(flag.Args())
 	log := newLogger(conf.Log)
 	zap.ReplaceGlobals(log)
 	zap.RedirectStdLog(log)
@@ -186,7 +190,7 @@ func runEngine(ctx context.Context, engine *engine.Engine, errs chan error) {
 	errs <- engine.Run(ctx)
 }
 
-func readConfig() *cliConfig {
+func readConfig(args []string) *cliConfig {
 	log, err := zap.NewDevelopment(zap.AddCaller())
 	if err != nil {
 		panic(err)
@@ -198,11 +202,10 @@ func readConfig() *cliConfig {
 	v := newViper()
 
 	var useStdinConfig = false
-	args := flag.Args()
 	if len(args) > 0 {
 		switch {
 		case len(args) > 1:
-			zap.L().Fatal("Too many command line arguments", zap.Strings("args", flag.Args()))
+			zap.L().Fatal("Too many command line arguments", zap.Strings("args", args))
 		case args[0] == stdinConfigSelector:
 			log.Info("Reading config from standard input")
 			useStdinConfig = true
