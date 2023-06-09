@@ -3,22 +3,16 @@ package decoders
 import (
 	"context"
 	"net/http"
+	"net/http/httputil"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/yandex/pandora/components/providers/base"
 	"github.com/yandex/pandora/components/providers/http/config"
 )
 
 func Test_uripostDecoder_Scan(t *testing.T) {
-	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *base.Ammo {
-		ammo, err := base.NewAmmo(method, url, body, header, tag)
-		require.NoError(t, err)
-		return ammo
-	}
 	input := `5 /0
 class
 [A:b]
@@ -42,22 +36,51 @@ classclassclass
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	wants := []*base.Ammo{
-		mustNewAmmo(t, "POST", "/0", []byte("class"), http.Header{"Content-Type": []string{"application/json"}}, ""),
-		mustNewAmmo(t, "POST", "/1", []byte("class"), http.Header{"A": []string{"b"}, "Content-Type": []string{"application/json"}}, ""),
-		mustNewAmmo(t, "POST", "/2", []byte("classclass"), http.Header{"Host": []string{"example.com"}, "A": []string{"b"}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, ""),
-		mustNewAmmo(t, "POST", "/3", []byte("classclassclass"), http.Header{"Host": []string{"other.net"}, "A": []string{""}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, "wantTag"),
+	tests := []struct {
+		wantTag  string
+		wantErr  bool
+		wantBody string
+	}{
+		{
+			wantTag:  "",
+			wantErr:  false,
+			wantBody: "POST /0 HTTP/1.1\r\nContent-Type: application/json\r\n\r\nclass",
+		},
+		{
+			wantTag:  "",
+			wantErr:  false,
+			wantBody: "POST /1 HTTP/1.1\r\nA: b\r\nContent-Type: application/json\r\n\r\nclass",
+		},
+		{
+			wantTag:  "",
+			wantErr:  false,
+			wantBody: "POST /2 HTTP/1.1\r\nHost: example.com\r\nA: b\r\nC: d\r\nContent-Type: application/json\r\n\r\nclassclass",
+		},
+		{
+			wantTag:  "wantTag",
+			wantErr:  false,
+			wantBody: "POST /3 HTTP/1.1\r\nHost: other.net\r\nA: \r\nC: d\r\nContent-Type: application/json\r\n\r\nclassclassclass",
+		},
 	}
 	for j := 0; j < 2; j++ {
-		for i, want := range wants {
-			ammo, err := decoder.Scan(ctx)
-			assert.NoError(t, err, "iteration %d-%d", j, i)
-			assert.Equal(t, want, ammo, "iteration %d-%d", j, i)
+		for i, tt := range tests {
+			req, tag, err := decoder.Scan(ctx)
+			if tt.wantErr {
+				assert.Error(t, err, "iteration %d-%d", j, i)
+				continue
+			} else {
+				assert.NoError(t, err, "iteration %d-%d", j, i)
+			}
+			assert.Equal(t, tt.wantTag, tag, "iteration %d-%d", j, i)
+
+			req.Close = false
+			body, _ := httputil.DumpRequest(req, true)
+			assert.Equal(t, tt.wantBody, string(body), "iteration %d-%d", j, i)
 		}
 	}
 
-	_, err := decoder.Scan(ctx)
+	_, _, err := decoder.Scan(ctx)
 	assert.Equal(t, err, ErrAmmoLimit)
-	assert.Equal(t, decoder.ammoNum, uint(len(wants)*2))
+	assert.Equal(t, decoder.ammoNum, uint(len(tests)*2))
 	assert.Equal(t, decoder.passNum, uint(1))
 }

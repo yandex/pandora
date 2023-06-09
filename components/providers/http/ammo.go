@@ -16,4 +16,4 @@ type Request interface {
 	http.Request
 }
 
-var _ phttp.Ammo = (*base.Ammo)(nil)
+var _ phttp.Ammo = (*base.Ammo[http.Request])(nil)

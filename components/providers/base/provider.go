@@ -8,7 +8,7 @@ import (
 )
 
 type ProviderBase struct {
-	Deps      core.ProviderDeps
+	core.ProviderDeps
 	FS        afero.Fs
 	idCounter atomic.Uint64
 }

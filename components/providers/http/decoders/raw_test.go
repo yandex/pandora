@@ -13,9 +13,9 @@ import (
 )
 
 func Test_rawDecoder_Scan(t *testing.T) {
-	input := `38 good50
+	input := `68 good50
 GET /?sleep=50 HTTP/1.0
-Host: ya.net
+Host: 4bs65mu2kdulxmir.myt.yp-c.yandex.net
 
 
 74 bad
@@ -58,7 +58,7 @@ User-Agent: xxx (shell 1)
 		{
 			wantTag:  "good50",
 			wantErr:  false,
-			wantBody: "GET /?sleep=50 HTTP/1.0\r\nHost: ya.net\r\nContent-Type: application/json\r\n\r\n",
+			wantBody: "GET /?sleep=50 HTTP/1.0\r\nHost: 4bs65mu2kdulxmir.myt.yp-c.yandex.net\r\nContent-Type: application/json\r\n\r\n",
 		},
 		{
 			wantTag:  "bad",
@@ -78,23 +78,22 @@ User-Agent: xxx (shell 1)
 	}
 	for j := 0; j < 2; j++ {
 		for i, tt := range tests {
-			ammo, err := decoder.Scan(ctx)
+			req, tag, err := decoder.Scan(ctx)
 			if tt.wantErr {
 				assert.Error(t, err, "iteration %d-%d", j, i)
 				continue
 			} else {
 				assert.NoError(t, err, "iteration %d-%d", j, i)
 			}
-			assert.Equal(t, tt.wantTag, ammo.Tag(), "iteration %d-%d", j, i)
+			assert.Equal(t, tt.wantTag, tag, "iteration %d-%d", j, i)
 
-			req := ammo.Req
 			req.Close = false
 			body, _ := httputil.DumpRequest(req, true)
 			assert.Equal(t, tt.wantBody, string(body), "iteration %d-%d", j, i)
 		}
 	}
 
-	_, err := decoder.Scan(ctx)
+	_, _, err := decoder.Scan(ctx)
 	assert.Equal(t, err, ErrAmmoLimit)
 	assert.Equal(t, decoder.ammoNum, uint(len(tests)*2))
 	assert.Equal(t, decoder.passNum, uint(1))

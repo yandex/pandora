@@ -1,60 +1,117 @@
 package jsonline
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
+	"net/url"
 	"testing"
+	"testing/iotest"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/yandex/pandora/components/providers/base"
+	"github.com/yandex/pandora/lib/testutil"
 )
+
+const testFile = "./ammo.jsonline"
+
+// testData holds jsonline.data that contains in testFile
+var testData = []data{
+	{
+		Host:    "example.com",
+		Method:  "GET",
+		URI:     "/00",
+		Headers: map[string]string{"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "User-Agent": "Pandora/0.0.1"},
+	},
+	{
+		Host:    "ya.ru",
+		Method:  "HEAD",
+		URI:     "/01",
+		Headers: map[string]string{"Accept": "*/*", "Accept-Encoding": "gzip, brotli", "User-Agent": "YaBro/0.1"},
+		Tag:     "head",
+	},
+}
+
+type ToRequestWant struct {
+	req *http.Request
+	error
+	body []byte
+}
 
 func TestToRequest(t *testing.T) {
 	var tests = []struct {
-		name       string
-		json       []byte
-		confHeader http.Header
-		want       *base.Ammo
-		wantErr    bool
+		name  string
+		input data
+		want  ToRequestWant
 	}{
 		{
-			name:       "GET request",
-			json:       []byte(`{"host": "ya.ru", "method": "GET", "uri": "/00", "tag": "tag", "headers": {"A": "a", "B": "b"}}`),
-			confHeader: http.Header{"Default": []string{"def"}},
-			want:       MustNewAmmo(t, "GET", "http://ya.ru/00", nil, http.Header{"Default": []string{"def"}, "A": []string{"a"}, "B": []string{"b"}}, "tag"),
-			wantErr:    false,
-		},
-		{
-			name:       "POST request",
-			json:       []byte(`{"host": "ya.ru", "method": "POST", "uri": "/01?sleep=10", "tag": "tag", "headers": {"A": "a", "B": "b"}, "body": "body"}`),
-			confHeader: http.Header{"Default": []string{"def"}},
-			want:       MustNewAmmo(t, "POST", "http://ya.ru/01?sleep=10", []byte(`body`), http.Header{"Default": []string{"def"}, "A": []string{"a"}, "B": []string{"b"}}, "tag"),
-			wantErr:    false,
-		},
-		{
-			name:       "POST request with json",
-			json:       []byte(`{"host": "ya.ru", "method": "POST", "uri": "/01?sleep=10", "tag": "tag", "headers": {"A": "a", "B": "b"}, "body": "{\"field\":\"value\"}"}`),
-			confHeader: http.Header{"Default": []string{"def"}},
-			want:       MustNewAmmo(t, "POST", "http://ya.ru/01?sleep=10", []byte(`{"field":"value"}`), http.Header{"Default": []string{"def"}, "A": []string{"a"}, "B": []string{"b"}}, "tag"),
-			wantErr:    false,
+			name: "decoded well",
+			input: data{
+				Host:    "ya.ru",
+				Method:  "GET",
+				URI:     "/00",
+				Headers: map[string]string{"A": "a", "B": "b"},
+				Tag:     "tag",
+			},
+			want: ToRequestWant{
+				req: &http.Request{
+					Method:     "GET",
+					URL:        testutil.Must(url.Parse("http://ya.ru/00")),
+					Proto:      "HTTP/1.1",
+					ProtoMajor: 1,
+					ProtoMinor: 1,
+					Header:     http.Header{"A": []string{"a"}, "B": []string{"b"}},
+					Body:       http.NoBody,
+					Host:       "ya.ru",
+				},
+				error: nil,
+			},
 		},
 	}
+	var ans ToRequestWant
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert := assert.New(t)
-			ans, err := DecodeAmmo(tt.json, tt.confHeader)
-			if tt.wantErr {
-				require.Error(t, err)
-				return
+			ans.req, ans.error = tt.input.ToRequest()
+			if tt.want.body != nil {
+				assert.NotNil(ans.req)
+				assert.NoError(iotest.TestReader(ans.req.Body, tt.want.body))
+				ans.req.Body = nil
+				tt.want.body = nil
 			}
-			assert.NoError(err)
+			ans.req.GetBody = nil
+			tt.want.req = ans.req.WithContext(context.Background())
 			assert.Equal(tt.want, ans)
 		})
 	}
 }
 
-func MustNewAmmo(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *base.Ammo {
-	ammo, err := base.NewAmmo(method, url, body, header, tag)
-	require.NoError(t, err)
-	return ammo
+type DecodeAmmoWant struct {
+	req *http.Request
+	tag string
+	error
+}
+
+func TestDecodeAmmo(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input []byte
+		want  DecodeAmmoWant
+	}{}
+	var ans DecodeAmmoWant
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert := assert.New(t)
+			ans.req, ans.tag, ans.error = DecodeAmmo(tt.input)
+			assert.Equal(tt.want, ans)
+		})
+	}
+}
+
+func BenchmarkDecodeAmmo(b *testing.B) {
+	jsonDoc, err := json.Marshal(testData[0])
+	assert.NoError(b, err)
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, _, _ = DecodeAmmo(jsonDoc)
+	}
 }
