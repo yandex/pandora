@@ -3,8 +3,8 @@ package raw
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/components/providers/http/util"
-	"github.com/yandex/pandora/lib/testutil"
 )
 
 var (
@@ -30,7 +30,8 @@ func BenchmarkRawDecoder(b *testing.B) {
 }
 
 func BenchmarkRawDecoderWithHeaders(b *testing.B) {
-	decodedHTTPConfigHeaders := testutil.Must(util.DecodeHTTPConfigHeaders(benchTestConfigHeaders))
+	decodedHTTPConfigHeaders, err := util.DecodeHTTPConfigHeaders(benchTestConfigHeaders)
+	require.NoError(b, err)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		req, _ := DecodeRequest(benchTestRequest)

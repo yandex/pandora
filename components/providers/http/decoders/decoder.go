@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/yandex/pandora/components/providers/base"
 	"github.com/yandex/pandora/components/providers/http/config"
 	"github.com/yandex/pandora/components/providers/http/util"
 )
@@ -24,7 +25,7 @@ var (
 
 type Decoder interface {
 	// Decode(context.Context, chan<- *base.Ammo[http.Request], io.ReadSeeker) error
-	Scan(context.Context) (*http.Request, string, error)
+	Scan(context.Context) (*base.Ammo, error)
 }
 
 type protoDecoder struct {

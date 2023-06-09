@@ -1,12 +1,12 @@
-//go:generate github.com/pquerna/ffjson data_ffjson.go
+//go:generate github.com/pquerna/ffjson@latest data_ffjson.go
 
 package jsonline
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/yandex/pandora/components/providers/base"
 )
 
 // ffjson: noencoder
@@ -24,24 +24,20 @@ type data struct {
 	Body string `json:"body"`
 }
 
-func (d *data) ToRequest() (*http.Request, error) {
-	uri := "http://" + d.Host + d.URI
-	req, err := http.NewRequest(d.Method, uri, strings.NewReader(d.Body))
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	for k, v := range d.Headers {
-		req.Header.Set(k, v)
-	}
-	return req, err
-}
-
-func DecodeAmmo(jsonDoc []byte) (*http.Request, string, error) {
-	var data = new(data)
-	if err := data.UnmarshalJSON(jsonDoc); err != nil {
+func DecodeAmmo(jsonDoc []byte, headers http.Header) (*base.Ammo, error) {
+	var d = new(data)
+	if err := d.UnmarshalJSON(jsonDoc); err != nil {
 		err = errors.WithStack(err)
-		return nil, data.Tag, err
+		return nil, err
 	}
-	req, err := data.ToRequest()
-	return req, data.Tag, err
+
+	for k, v := range d.Headers {
+		headers.Set(k, v)
+	}
+	url := "http://" + d.Host + d.URI
+	var body []byte
+	if d.Body != "" {
+		body = []byte(d.Body)
+	}
+	return base.NewAmmo(d.Method, url, body, headers, d.Tag)
 }

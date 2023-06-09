@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/yandex/pandora/components/providers/base"
 	"github.com/yandex/pandora/components/providers/http/config"
 	"github.com/yandex/pandora/components/providers/http/decoders/raw"
 	"github.com/yandex/pandora/components/providers/http/util"
@@ -58,38 +59,38 @@ type rawDecoder struct {
 	reader *bufio.Reader
 }
 
-func (d *rawDecoder) Scan(ctx context.Context) (*http.Request, string, error) {
+func (d *rawDecoder) Scan(ctx context.Context) (*base.Ammo, error) {
 	var data string
 	var buff []byte
 	var req *http.Request
 	var err error
 
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
-		return nil, "", ErrAmmoLimit
+		return nil, ErrAmmoLimit
 	}
 	for {
 		if ctx.Err() != nil {
-			return nil, "", ctx.Err()
+			return nil, ctx.Err()
 		}
 
 		data, err = d.reader.ReadString('\n')
 		if err == io.EOF {
 			d.passNum++
 			if d.config.Passes != 0 && d.passNum >= d.config.Passes {
-				return nil, "", ErrPassLimit
+				return nil, ErrPassLimit
 			}
 			if d.ammoNum == 0 {
-				return nil, "", ErrNoAmmo
+				return nil, ErrNoAmmo
 			}
 			_, err := d.file.Seek(0, io.SeekStart)
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 			d.reader.Reset(d.file)
 			continue
 		}
 		if err != nil {
-			return nil, "", xerrors.Errorf("reading ammo failed with err: %w, at position: %v", err, filePosition(d.file))
+			return nil, xerrors.Errorf("reading ammo failed with err: %w, at position: %v", err, filePosition(d.file))
 		}
 		data = strings.TrimSpace(data)
 		if len(data) == 0 {
@@ -98,7 +99,7 @@ func (d *rawDecoder) Scan(ctx context.Context) (*http.Request, string, error) {
 		d.ammoNum++
 		reqSize, tag, err := raw.DecodeHeader(data)
 		if err != nil {
-			return nil, "", xerrors.Errorf("header decoding error: %w", err)
+			return nil, xerrors.Errorf("header decoding error: %w", err)
 		}
 
 		if reqSize != 0 {
@@ -107,11 +108,11 @@ func (d *rawDecoder) Scan(ctx context.Context) (*http.Request, string, error) {
 			}
 			buff = buff[:reqSize]
 			if n, err := io.ReadFull(d.reader, buff); err != nil {
-				return nil, "", xerrors.Errorf("failed to read ammo with err: %w, at position: %v; tried to read: %v; have read: %v", err, filePosition(d.file), reqSize, n)
+				return nil, xerrors.Errorf("failed to read ammo with err: %w, at position: %v; tried to read: %v; have read: %v", err, filePosition(d.file), reqSize, n)
 			}
 			req, err = raw.DecodeRequest(buff)
 			if err != nil {
-				return nil, "", xerrors.Errorf("failed to decode ammo with err: %w, at position: %v; data: %q", err, filePosition(d.file), buff)
+				return nil, xerrors.Errorf("failed to decode ammo with err: %w, at position: %v; data: %q", err, filePosition(d.file), buff)
 			}
 		} else {
 			req, _ = http.NewRequest("", "/", nil)
@@ -119,6 +120,8 @@ func (d *rawDecoder) Scan(ctx context.Context) (*http.Request, string, error) {
 
 		// add new Headers to request from config
 		util.EnrichRequestWithHeaders(req, d.decodedConfigHeaders)
-		return req, tag, nil
+		ammo := &base.Ammo{Req: req}
+		ammo.SetTag(tag)
+		return ammo, nil
 	}
 }
