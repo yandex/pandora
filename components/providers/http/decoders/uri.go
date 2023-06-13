@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
+	"github.com/yandex/pandora/components/providers/base"
 	"github.com/yandex/pandora/components/providers/http/config"
 	"github.com/yandex/pandora/components/providers/http/util"
 )
@@ -31,76 +33,72 @@ type uriDecoder struct {
 	line    uint
 }
 
-func (d *uriDecoder) readLine(data string, commonHeader http.Header) (*http.Request, string, error) {
+func (d *uriDecoder) readLine(data string, commonHeader http.Header) (*base.Ammo, error) {
 	data = strings.TrimSpace(data)
 	if len(data) == 0 {
-		return nil, "", nil // skip empty line
+		return nil, nil // skip empty line
 	}
-	var req *http.Request
-	var tag string
-	var err error
 	if data[0] == '[' {
 		key, val, err := util.DecodeHeader(data)
 		if err != nil {
 			err = fmt.Errorf("decoding header error: %w", err)
-			return nil, "", err
+			return nil, err
 		}
 		commonHeader.Set(key, val)
-	} else {
-		var rawURL string
-		rawURL, tag, _ = strings.Cut(data, " ")
-		req, err = http.NewRequest("GET", rawURL, nil)
-		if err != nil {
-			err = fmt.Errorf("failed to decode uri: %w", err)
-			return nil, "", err
-		}
-		if host, ok := commonHeader["Host"]; ok {
-			req.Host = host[0]
-		}
-		req.Header = commonHeader.Clone()
-
-		// add new Headers to request from config
-		util.EnrichRequestWithHeaders(req, d.decodedConfigHeaders)
+		return nil, nil
 	}
-	return req, tag, nil
+
+	var rawURL string
+	rawURL, tag, _ := strings.Cut(data, " ")
+	_, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+	header := commonHeader.Clone()
+	for k, vv := range d.decodedConfigHeaders {
+		for _, v := range vv {
+			header.Set(k, v)
+		}
+	}
+	return base.NewAmmo("GET", rawURL, nil, header, tag)
 }
 
-func (d *uriDecoder) Scan(ctx context.Context) (*http.Request, string, error) {
+func (d *uriDecoder) Scan(ctx context.Context) (*base.Ammo, error) {
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
-		return nil, "", ErrAmmoLimit
+		return nil, ErrAmmoLimit
 	}
 	for ; ; d.line++ {
 		if ctx.Err() != nil {
-			return nil, "", ctx.Err()
+			return nil, ctx.Err()
 		}
 		if !d.scanner.Scan() {
 			if d.scanner.Err() == nil { // assume as io.EOF; FIXME: check possible nil error with other reason
 				d.line = 0
 				d.passNum++
 				if d.config.Passes != 0 && d.passNum >= d.config.Passes {
-					return nil, "", ErrPassLimit
+					return nil, ErrPassLimit
 				}
 				if d.ammoNum == 0 {
-					return nil, "", ErrNoAmmo
+					return nil, ErrNoAmmo
 				}
 				d.Header = http.Header{}
 				_, err := d.file.Seek(0, io.SeekStart)
 				if err != nil {
-					return nil, "", err
+					return nil, err
 				}
 				d.scanner = bufio.NewScanner(d.file)
 				continue
 			}
-			return nil, "", d.scanner.Err()
+			return nil, d.scanner.Err()
 		}
 		data := d.scanner.Text()
-		req, tag, err := d.readLine(data, d.Header)
+		ammo, err := d.readLine(data, d.Header)
 		if err != nil {
-			return nil, "", fmt.Errorf("decode at line %d `%s` error: %w", d.line+1, data, err)
+			return nil, fmt.Errorf("decode at line %d `%s` error: %w", d.line+1, data, err)
 		}
-		if req != nil {
+		if ammo != nil {
 			d.ammoNum++
-			return req, tag, nil
+			return ammo, nil
 		}
 	}
 }

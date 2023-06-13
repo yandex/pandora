@@ -8,7 +8,7 @@ import (
 	"testing/iotest"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/yandex/pandora/lib/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 type DecoderHeaderWant struct {
@@ -64,7 +64,7 @@ func TestDecodeRequest(t *testing.T) {
 			want: DecoderRequestWant{
 				&http.Request{
 					Method:     "GET",
-					URL:        testutil.Must(url.Parse("/some/path")),
+					URL:        MustURL(t, "/some/path"),
 					Proto:      "HTTP/1.0",
 					ProtoMajor: 1,
 					ProtoMinor: 0,
@@ -89,7 +89,7 @@ func TestDecodeRequest(t *testing.T) {
 			want: DecoderRequestWant{
 				&http.Request{
 					Method:           "POST",
-					URL:              testutil.Must(url.Parse("/some/path")),
+					URL:              MustURL(t, "/some/path"),
 					Proto:            "HTTP/1.1",
 					ProtoMajor:       1,
 					ProtoMinor:       1,
@@ -125,7 +125,7 @@ func TestDecodeRequest(t *testing.T) {
 			want: DecoderRequestWant{
 				&http.Request{
 					Method:     "GET",
-					URL:        testutil.Must(url.Parse("/etc/passwd")),
+					URL:        MustURL(t, "/etc/passwd"),
 					Proto:      "HTTP/1.1",
 					ProtoMajor: 1,
 					ProtoMinor: 1,
@@ -150,4 +150,10 @@ func TestDecodeRequest(t *testing.T) {
 			assert.Equal(tt.want, ans)
 		})
 	}
+}
+
+func MustURL(t *testing.T, rawURL string) *url.URL {
+	url, err := url.Parse(rawURL)
+	require.NoError(t, err)
+	return url
 }

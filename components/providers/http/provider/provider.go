@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"sync"
 
 	"github.com/yandex/pandora/components/providers/base"
@@ -24,7 +23,7 @@ type Provider struct {
 	Close func() error
 
 	AmmoPool sync.Pool
-	Sink     chan *base.Ammo[http.Request]
+	Sink     chan *base.Ammo
 }
 
 func (p *Provider) Acquire() (core.Ammo, bool) {
@@ -32,10 +31,14 @@ func (p *Provider) Acquire() (core.Ammo, bool) {
 	if ok {
 		ammo.SetID(p.NextID())
 	}
+	if err := ammo.BuildRequest(); err != nil {
+		p.Deps.Log.Error("http build request error", zap.Error(err))
+		return ammo, false
+	}
 	for _, mw := range p.Middlewares {
 		err := mw.UpdateRequest(ammo.Req)
 		if err != nil {
-			p.Log.Error("error on Middleware.UpdateRequest", zap.Error(err))
+			p.Deps.Log.Error("error on Middleware.UpdateRequest", zap.Error(err))
 			return ammo, false
 		}
 	}
@@ -43,18 +46,15 @@ func (p *Provider) Acquire() (core.Ammo, bool) {
 }
 
 func (p *Provider) Release(a core.Ammo) {
-	ammo := a.(*base.Ammo[http.Request])
-	// TODO: add request release for example for future fasthttp
-	// ammo.Req.Body = nil
-	ammo.Req = nil
+	ammo := a.(*base.Ammo)
+	ammo.Reset()
 	p.AmmoPool.Put(ammo)
 }
 
 func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) {
-	var req *http.Request
-	var tag string
+	var ammo *base.Ammo
 
-	p.ProviderDeps = deps
+	p.Deps = deps
 	defer func() {
 		// TODO: wrap in go 1.20
 		// err = errors.Join(err, p.Close())
@@ -84,8 +84,8 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 			}
 			return
 		}
-		req, tag, err = p.Decoder.Scan(ctx)
-		if !confutil.IsChosenCase(tag, p.Config.ChosenCases) {
+		ammo, err = p.Decoder.Scan(ctx)
+		if !confutil.IsChosenCase(ammo.Tag(), p.Config.ChosenCases) {
 			continue
 		}
 		if err != nil {
@@ -95,8 +95,6 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 			return
 		}
 
-		a := p.AmmoPool.Get().(*base.Ammo[http.Request])
-		a.Reset(req, tag)
 		select {
 		case <-ctx.Done():
 			err = ctx.Err()
@@ -104,7 +102,7 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 				err = xerrors.Errorf("error from context: %w", err)
 			}
 			return
-		case p.Sink <- a:
+		case p.Sink <- ammo:
 		}
 	}
 }

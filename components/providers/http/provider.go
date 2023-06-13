@@ -7,7 +7,6 @@ package http
 import (
 	"bytes"
 	"io"
-	"net/http"
 	"strings"
 	"sync"
 
@@ -48,8 +47,8 @@ func NewProvider(fs afero.Fs, conf config.Config) (core.Provider, error) {
 		Config:   conf,
 		Decoder:  decoder,
 		Close:    closer.Close,
-		AmmoPool: sync.Pool{New: func() interface{} { return new(base.Ammo[http.Request]) }},
-		Sink:     make(chan *base.Ammo[http.Request]),
+		AmmoPool: sync.Pool{New: func() interface{} { return new(base.Ammo) }},
+		Sink:     make(chan *base.Ammo),
 	}, nil
 }
 
