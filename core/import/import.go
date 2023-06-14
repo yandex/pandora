@@ -96,6 +96,7 @@ func Import(fs afero.Fs) {
 
 	confutil.RegisterTagResolver("", confutil.EnvTagResolver)
 	confutil.RegisterTagResolver("ENV", confutil.EnvTagResolver)
+	confutil.RegisterTagResolver("PROPERTY", confutil.PropertyTagResolver)
 
 	// Required for decoding plugins. Need to be added after Composite Schedule hacky hook.
 	pluginconfig.AddHooks()
