@@ -34,31 +34,8 @@ Pandora supports config files in `YAML`_ format. Create a new file named ``load.
         times: 10
 
 
-You can enable debug information about gun (e.g. monitoring and additional logging).
+Visit `Configuration`_ page for more details.
 
-.. code-block:: yaml
-
-  log:                                 # gun logging configuration
-    level: error                       # log only `error` messages (`debug` for verbose logging)
-
-  monitoring:
-    expvar:                            # gun statistics HTTP server
-      enabled: true
-      port: 1234
-    cpuprofile:                        # cpu profiling
-      enabled: true
-      file: "cpuprofile.log"
-    memprofile:                        # mem profiling
-      enabled: true
-      file: "memprofile.log"
-
-
-`ammo.uri`:
-
-::
-
-  /my/first/url
-  /my/second/url
 
 Run your tests:
 

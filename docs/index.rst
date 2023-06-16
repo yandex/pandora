@@ -13,6 +13,7 @@ Pandora is a high-performance load generator in Go language. It has built-in HTT
    :caption: Contents:
 
    install
+   configuration
    tutorial
    advanced
    custom
