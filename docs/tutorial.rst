@@ -56,4 +56,4 @@ References
 .. _`Overload`: https://overload.yandex.net
 .. _`Yandex.Tank`: https://yandextank.readthedocs.io/en/latest/core_and_modules.html#pandora
 .. _`YAML`: https://en.wikipedia.org/wiki/YAML
-.. _`Configuration`: https://yandexpandora.readthedocs.io/en/latest/configuration.html
+.. _`Configuration`: configuration.html
