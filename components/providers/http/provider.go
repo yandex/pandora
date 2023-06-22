@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"io"
 	"strings"
-	"sync"
 
 	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/providers/base"
@@ -44,11 +43,10 @@ func NewProvider(fs afero.Fs, conf config.Config) (core.Provider, error) {
 		ProviderBase: base.ProviderBase{
 			FS: fs,
 		},
-		Config:   conf,
-		Decoder:  decoder,
-		Close:    closer.Close,
-		AmmoPool: sync.Pool{New: func() interface{} { return new(base.Ammo) }},
-		Sink:     make(chan *base.Ammo),
+		Config:  conf,
+		Decoder: decoder,
+		Close:   closer.Close,
+		Sink:    make(chan decoders.DecodedAmmo),
 	}, nil
 }
 

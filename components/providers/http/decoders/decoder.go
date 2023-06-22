@@ -6,9 +6,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/yandex/pandora/components/providers/base"
 	"github.com/yandex/pandora/components/providers/http/config"
 	"github.com/yandex/pandora/components/providers/http/util"
+	"github.com/yandex/pandora/core"
 )
 
 func filePosition(file io.ReadSeeker) (position int64) {
@@ -25,7 +25,8 @@ var (
 
 type Decoder interface {
 	// Decode(context.Context, chan<- *base.Ammo[http.Request], io.ReadSeeker) error
-	Scan(context.Context) (*base.Ammo, error)
+	Scan(context.Context) (DecodedAmmo, error)
+	Release(a core.Ammo)
 }
 
 type protoDecoder struct {

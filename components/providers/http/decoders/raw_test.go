@@ -87,7 +87,8 @@ User-Agent: xxx (shell 1)
 			}
 			assert.Equal(t, tt.wantTag, ammo.Tag(), "iteration %d-%d", j, i)
 
-			req := ammo.Req
+			req, err := ammo.BuildRequest()
+			assert.NoError(t, err)
 			req.Close = false
 			body, _ := httputil.DumpRequest(req, true)
 			assert.Equal(t, tt.wantBody, string(body), "iteration %d-%d", j, i)

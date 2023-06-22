@@ -9,15 +9,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/yandex/pandora/components/providers/base"
 	"github.com/yandex/pandora/components/providers/http/config"
+	"github.com/yandex/pandora/components/providers/http/decoders/ammo"
 )
 
 func Test_uripostDecoder_Scan(t *testing.T) {
-	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *base.Ammo {
-		ammo, err := base.NewAmmo(method, url, body, header, tag)
+	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *ammo.Ammo {
+		a := ammo.Ammo{}
+		err := a.Setup(method, url, body, header, tag)
 		require.NoError(t, err)
-		return ammo
+		return &a
 	}
 	input := `5 /0
 class
@@ -42,7 +43,7 @@ classclassclass
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	wants := []*base.Ammo{
+	wants := []*ammo.Ammo{
 		mustNewAmmo(t, "POST", "/0", []byte("class"), http.Header{"Content-Type": []string{"application/json"}}, ""),
 		mustNewAmmo(t, "POST", "/1", []byte("class"), http.Header{"A": []string{"b"}, "Content-Type": []string{"application/json"}}, ""),
 		mustNewAmmo(t, "POST", "/2", []byte("classclass"), http.Header{"Host": []string{"example.com"}, "A": []string{"b"}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, ""),

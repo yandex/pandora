@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
-	"github.com/yandex/pandora/components/providers/base"
 	"github.com/yandex/pandora/components/providers/http/config"
+	"github.com/yandex/pandora/components/providers/http/decoders/ammo"
 	"github.com/yandex/pandora/components/providers/http/util"
+	"github.com/yandex/pandora/core"
 )
 
 func newURIDecoder(file io.ReadSeeker, cfg config.Config, decodedConfigHeaders http.Header) *uriDecoder {
@@ -23,6 +25,7 @@ func newURIDecoder(file io.ReadSeeker, cfg config.Config, decodedConfigHeaders h
 		},
 		scanner: bufio.NewScanner(file),
 		Header:  http.Header{},
+		pool:    &sync.Pool{New: func() any { return &ammo.Ammo{} }},
 	}
 }
 
@@ -31,9 +34,10 @@ type uriDecoder struct {
 	scanner *bufio.Scanner
 	Header  http.Header
 	line    uint
+	pool    *sync.Pool
 }
 
-func (d *uriDecoder) readLine(data string, commonHeader http.Header) (*base.Ammo, error) {
+func (d *uriDecoder) readLine(data string, commonHeader http.Header) (DecodedAmmo, error) {
 	data = strings.TrimSpace(data)
 	if len(data) == 0 {
 		return nil, nil // skip empty line
@@ -60,10 +64,21 @@ func (d *uriDecoder) readLine(data string, commonHeader http.Header) (*base.Ammo
 			header.Set(k, v)
 		}
 	}
-	return base.NewAmmo("GET", rawURL, nil, header, tag)
+	a := d.pool.Get().(*ammo.Ammo)
+	if err := a.Setup("GET", rawURL, nil, header, tag); err != nil {
+		return nil, err
+	}
+	return a, nil
 }
 
-func (d *uriDecoder) Scan(ctx context.Context) (*base.Ammo, error) {
+func (d *uriDecoder) Release(a core.Ammo) {
+	if am, ok := a.(*ammo.Ammo); ok {
+		am.Reset()
+		d.pool.Put(*am)
+	}
+}
+
+func (d *uriDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
 		return nil, ErrAmmoLimit
 	}
@@ -92,13 +107,13 @@ func (d *uriDecoder) Scan(ctx context.Context) (*base.Ammo, error) {
 			return nil, d.scanner.Err()
 		}
 		data := d.scanner.Text()
-		ammo, err := d.readLine(data, d.Header)
+		a, err := d.readLine(data, d.Header)
 		if err != nil {
 			return nil, fmt.Errorf("decode at line %d `%s` error: %w", d.line+1, data, err)
 		}
-		if ammo != nil {
+		if a != nil {
 			d.ammoNum++
-			return ammo, nil
+			return a, nil
 		}
 	}
 }

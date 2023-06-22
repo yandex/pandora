@@ -9,21 +9,22 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/yandex/pandora/components/providers/base"
 	"github.com/yandex/pandora/components/providers/http/config"
+	"github.com/yandex/pandora/components/providers/http/decoders/ammo"
 )
 
 func Test_uriDecoder_readLine(t *testing.T) {
-	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *base.Ammo {
-		ammo, err := base.NewAmmo(method, url, body, header, tag)
+	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *ammo.Ammo {
+		a := ammo.Ammo{}
+		err := a.Setup(method, url, body, header, tag)
 		require.NoError(t, err)
-		return ammo
+		return &a
 	}
 
 	tests := []struct {
 		name                  string
 		data                  string
-		want                  *base.Ammo
+		want                  *ammo.Ammo
 		wantErr               bool
 		expectedCommonHeaders http.Header
 	}{
@@ -68,20 +69,24 @@ func Test_uriDecoder_readLine(t *testing.T) {
 			wantErr: true,
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			commonHeader := http.Header{"User-Agent": []string{"TestAgent"}}
 			decodedConfigHeaders := http.Header{"Authorization": []string{"Bearer xxx"}}
 
 			decoder := newURIDecoder(nil, config.Config{}, decodedConfigHeaders)
-			ammo, err := decoder.readLine(test.data, commonHeader)
+			ammo, err := decoder.readLine(tt.data, commonHeader)
 
-			if test.wantErr {
+			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
-			assert.Equal(t, test.want, ammo)
-			assert.Equal(t, test.expectedCommonHeaders, commonHeader)
+			if tt.want == nil {
+				assert.Nil(t, ammo)
+			} else {
+				assert.Equal(t, tt.want, ammo)
+			}
+			assert.Equal(t, tt.expectedCommonHeaders, commonHeader)
 		})
 	}
 }
@@ -99,10 +104,11 @@ const uriInput = ` /0
 /4 some tag`
 
 func Test_uriDecoder_Scan(t *testing.T) {
-	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *base.Ammo {
-		ammo, err := base.NewAmmo(method, url, body, header, tag)
+	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *ammo.Ammo {
+		a := ammo.Ammo{}
+		err := a.Setup(method, url, body, header, tag)
 		require.NoError(t, err)
-		return ammo
+		return &a
 	}
 
 	decoder := newURIDecoder(strings.NewReader(uriInput), config.Config{
@@ -112,7 +118,7 @@ func Test_uriDecoder_Scan(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	wants := []*base.Ammo{
+	wants := []*ammo.Ammo{
 		mustNewAmmo(t, "GET", "/0", nil, http.Header{"Content-Type": []string{"application/json"}}, ""),
 		mustNewAmmo(t, "GET", "/1", nil, http.Header{"A": []string{"b"}, "Content-Type": []string{"application/json"}}, ""),
 		mustNewAmmo(t, "GET", "/2", nil, http.Header{"Host": []string{"example.com"}, "A": []string{"b"}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, ""),

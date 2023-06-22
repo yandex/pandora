@@ -6,10 +6,12 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 
-	"github.com/yandex/pandora/components/providers/base"
 	"github.com/yandex/pandora/components/providers/http/config"
+	"github.com/yandex/pandora/components/providers/http/decoders/ammo"
 	"github.com/yandex/pandora/components/providers/http/decoders/jsonline"
+	"github.com/yandex/pandora/core"
 	"golang.org/x/xerrors"
 )
 
@@ -26,6 +28,7 @@ func newJsonlineDecoder(file io.ReadSeeker, cfg config.Config, decodedConfigHead
 			decodedConfigHeaders: decodedConfigHeaders,
 		},
 		scanner: scanner,
+		pool:    &sync.Pool{New: func() any { return &ammo.Ammo{} }},
 	}
 }
 
@@ -33,9 +36,17 @@ type jsonlineDecoder struct {
 	protoDecoder
 	scanner *bufio.Scanner
 	line    uint
+	pool    *sync.Pool
 }
 
-func (d *jsonlineDecoder) Scan(ctx context.Context) (*base.Ammo, error) {
+func (d *jsonlineDecoder) Release(a core.Ammo) {
+	if am, ok := a.(*ammo.Ammo); ok {
+		am.Reset()
+		d.pool.Put(am)
+	}
+}
+
+func (d *jsonlineDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
 		return nil, ErrAmmoLimit
 	}
@@ -51,7 +62,7 @@ func (d *jsonlineDecoder) Scan(ctx context.Context) (*base.Ammo, error) {
 				continue
 			}
 			d.ammoNum++
-			ammo, err := jsonline.DecodeAmmo(data, d.decodedConfigHeaders)
+			method, url, header, tag, body, err := jsonline.DecodeAmmo(data, d.decodedConfigHeaders)
 			if err != nil {
 				if !d.config.ContinueOnError {
 					return nil, xerrors.Errorf("failed to decode ammo at line: %v; data: %q, with err: %w", d.line+1, data, err)
@@ -59,7 +70,9 @@ func (d *jsonlineDecoder) Scan(ctx context.Context) (*base.Ammo, error) {
 				// TODO: add log message about error
 				continue // skipping ammo
 			}
-			return ammo, err
+			a := d.pool.Get().(*ammo.Ammo)
+			err = a.Setup(method, url, body, header, tag)
+			return a, err
 		}
 
 		err := d.scanner.Err()

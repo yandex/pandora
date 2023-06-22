@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	"github.com/yandex/pandora/components/providers/base"
 )
 
 // ffjson: noencoder
@@ -24,21 +23,20 @@ type data struct {
 	Body string `json:"body"`
 }
 
-func DecodeAmmo(jsonDoc []byte, baseHeader http.Header) (*base.Ammo, error) {
+func DecodeAmmo(jsonDoc []byte, baseHeader http.Header) (method string, url string, header http.Header, tag string, body []byte, err error) {
 	var d = new(data)
 	if err := d.UnmarshalJSON(jsonDoc); err != nil {
 		err = errors.WithStack(err)
-		return nil, err
+		return "", "", nil, "", nil, err
 	}
 
-	header := baseHeader.Clone()
+	header = baseHeader.Clone()
 	for k, v := range d.Headers {
 		header.Set(k, v)
 	}
-	url := "http://" + d.Host + d.URI
-	var body []byte
+	url = "http://" + d.Host + d.URI
 	if d.Body != "" {
 		body = []byte(d.Body)
 	}
-	return base.NewAmmo(d.Method, url, body, header, d.Tag)
+	return d.Method, url, header, d.Tag, body, nil
 }

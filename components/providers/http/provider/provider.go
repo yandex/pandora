@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/yandex/pandora/components/providers/base"
+	httpProvider "github.com/yandex/pandora/components/providers/http/ammo"
 	"github.com/yandex/pandora/components/providers/http/config"
 	"github.com/yandex/pandora/components/providers/http/decoders"
 	"github.com/yandex/pandora/core"
@@ -22,37 +22,35 @@ type Provider struct {
 
 	Close func() error
 
-	AmmoPool sync.Pool
-	Sink     chan *base.Ammo
+	Sink chan decoders.DecodedAmmo
 }
 
 func (p *Provider) Acquire() (core.Ammo, bool) {
 	ammo, ok := <-p.Sink
-	if ok {
-		ammo.SetID(p.NextID())
+	if !ok {
+		return nil, false
 	}
-	if err := ammo.BuildRequest(); err != nil {
+	req, err := ammo.BuildRequest()
+	if err != nil {
 		p.Deps.Log.Error("http build request error", zap.Error(err))
 		return ammo, false
 	}
 	for _, mw := range p.Middlewares {
-		err := mw.UpdateRequest(ammo.Req)
+		err := mw.UpdateRequest(req)
 		if err != nil {
 			p.Deps.Log.Error("error on Middleware.UpdateRequest", zap.Error(err))
 			return ammo, false
 		}
 	}
-	return ammo, ok
+	return httpProvider.NewGunAmmo(req, ammo.Tag(), p.NextID()), ok
 }
 
 func (p *Provider) Release(a core.Ammo) {
-	ammo := a.(*base.Ammo)
-	ammo.Reset()
-	p.AmmoPool.Put(ammo)
+	p.Decoder.Release(a)
 }
 
 func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) {
-	var ammo *base.Ammo
+	var ammo decoders.DecodedAmmo
 
 	p.Deps = deps
 	defer func() {

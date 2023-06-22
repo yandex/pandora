@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
-	"github.com/yandex/pandora/components/providers/base"
 	"github.com/yandex/pandora/components/providers/http/config"
+	"github.com/yandex/pandora/components/providers/http/decoders/ammo"
 	"github.com/yandex/pandora/components/providers/http/decoders/uripost"
 	"github.com/yandex/pandora/components/providers/http/util"
+	"github.com/yandex/pandora/core"
 	"golang.org/x/xerrors"
 )
 
@@ -25,6 +27,7 @@ func newURIPostDecoder(file io.ReadSeeker, cfg config.Config, decodedConfigHeade
 		},
 		reader: bufio.NewReader(file),
 		header: http.Header{},
+		pool:   &sync.Pool{New: func() any { return &ammo.Ammo{} }},
 	}
 }
 
@@ -33,9 +36,17 @@ type uripostDecoder struct {
 	reader *bufio.Reader
 	header http.Header
 	line   uint
+	pool   *sync.Pool
 }
 
-func (d *uripostDecoder) Scan(ctx context.Context) (*base.Ammo, error) {
+func (d *uripostDecoder) Release(a core.Ammo) {
+	if am, ok := a.(*ammo.Ammo); ok {
+		am.Reset()
+		d.pool.Put(am)
+	}
+}
+
+func (d *uripostDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
 		return nil, ErrAmmoLimit
 	}
@@ -45,16 +56,16 @@ func (d *uripostDecoder) Scan(ctx context.Context) (*base.Ammo, error) {
 				return nil, ctx.Err()
 			}
 
-			req, err := d.readBlock(d.reader, d.header)
+			ammo, err := d.readBlock(d.reader, d.header)
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
 				return nil, err
 			}
-			if req != nil {
+			if ammo != nil {
 				d.ammoNum++
-				return req, nil
+				return ammo, nil
 			}
 			// here only if read header
 		}
@@ -79,7 +90,7 @@ func (d *uripostDecoder) Scan(ctx context.Context) (*base.Ammo, error) {
 }
 
 // readBlock read one header at time and set to commonHeader or read full request
-func (d *uripostDecoder) readBlock(reader *bufio.Reader, commonHeader http.Header) (*base.Ammo, error) {
+func (d *uripostDecoder) readBlock(reader *bufio.Reader, commonHeader http.Header) (*ammo.Ammo, error) {
 	data, err := reader.ReadString('\n')
 	if err != nil {
 		return nil, err
@@ -120,6 +131,7 @@ func (d *uripostDecoder) readBlock(reader *bufio.Reader, commonHeader http.Heade
 			header.Set(k, v)
 		}
 	}
-
-	return base.NewAmmo("POST", uri, buff, header, tag)
+	a := d.pool.Get().(*ammo.Ammo)
+	err = a.Setup("POST", uri, buff, header, tag)
+	return a, err
 }

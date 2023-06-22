@@ -9,15 +9,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/yandex/pandora/components/providers/base"
 	"github.com/yandex/pandora/components/providers/http/config"
+	"github.com/yandex/pandora/components/providers/http/decoders/ammo"
 )
 
 func Test_jsonlineDecoder_Scan(t *testing.T) {
-	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *base.Ammo {
-		ammo, err := base.NewAmmo(method, url, body, header, tag)
+	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *ammo.Ammo {
+		a := ammo.Ammo{}
+		err := a.Setup(method, url, body, header, tag)
 		require.NoError(t, err)
-		return ammo
+		return &a
 	}
 
 	input := `{"host": "ya.net", "method": "GET", "uri": "/?sleep=100", "tag": "sleep1", "headers": {"User-agent": "Tank", "Connection": "close"}}
@@ -33,7 +34,7 @@ func Test_jsonlineDecoder_Scan(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	wants := []*base.Ammo{
+	wants := []*ammo.Ammo{
 		mustNewAmmo(t,
 			"GET",
 			"http://ya.net/?sleep=100",
