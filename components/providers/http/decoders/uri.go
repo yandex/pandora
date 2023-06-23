@@ -78,6 +78,10 @@ func (d *uriDecoder) Release(a core.Ammo) {
 	}
 }
 
+func (d *uriDecoder) LoadAmmo(ctx context.Context) ([]DecodedAmmo, error) {
+	return d.protoDecoder.LoadAmmo(ctx, d.Scan)
+}
+
 func (d *uriDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
 		return nil, ErrAmmoLimit

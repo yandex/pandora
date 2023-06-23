@@ -46,6 +46,10 @@ func (d *uripostDecoder) Release(a core.Ammo) {
 	}
 }
 
+func (d *uripostDecoder) LoadAmmo(ctx context.Context) ([]DecodedAmmo, error) {
+	return d.protoDecoder.LoadAmmo(ctx, d.Scan)
+}
+
 func (d *uripostDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
 		return nil, ErrAmmoLimit
@@ -56,16 +60,16 @@ func (d *uripostDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 				return nil, ctx.Err()
 			}
 
-			ammo, err := d.readBlock(d.reader, d.header)
+			a, err := d.readBlock(d.reader, d.header)
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
 				return nil, err
 			}
-			if ammo != nil {
+			if a != nil {
 				d.ammoNum++
-				return ammo, nil
+				return a, nil
 			}
 			// here only if read header
 		}

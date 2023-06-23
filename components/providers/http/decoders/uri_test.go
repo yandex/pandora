@@ -75,16 +75,16 @@ func Test_uriDecoder_readLine(t *testing.T) {
 			decodedConfigHeaders := http.Header{"Authorization": []string{"Bearer xxx"}}
 
 			decoder := newURIDecoder(nil, config.Config{}, decodedConfigHeaders)
-			ammo, err := decoder.readLine(tt.data, commonHeader)
+			a, err := decoder.readLine(tt.data, commonHeader)
 
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
 			if tt.want == nil {
-				assert.Nil(t, ammo)
+				assert.Nil(t, a)
 			} else {
-				assert.Equal(t, tt.want, ammo)
+				assert.Equal(t, tt.want, a)
 			}
 			assert.Equal(t, tt.expectedCommonHeaders, commonHeader)
 		})
@@ -103,14 +103,23 @@ const uriInput = ` /0
 /3
 /4 some tag`
 
-func Test_uriDecoder_Scan(t *testing.T) {
+func getURIAmmoWants(t *testing.T) []DecodedAmmo {
 	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *ammo.Ammo {
 		a := ammo.Ammo{}
 		err := a.Setup(method, url, body, header, tag)
 		require.NoError(t, err)
 		return &a
 	}
+	return []DecodedAmmo{
+		mustNewAmmo(t, "GET", "/0", nil, http.Header{"Content-Type": []string{"application/json"}}, ""),
+		mustNewAmmo(t, "GET", "/1", nil, http.Header{"A": []string{"b"}, "Content-Type": []string{"application/json"}}, ""),
+		mustNewAmmo(t, "GET", "/2", nil, http.Header{"Host": []string{"example.com"}, "A": []string{"b"}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, ""),
+		mustNewAmmo(t, "GET", "/3", nil, http.Header{"Host": []string{"other.net"}, "A": []string{""}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, ""),
+		mustNewAmmo(t, "GET", "/4", nil, http.Header{"Host": []string{"other.net"}, "A": []string{""}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, "some tag"),
+	}
+}
 
+func Test_uriDecoder_Scan(t *testing.T) {
 	decoder := newURIDecoder(strings.NewReader(uriInput), config.Config{
 		Limit: 10,
 	}, http.Header{"Content-Type": []string{"application/json"}})
@@ -118,13 +127,7 @@ func Test_uriDecoder_Scan(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	wants := []*ammo.Ammo{
-		mustNewAmmo(t, "GET", "/0", nil, http.Header{"Content-Type": []string{"application/json"}}, ""),
-		mustNewAmmo(t, "GET", "/1", nil, http.Header{"A": []string{"b"}, "Content-Type": []string{"application/json"}}, ""),
-		mustNewAmmo(t, "GET", "/2", nil, http.Header{"Host": []string{"example.com"}, "A": []string{"b"}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, ""),
-		mustNewAmmo(t, "GET", "/3", nil, http.Header{"Host": []string{"other.net"}, "A": []string{""}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, ""),
-		mustNewAmmo(t, "GET", "/4", nil, http.Header{"Host": []string{"other.net"}, "A": []string{""}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, "some tag"),
-	}
+	wants := getURIAmmoWants(t)
 	for j := 0; j < 2; j++ {
 		for i, want := range wants {
 			ammo, err := decoder.Scan(ctx)
@@ -137,4 +140,21 @@ func Test_uriDecoder_Scan(t *testing.T) {
 	assert.Equal(t, err, ErrAmmoLimit)
 	assert.Equal(t, decoder.ammoNum, uint(len(wants)*2))
 	assert.Equal(t, decoder.passNum, uint(1))
+}
+
+func Test_uriDecoder_LoadAmmo(t *testing.T) {
+	decoder := newURIDecoder(strings.NewReader(uriInput), config.Config{
+		Limit: 10,
+	}, http.Header{"Content-Type": []string{"application/json"}})
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	wants := getURIAmmoWants(t)
+
+	ammos, err := decoder.LoadAmmo(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, wants, ammos)
+	assert.Equal(t, decoder.config.Limit, uint(10))
+	assert.Equal(t, decoder.config.Passes, uint(0))
 }

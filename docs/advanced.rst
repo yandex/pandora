@@ -1,5 +1,5 @@
 HTTP Ammo providers
-==============
+===================
 
 HTTP Ammo provider is a source of test data: it makes ammo object.
 
@@ -141,16 +141,22 @@ Each http ammo provider lets you choose specific ammo for your test from ammo fi
 Tags are defined in ammo files as shown below:
 
 http/json:
+
 ::
+
   {"tag": "tag1", "uri": "/",
 
 raw (request-style):
+
 ::
+
   73 tag1
   GET / HTTP/1.0
 
 uri-style:
+
 ::
+
   /?drg tag1
   /
   /buy tag2
@@ -190,4 +196,31 @@ You can create your own middleware. But in order to do that you need to register
       return headerdate.NewMiddleware(cfg)
   })
 
-For more on how to write custom pandora, see :ref:`custom`
+For more on how to write custom pandora, see `Custom`_ .
+
+HTTP Ammo preloaded
+-------------------
+
+Pandora's architecture is designed for high performance. To achieve high performance, Pandora prepares ammo for each instance.
+
+If you have **large requests** and **a large number of instances**, Pandora starts using a lot of memory.
+
+For this case HTTP providers has a ``preload`` flag. If it's set to ``true``, the provider will load the ammo file into memory and use the body of the request from memory
+
+Example:
+
+.. code-block:: yaml
+
+  pools:
+    - ammo:
+        type: ...
+        ...
+        preload: true
+
+
+References
+----------
+
+.. target-notes::
+
+.. _`Custom`: custom.html

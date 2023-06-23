@@ -20,4 +20,5 @@ type Config struct {
 	MaxAmmoSize int
 	ChosenCases []string
 	Middlewares []middleware.Middleware
+	Preload     bool
 }

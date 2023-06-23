@@ -62,6 +62,10 @@ type rawDecoder struct {
 	pool   *sync.Pool
 }
 
+func (d *rawDecoder) LoadAmmo(ctx context.Context) ([]DecodedAmmo, error) {
+	return d.protoDecoder.LoadAmmo(ctx, d.Scan)
+}
+
 func (d *rawDecoder) Release(a core.Ammo) {
 	if am, ok := a.(*ammo.RawAmmo); ok {
 		am.Reset()
@@ -111,17 +115,17 @@ func (d *rawDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 			return nil, xerrors.Errorf("header decoding error: %w", err)
 		}
 
-		ammo := d.pool.Get().(*ammo.RawAmmo)
+		a := d.pool.Get().(*ammo.RawAmmo)
 		if reqSize != 0 {
 			buff := make([]byte, reqSize)
 			if n, err := io.ReadFull(d.reader, buff); err != nil {
 				return nil, xerrors.Errorf("failed to read ammo with err: %w, at position: %v; tried to read: %v; have read: %v", err, position, reqSize, n)
 			}
 
-			ammo.Setup(buff, tag, position, d.decodedConfigHeaders)
+			a.Setup(buff, tag, position, d.decodedConfigHeaders)
 		} else {
-			ammo.Setup(nil, "", position, d.decodedConfigHeaders)
+			a.Setup(nil, "", position, d.decodedConfigHeaders)
 		}
-		return ammo, nil
+		return a, nil
 	}
 }

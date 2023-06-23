@@ -13,28 +13,20 @@ import (
 	"github.com/yandex/pandora/components/providers/http/decoders/ammo"
 )
 
-func Test_jsonlineDecoder_Scan(t *testing.T) {
+const jsonlineDecoderInput = `{"host": "ya.net", "method": "GET", "uri": "/?sleep=100", "tag": "sleep1", "headers": {"User-agent": "Tank", "Connection": "close"}}
+{"host": "ya.net", "method": "POST", "uri": "/?sleep=200", "tag": "sleep2", "headers": {"User-agent": "Tank", "Connection": "close"}, "body": "body_data"}
+
+
+`
+
+func getJsonlineAmmoWants(t *testing.T) []DecodedAmmo {
 	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *ammo.Ammo {
 		a := ammo.Ammo{}
 		err := a.Setup(method, url, body, header, tag)
 		require.NoError(t, err)
 		return &a
 	}
-
-	input := `{"host": "ya.net", "method": "GET", "uri": "/?sleep=100", "tag": "sleep1", "headers": {"User-agent": "Tank", "Connection": "close"}}
-{"host": "ya.net", "method": "POST", "uri": "/?sleep=200", "tag": "sleep2", "headers": {"User-agent": "Tank", "Connection": "close"}, "body": "body_data"}
-
-
-`
-
-	decoder := newJsonlineDecoder(strings.NewReader(input), config.Config{
-		Limit: 4,
-	}, http.Header{"Content-Type": []string{"application/json"}})
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	wants := []*ammo.Ammo{
+	return []DecodedAmmo{
 		mustNewAmmo(t,
 			"GET",
 			"http://ya.net/?sleep=100",
@@ -50,6 +42,17 @@ func Test_jsonlineDecoder_Scan(t *testing.T) {
 			"sleep2",
 		),
 	}
+}
+
+func Test_jsonlineDecoder_Scan(t *testing.T) {
+	decoder := newJsonlineDecoder(strings.NewReader(jsonlineDecoderInput), config.Config{
+		Limit: 4,
+	}, http.Header{"Content-Type": []string{"application/json"}})
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	wants := getJsonlineAmmoWants(t)
 	for j := 0; j < 2; j++ {
 		for i, want := range wants {
 			ammo, err := decoder.Scan(ctx)
@@ -62,4 +65,21 @@ func Test_jsonlineDecoder_Scan(t *testing.T) {
 	assert.Equal(t, err, ErrAmmoLimit)
 	assert.Equal(t, decoder.ammoNum, uint(len(wants)*2))
 	assert.Equal(t, decoder.passNum, uint(1))
+}
+
+func Test_jsonlineDecoder_LoadAmmo(t *testing.T) {
+	decoder := newJsonlineDecoder(strings.NewReader(jsonlineDecoderInput), config.Config{
+		Limit: 4,
+	}, http.Header{"Content-Type": []string{"application/json"}})
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	wants := getJsonlineAmmoWants(t)
+
+	ammos, err := decoder.LoadAmmo(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, wants, ammos)
+	assert.Equal(t, decoder.config.Limit, uint(4))
+	assert.Equal(t, decoder.config.Passes, uint(0))
 }

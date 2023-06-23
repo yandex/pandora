@@ -2,6 +2,7 @@ package decoders
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"github.com/yandex/pandora/components/providers/http/util"
 	"github.com/yandex/pandora/core"
 )
+
+//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Decoder --filename=mock_decoder.go
 
 func filePosition(file io.ReadSeeker) (position int64) {
 	position, _ = file.Seek(0, io.SeekCurrent)
@@ -24,9 +27,9 @@ var (
 )
 
 type Decoder interface {
-	// Decode(context.Context, chan<- *base.Ammo[http.Request], io.ReadSeeker) error
 	Scan(context.Context) (DecodedAmmo, error)
 	Release(a core.Ammo)
+	LoadAmmo(context.Context) ([]DecodedAmmo, error)
 }
 
 type protoDecoder struct {
@@ -37,9 +40,31 @@ type protoDecoder struct {
 	passNum              uint // number of file reads
 }
 
+func (d *protoDecoder) LoadAmmo(ctx context.Context, scan func(ctx context.Context) (DecodedAmmo, error)) ([]DecodedAmmo, error) {
+	passes := d.config.Passes
+	limit := d.config.Limit
+	d.config.Passes = 1
+	d.config.Limit = 0
+	var result []DecodedAmmo
+	var err error
+	var ammo DecodedAmmo
+	for err == nil {
+		ammo, err = scan(ctx)
+		if ammo != nil {
+			result = append(result, ammo)
+		}
+	}
+	d.config.Passes = passes
+	d.config.Limit = limit
+	if errors.Is(err, ErrPassLimit) {
+		err = nil
+	}
+
+	return result, err
+}
+
 func NewDecoder(conf config.Config, file io.ReadSeeker) (d Decoder, err error) {
-	var decodedConfigHeaders http.Header
-	decodedConfigHeaders, err = util.DecodeHTTPConfigHeaders(conf.Headers)
+	decodedConfigHeaders, err := util.DecodeHTTPConfigHeaders(conf.Headers)
 	if err != nil {
 		return
 	}

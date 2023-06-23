@@ -22,7 +22,8 @@ type Provider struct {
 
 	Close func() error
 
-	Sink chan decoders.DecodedAmmo
+	Sink  chan decoders.DecodedAmmo
+	ammos []decoders.DecodedAmmo
 }
 
 func (p *Provider) Acquire() (core.Ammo, bool) {
@@ -46,12 +47,13 @@ func (p *Provider) Acquire() (core.Ammo, bool) {
 }
 
 func (p *Provider) Release(a core.Ammo) {
+	if p.Preload {
+		return
+	}
 	p.Decoder.Release(a)
 }
 
 func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) {
-	var ammo decoders.DecodedAmmo
-
 	p.Deps = deps
 	defer func() {
 		// TODO: wrap in go 1.20
@@ -75,14 +77,27 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 		}
 	}
 
+	if p.Config.Preload {
+		err = p.loadAmmo(ctx)
+		if err == nil {
+			err = p.runPreloaded(ctx)
+		}
+	} else {
+		err = p.runFullScan(ctx)
+	}
+
+	return
+}
+
+func (p *Provider) runFullScan(ctx context.Context) error {
 	for {
-		if err = ctx.Err(); err != nil {
+		if err := ctx.Err(); err != nil {
 			if !errors.Is(err, context.Canceled) {
 				err = xerrors.Errorf("error from context: %w", err)
 			}
-			return
+			return err
 		}
-		ammo, err = p.Decoder.Scan(ctx)
+		ammo, err := p.Decoder.Scan(ctx)
 		if !confutil.IsChosenCase(ammo.Tag(), p.Config.ChosenCases) {
 			continue
 		}
@@ -90,7 +105,7 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 			if errors.Is(err, decoders.ErrAmmoLimit) || errors.Is(err, decoders.ErrPassLimit) {
 				err = nil
 			}
-			return
+			return err
 		}
 
 		select {
@@ -99,7 +114,58 @@ func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) 
 			if err != nil && !errors.Is(err, context.Canceled) {
 				err = xerrors.Errorf("error from context: %w", err)
 			}
-			return
+			return err
+		case p.Sink <- ammo:
+		}
+	}
+}
+
+func (p *Provider) loadAmmo(ctx context.Context) error {
+	ammos, err := p.Decoder.LoadAmmo(ctx)
+	if err != nil {
+		return fmt.Errorf("cant LoadAmmo, err: %w", err)
+	}
+	p.ammos = make([]decoders.DecodedAmmo, 0, len(ammos))
+	for _, ammo := range ammos {
+		if confutil.IsChosenCase(ammo.Tag(), p.Config.ChosenCases) {
+			p.ammos = append(p.ammos, ammo)
+		}
+	}
+	return nil
+}
+
+func (p *Provider) runPreloaded(ctx context.Context) error {
+	length := uint(len(p.ammos))
+	if length == 0 {
+		return decoders.ErrNoAmmo
+	}
+	ammoNum := uint(0)
+	passNum := uint(0)
+	for {
+		err := ctx.Err()
+		if err != nil {
+			if !errors.Is(err, context.Canceled) {
+				err = xerrors.Errorf("error from context: %w", err)
+			}
+			return err
+		}
+		i := ammoNum % length
+		passNum = ammoNum / length
+		if p.Passes != 0 && passNum >= p.Passes {
+			return decoders.ErrPassLimit
+		}
+		if p.Limit != 0 && ammoNum >= p.Limit {
+			return decoders.ErrAmmoLimit
+		}
+		ammoNum++
+		ammo := p.ammos[i]
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+			if err != nil && !errors.Is(err, context.Canceled) {
+				err = xerrors.Errorf("error from context: %w", err)
+			}
+			return err
 		case p.Sink <- ammo:
 		}
 	}

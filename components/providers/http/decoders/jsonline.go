@@ -46,6 +46,10 @@ func (d *jsonlineDecoder) Release(a core.Ammo) {
 	}
 }
 
+func (d *jsonlineDecoder) LoadAmmo(ctx context.Context) ([]DecodedAmmo, error) {
+	return d.protoDecoder.LoadAmmo(ctx, d.Scan)
+}
+
 func (d *jsonlineDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 	if d.config.Limit != 0 && d.ammoNum >= d.config.Limit {
 		return nil, ErrAmmoLimit

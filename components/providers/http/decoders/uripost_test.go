@@ -13,14 +13,7 @@ import (
 	"github.com/yandex/pandora/components/providers/http/decoders/ammo"
 )
 
-func Test_uripostDecoder_Scan(t *testing.T) {
-	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *ammo.Ammo {
-		a := ammo.Ammo{}
-		err := a.Setup(method, url, body, header, tag)
-		require.NoError(t, err)
-		return &a
-	}
-	input := `5 /0
+const uripostInput = `5 /0
 class
 [A:b]
 5 /1
@@ -36,19 +29,31 @@ classclass
 classclassclass
 `
 
-	decoder := newURIPostDecoder(strings.NewReader(input), config.Config{
+func getUripostAmmoWants(t *testing.T) []DecodedAmmo {
+	var mustNewAmmo = func(t *testing.T, method string, url string, body []byte, header http.Header, tag string) *ammo.Ammo {
+		a := ammo.Ammo{}
+		err := a.Setup(method, url, body, header, tag)
+		require.NoError(t, err)
+		return &a
+	}
+	return []DecodedAmmo{
+		mustNewAmmo(t, "POST", "/0", []byte("class"), http.Header{"Content-Type": []string{"application/json"}}, ""),
+		mustNewAmmo(t, "POST", "/1", []byte("class"), http.Header{"A": []string{"b"}, "Content-Type": []string{"application/json"}}, ""),
+		mustNewAmmo(t, "POST", "/2", []byte("classclass"), http.Header{"Host": []string{"example.com"}, "A": []string{"b"}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, ""),
+		mustNewAmmo(t, "POST", "/3", []byte("classclassclass"), http.Header{"Host": []string{"other.net"}, "A": []string{""}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, "wantTag"),
+	}
+}
+
+func Test_uripostDecoder_Scan(t *testing.T) {
+
+	decoder := newURIPostDecoder(strings.NewReader(uripostInput), config.Config{
 		Limit: 8,
 	}, http.Header{"Content-Type": []string{"application/json"}})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	wants := []*ammo.Ammo{
-		mustNewAmmo(t, "POST", "/0", []byte("class"), http.Header{"Content-Type": []string{"application/json"}}, ""),
-		mustNewAmmo(t, "POST", "/1", []byte("class"), http.Header{"A": []string{"b"}, "Content-Type": []string{"application/json"}}, ""),
-		mustNewAmmo(t, "POST", "/2", []byte("classclass"), http.Header{"Host": []string{"example.com"}, "A": []string{"b"}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, ""),
-		mustNewAmmo(t, "POST", "/3", []byte("classclassclass"), http.Header{"Host": []string{"other.net"}, "A": []string{""}, "C": []string{"d"}, "Content-Type": []string{"application/json"}}, "wantTag"),
-	}
+	wants := getUripostAmmoWants(t)
 	for j := 0; j < 2; j++ {
 		for i, want := range wants {
 			ammo, err := decoder.Scan(ctx)
@@ -61,4 +66,21 @@ classclassclass
 	assert.Equal(t, err, ErrAmmoLimit)
 	assert.Equal(t, decoder.ammoNum, uint(len(wants)*2))
 	assert.Equal(t, decoder.passNum, uint(1))
+}
+
+func Test_uripostDecoder_LoadAmmo(t *testing.T) {
+	decoder := newURIPostDecoder(strings.NewReader(uripostInput), config.Config{
+		Limit: 8,
+	}, http.Header{"Content-Type": []string{"application/json"}})
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	wants := getUripostAmmoWants(t)
+
+	ammos, err := decoder.LoadAmmo(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, wants, ammos)
+	assert.Equal(t, decoder.config.Limit, uint(8))
+	assert.Equal(t, decoder.config.Passes, uint(0))
 }
