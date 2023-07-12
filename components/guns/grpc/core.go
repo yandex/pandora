@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
@@ -16,6 +17,7 @@ import (
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/warmup"
+	"github.com/yandex/pandora/lib/answlog"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -42,6 +44,13 @@ type GunConfig struct {
 	Timeout     time.Duration   `config:"timeout"` // grpc request timeout
 	TLS         bool            `config:"tls"`
 	DialOptions grpcDialOptions `config:"dial_options"`
+	AnswLog     AnswLogConfig   `config:"answlog"`
+}
+
+type AnswLogConfig struct {
+	Enabled bool   `config:"enabled"`
+	Path    string `config:"path"`
+	Filter  string `config:"filter" valid:"oneof=all warning error"`
 }
 
 type Gun struct {
@@ -53,6 +62,19 @@ type Gun struct {
 
 	stub     grpcdynamic.Stub
 	services map[string]desc.MethodDescriptor
+
+	answLog *zap.Logger
+}
+
+func DefaultGunConfig() GunConfig {
+	return GunConfig{
+		Target: "default target",
+		AnswLog: AnswLogConfig{
+			Enabled: false,
+			Path:    "answ.log",
+			Filter:  "all",
+		},
+	}
 }
 
 func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
@@ -96,7 +118,8 @@ func (g *Gun) AcceptWarmUpResult(i interface{}) error {
 }
 
 func NewGun(conf GunConfig) *Gun {
-	return &Gun{conf: conf}
+	answLog := answlog.Init(conf.AnswLog.Path)
+	return &Gun{conf: conf, answLog: answLog}
 }
 
 func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
@@ -110,7 +133,7 @@ func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
 	g.stub = grpcdynamic.NewStub(conn)
 
 	if ent := deps.Log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
-		// Enable debug level logging during shooting. Creating log entries isn't free.
+		log.Printf("Deprecation Warning: log level: debug doesn't produce request/response logs anymore. Please use AnswLog option instead:\nanswlog:\n  enabled: true\n  filter: all|warning|error\n  path: answ.log")
 		g.DebugLog = true
 	}
 
@@ -159,18 +182,34 @@ func (g *Gun) shoot(ammo *ammo.Ammo) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(ammo.Metadata))
-	out, err := g.stub.InvokeRpc(ctx, &method, message)
-	code = convertGrpcStatus(err)
+	out, grpcErr := g.stub.InvokeRpc(ctx, &method, message)
+	code = convertGrpcStatus(grpcErr)
 
-	if err != nil {
-		log.Printf("Response error: %s\n", err)
+	if grpcErr != nil {
+		log.Printf("Response error: %s\n", grpcErr)
 	}
 
-	if g.DebugLog {
-		g.Log.Debug("Request:", zap.Stringer("method", &method), zap.Stringer("message", message))
-		g.Log.Debug("Response:", zap.Stringer("resp", out))
-	}
+	if g.conf.AnswLog.Enabled {
+		switch g.conf.AnswLog.Filter {
+		case "all":
+			g.answLogging(g.answLog, &method, message, out, grpcErr)
 
+		case "warning":
+			if code >= 400 {
+				g.answLogging(g.answLog, &method, message, out, grpcErr)
+			}
+
+		case "error":
+			if code >= 500 {
+				g.answLogging(g.answLog, &method, message, out, grpcErr)
+			}
+		}
+	}
+}
+
+func (g *Gun) answLogging(logger *zap.Logger, method *desc.MethodDescriptor, request proto.Message, response proto.Message, grpcErr error) {
+	logger.Debug("Request:", zap.Stringer("method", method), zap.Stringer("message", request))
+	logger.Debug("Response:", zap.Stringer("resp", response), zap.Error(grpcErr))
 }
 
 func makeGRPCConnect(target string, isTLS bool, dialOptions grpcDialOptions) (conn *grpc.ClientConn, err error) {
