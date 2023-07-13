@@ -19,5 +19,5 @@ func Import(fs afero.Fs) {
 		return grpcjson.NewProvider(fs, conf)
 	})
 
-	register.Gun("grpc", grpc.NewGun, grpc.DefaultGunConfig())
+	register.Gun("grpc", grpc.NewGun, grpc.DefaultGunConfig)
 }

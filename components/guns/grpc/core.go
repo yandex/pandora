@@ -66,16 +66,14 @@ type Gun struct {
 	answLog *zap.Logger
 }
 
-func DefaultGunConfig() func() GunConfig {
-	return func() GunConfig {
-		return GunConfig{
-			Target: "default target",
-			AnswLog: AnswLogConfig{
-				Enabled: false,
-				Path:    "answ.log",
-				Filter:  "all",
-			},
-		}
+func DefaultGunConfig() GunConfig {
+	return GunConfig{
+		Target: "default target",
+		AnswLog: AnswLogConfig{
+			Enabled: false,
+			Path:    "answ.log",
+			Filter:  "all",
+		},
 	}
 }
 
