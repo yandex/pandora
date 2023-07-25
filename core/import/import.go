@@ -74,6 +74,10 @@ func Import(fs afero.Fs) {
 	// type that you need, but untyped map.
 	RegisterCustomJSONProvider("json", func() core.Ammo { return map[string]interface{}{} })
 
+	register.Provider("dummy", func() core.Provider {
+		return provider.Dummy{}
+	})
+
 	register.Aggregator("phout", func(conf netsample.PhoutConfig) (core.Aggregator, error) {
 		a, err := netsample.NewPhout(fs, conf)
 		return netsample.WrapAggregator(a), err
