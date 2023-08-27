@@ -1,0 +1,97 @@
+variables:
+  hostname: localhost
+
+variable_sources:
+  - type: "file/csv"
+    name: "users"
+    skip_header: true
+    header_as_fields: false
+    file: "files/users.csv"
+    fields: [ "user_id", "name", "pass" ]
+  - type: "file/csv"
+    name: "users2"
+    skip_header: false
+    header_as_fields: true
+    file: "files/users2.csv"
+    fields: [ "user_id2", "name2", "pass2" ]
+  - type: "file/json"
+    name: "filter_src"
+    file: "files/filter.json"
+  - type: "file/json"
+    name: "filter_src2"
+    file: "files/filter2.json"
+
+requests:
+  - name: "auth_req"
+    uri: '/auth'
+    method: POST
+    headers:
+      Useragent: Tank
+      Content-Type: "application/json"
+    tag: auth
+    preprocessor:
+      variables:
+        user_id: source.users[0].user_id
+    body: '{"user_id":  {{.preprocessor.user_id}}}'
+    templater: text
+    postprocessors:
+      - type: var/header
+        mapping:
+          httpAuthorization: "Http-Authorization"
+          Content-Type: "Content-Type|upper"
+      - type: 'var/jsonpath'
+        mapping:
+          token: "$.auth_key"
+      - type: 'assert/response'
+        headers:
+          Content-Type: "json"
+        body: ["token", "auth"]
+
+  - name: list_req
+    uri: '/list'
+    method: GET
+    headers:
+      Useragent: "Tank"
+      Content-Type: "application/json"
+      Authorization: "Bearer {{.request.auth_req.token}}"
+    tag: list
+    postprocessors:
+      - type: var/jsonpath
+        mapping:
+          items: $.items
+          item_id: $.items[0]
+
+  - name: item_req
+    preprocessor:
+      variables:
+        item: request.list_req.items[3]
+    uri: '/item'
+    tag: item_req
+    method: POST
+    headers:
+      Useragent: "Tank"
+      Content-Type: "application/json"
+      Authorization: "Bearer {{.request.auth_req.token}}"
+    body: '{"item_id": {{.preprocessor.item}}}'
+
+scenarios:
+  - name: scenario1
+    weight: 50
+    min_waiting_time: 500
+    shoots: [
+      auth_req(1),
+      sleep(100),
+      list_req(1),
+      sleep(100),
+      item_req(3)
+    ]
+  - name: scenario2
+    weight: 40
+    min_waiting_time: 400
+    shoots: [
+      auth_req(2),
+      sleep(200),
+      list_req(2),
+      sleep(200),
+      item_req(4)
+    ]

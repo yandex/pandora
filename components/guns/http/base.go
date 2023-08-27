@@ -150,7 +150,7 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 	var timings *TraceTimings
 	if b.Config.HTTPTrace.TraceEnabled {
 		var clientTracer *httptrace.ClientTrace
-		clientTracer, timings = createHTTPTrace()
+		clientTracer, timings = CreateHTTPTrace()
 		req = req.WithContext(httptrace.WithClientTrace(req.Context(), clientTracer))
 	}
 	if b.Config.HTTPTrace.DumpEnabled {
@@ -163,11 +163,9 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 	}
 	var res *http.Response
 	res, err = b.Do(req)
-
 	if b.Config.HTTPTrace.TraceEnabled && timings != nil {
 		sample.SetReceiveTime(timings.GetReceiveTime())
 	}
-
 	if b.Config.HTTPTrace.DumpEnabled && res != nil {
 		responseDump, err := httputil.DumpResponse(res, true)
 		if err != nil {

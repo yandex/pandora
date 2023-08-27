@@ -32,7 +32,7 @@ func (t *TraceTimings) GetLatency() time.Duration {
 	return t.GotFirstResponseByte.Sub(t.WroteRequestTime)
 }
 
-func createHTTPTrace() (*httptrace.ClientTrace, *TraceTimings) {
+func CreateHTTPTrace() (*httptrace.ClientTrace, *TraceTimings) {
 	timings := &TraceTimings{}
 	tracer := &httptrace.ClientTrace{
 		GetConn: func(_ string) {
