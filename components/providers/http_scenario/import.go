@@ -25,6 +25,10 @@ func Import(fs afero.Fs) {
 			return NewVSJson(cfg, fs)
 		})
 
+		RegisterPostprocessor("var/jsonpath", postprocessor.NewVarJsonpathPostprocessor)
+		RegisterPostprocessor("var/xpath", postprocessor.NewVarXpathPostprocessor)
+		RegisterPostprocessor("var/header", postprocessor.NewVarHeaderPostprocessor)
+		RegisterPostprocessor("assert/response", postprocessor.NewAssertResponsePostprocessor)
 	})
 }
 

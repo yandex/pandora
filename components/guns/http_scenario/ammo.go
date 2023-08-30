@@ -1,6 +1,7 @@
 package httpscenario
 
 import (
+	"io"
 	"net/http"
 	"time"
 )
@@ -13,7 +14,7 @@ type Preprocessor interface {
 }
 
 type Postprocessor interface {
-	Process(requestVars map[string]any, resp *http.Response, body []byte) error
+	Process(requestVars map[string]any, resp *http.Response, body io.Reader) error
 }
 
 type VariableStorage interface {
