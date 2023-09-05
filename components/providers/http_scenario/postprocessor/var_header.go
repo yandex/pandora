@@ -28,19 +28,23 @@ func (p *VarHeaderPostprocessor) ReturnedParams() []string {
 	return result
 }
 
-func (p *VarHeaderPostprocessor) Process(reqMap map[string]any, resp *http.Response, _ io.Reader) error {
+func (p *VarHeaderPostprocessor) Process(resp *http.Response, _ io.Reader) (map[string]any, error) {
+	if len(p.Mapping) == 0 {
+		return nil, nil
+	}
+	result := make(map[string]any, len(p.Mapping))
 	for k, v := range p.Mapping {
 		headerVal, modifier, err := p.parseValue(v)
 		if err != nil {
-			return fmt.Errorf("failed to parse value %s: %w", v, err)
+			return nil, fmt.Errorf("failed to parse value %s: %w", v, err)
 		}
 		val := resp.Header.Get(headerVal)
 		if val == "" {
 			continue
 		}
-		reqMap[k] = modifier(val)
+		result[k] = modifier(val)
 	}
-	return nil
+	return result, nil
 }
 
 func (p *VarHeaderPostprocessor) parseValue(v string) (value string, modifier func(in string) string, err error) {

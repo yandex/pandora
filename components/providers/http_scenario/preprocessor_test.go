@@ -17,7 +17,7 @@ func TestPreprocessor_Process(t *testing.T) {
 		{
 			name: "Nil templateVars",
 			prep: Preprocessor{
-				Variables: map[string]string{
+				Mapping: map[string]string{
 					"var1": "source.items[0].id",
 					"var2": "source.items[1]",
 				},
@@ -27,7 +27,7 @@ func TestPreprocessor_Process(t *testing.T) {
 		{
 			name: "Simple Processing",
 			prep: Preprocessor{
-				Variables: map[string]string{
+				Mapping: map[string]string{
 					"var1": "source.items[0].id",
 					"var2": "source.items[1]",
 					"var3": "request.auth.token",

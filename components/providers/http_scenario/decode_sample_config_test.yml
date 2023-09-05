@@ -1,17 +1,14 @@
-variables:
-  hostname: localhost
-
 variable_sources:
   - type: "file/csv"
     name: "users"
-    skip_header: true
-    header_as_fields: false
+    ignore_first_line: true
+    delimiter: ";"
     file: "files/users.csv"
     fields: [ "user_id", "name", "pass" ]
   - type: "file/csv"
     name: "users2"
-    skip_header: false
-    header_as_fields: true
+    ignore_first_line: false
+    delimiter: ";"
     file: "files/users2.csv"
     fields: [ "user_id2", "name2", "pass2" ]
   - type: "file/json"
@@ -20,6 +17,12 @@ variable_sources:
   - type: "file/json"
     name: "filter_src2"
     file: "files/filter2.json"
+  - type: "variables"
+    name: "variables"
+    variables:
+      var1: var
+      var2: 2
+      var3: false
 
 requests:
   - name: "auth_req"
@@ -30,10 +33,11 @@ requests:
       Content-Type: "application/json"
     tag: auth
     preprocessor:
-      variables:
+      mapping:
         user_id: source.users[0].user_id
     body: '{"user_id":  {{.preprocessor.user_id}}}'
-    templater: text
+    templater:
+      type: text
     postprocessors:
       - type: var/header
         mapping:
@@ -45,7 +49,11 @@ requests:
       - type: 'assert/response'
         headers:
           Content-Type: "json"
-        body: ["token", "auth"]
+        body: [ "token", "auth" ]
+        status_code: 200
+        size:
+          val: 10000
+          op: ">"
 
   - name: list_req
     uri: '/list'
@@ -55,6 +63,8 @@ requests:
       Content-Type: "application/json"
       Authorization: "Bearer {{.request.auth_req.token}}"
     tag: list
+    templater:
+      type: html
     postprocessors:
       - type: var/jsonpath
         mapping:
@@ -63,7 +73,7 @@ requests:
 
   - name: item_req
     preprocessor:
-      variables:
+      mapping:
         item: request.list_req.items[3]
     uri: '/item'
     tag: item_req

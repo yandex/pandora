@@ -8,8 +8,8 @@ import (
 )
 
 type VariableSourceJSON struct {
-	Name  string `yaml:"name"`
-	File  string `yaml:"file"`
+	Name  string
+	File  string
 	fs    afero.Fs
 	store any
 }

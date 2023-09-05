@@ -27,24 +27,27 @@ func (p *VarXpathPostprocessor) ReturnedParams() []string {
 	return result
 }
 
-func (p *VarXpathPostprocessor) Process(reqMap map[string]any, _ *http.Response, body io.Reader) error {
+func (p *VarXpathPostprocessor) Process(_ *http.Response, body io.Reader) (map[string]any, error) {
+	if len(p.Mapping) == 0 {
+		return nil, nil
+	}
 	doc, err := html.Parse(body)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
+	result := make(map[string]any, len(p.Mapping))
 	for k, path := range p.Mapping {
 		values, err := p.getValuesFromDOM(doc, path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if len(values) == 1 {
-			reqMap[k] = values[0]
+			result[k] = values[0]
 		} else {
-			reqMap[k] = values
+			result[k] = values
 		}
 	}
-	return nil
+	return result, nil
 }
 
 func (p *VarXpathPostprocessor) getValuesFromDOM(doc *html.Node, xpathQuery string) ([]string, error) {

@@ -49,7 +49,7 @@ type Request struct {
 	uri            string
 	preprocessor   Preprocessor
 	postprocessors []httpscenario.Postprocessor
-	templater      string
+	templater      httpscenario.Templater
 	sleep          time.Duration
 }
 
@@ -57,7 +57,7 @@ func (r *Request) GetPostProcessors() []httpscenario.Postprocessor {
 	return r.postprocessors
 }
 
-func (r *Request) GetTemplater() string {
+func (r *Request) GetTemplater() httpscenario.Templater {
 	return r.templater
 }
 

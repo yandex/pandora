@@ -1,24 +1,28 @@
-variables = {
-  hostname = "localhost"
-}
 
 variable_source "users" "file/csv" {
-  file             = "files/users.csv"
-  fields           = ["user_id", "name", "pass"]
-  skip_header      = true
-  header_as_fields = false
+  file              = "files/users.csv"
+  fields            = ["user_id", "name", "pass"]
+  ignore_first_line = true
+  delimiter         = ";"
 }
 variable_source "users2" "file/csv" {
-  file             = "files/users2.csv"
-  fields           = ["user_id2", "name2", "pass2"]
-  skip_header      = false
-  header_as_fields = true
+  file              = "files/users2.csv"
+  fields            = ["user_id2", "name2", "pass2"]
+  ignore_first_line = false
+  delimiter         = ";"
 }
 variable_source "filter_src" "file/json" {
   file = "files/filter.json"
 }
 variable_source "filter_src2" "file/json" {
   file = "files/filter2.json"
+}
+variable_source "variables" "variables" {
+  variables = {
+    var1 = "var"
+    var2 = "2"
+    var3 = "false"
+  }
 }
 
 request "auth_req" {
@@ -32,7 +36,7 @@ request "auth_req" {
   uri  = "/auth"
 
   preprocessor {
-    variables = {
+    mapping = {
       user_id = "source.users[0].user_id"
     }
   }
@@ -52,7 +56,13 @@ request "auth_req" {
     headers = {
       Content-Type = "json"
     }
-    body = ["token", "auth"]
+    body        = ["token", "auth"]
+    status_code = 200
+
+    size {
+      val = 10000
+      op  = ">"
+    }
   }
 
   templater = "text"
@@ -73,6 +83,8 @@ request "list_req" {
       items   = "$.items"
     }
   }
+
+  templater = "html"
 }
 request "item_req" {
   method = "POST"
@@ -86,10 +98,11 @@ request "item_req" {
   uri  = "/item"
 
   preprocessor {
-    variables = {
+    mapping = {
       item = "request.list_req.items[3]"
     }
   }
+  templater = "text"
 }
 
 scenario "scenario1" {

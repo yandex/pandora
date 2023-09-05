@@ -28,20 +28,24 @@ func (p *VarJsonpathPostprocessor) ReturnedParams() []string {
 	return result
 }
 
-func (p *VarJsonpathPostprocessor) Process(reqMap map[string]any, _ *http.Response, body io.Reader) error {
+func (p *VarJsonpathPostprocessor) Process(_ *http.Response, body io.Reader) (map[string]any, error) {
+	if len(p.Mapping) == 0 {
+		return nil, nil
+	}
 	var data any
 	decoder := json.NewDecoder(body)
 	err := decoder.Decode(&data)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal json: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal json: %w", err)
 	}
+	result := map[string]any{}
 	for k, path := range p.Mapping {
 		val, e := jsonpath.Get(path, data)
 		if e != nil {
 			err = multierr.Append(err, fmt.Errorf("failed to get value by jsonpath %s: %w", path, e))
 			continue
 		}
-		reqMap[k] = val
+		result[k] = val
 	}
-	return err
+	return result, err
 }

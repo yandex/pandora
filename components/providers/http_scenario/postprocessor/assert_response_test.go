@@ -18,7 +18,6 @@ func TestAssertResponse_Process(t *testing.T) {
 		Size       *AssertSize
 	}
 	type args struct {
-		in0  map[string]any
 		resp *http.Response
 		body io.Reader
 	}
@@ -37,7 +36,6 @@ func TestAssertResponse_Process(t *testing.T) {
 				Size:       &AssertSize{Val: 13, Op: ">"},
 			},
 			args: args{
-				in0:  nil,
 				resp: &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: nil}, // Set body to nil for this example
 				body: bytes.NewReader([]byte(`{"message": "Hello, World!"}`)),
 			},
@@ -51,7 +49,6 @@ func TestAssertResponse_Process(t *testing.T) {
 				StatusCode: http.StatusOK,
 			},
 			args: args{
-				in0:  nil,
 				resp: &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: nil}, // Set body to nil for this example
 				body: bytes.NewReader([]byte(`{"message": "Hello, World!"}`)),
 			},
@@ -65,7 +62,6 @@ func TestAssertResponse_Process(t *testing.T) {
 				StatusCode: http.StatusOK,
 			},
 			args: args{
-				in0:  nil,
 				resp: &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: nil}, // Set body to nil for this example
 				body: bytes.NewReader([]byte(`{"message": "Hello, World!"}`)),
 			},
@@ -79,7 +75,6 @@ func TestAssertResponse_Process(t *testing.T) {
 				StatusCode: http.StatusOK,
 			},
 			args: args{
-				in0:  nil,
 				resp: &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: nil}, // Set body to nil for this example
 				body: nil,                                                                                                                     // Set body to nil for this example
 			},
@@ -93,7 +88,6 @@ func TestAssertResponse_Process(t *testing.T) {
 				StatusCode: http.StatusOK,
 			},
 			args: args{
-				in0:  nil,
 				resp: &http.Response{StatusCode: http.StatusNotFound, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: nil}, // Set body to nil for this example
 				body: nil,                                                                                                                           // Set body to nil for this example
 			},
@@ -108,7 +102,6 @@ func TestAssertResponse_Process(t *testing.T) {
 				Size:       &AssertSize{Val: 28, Op: "eq"},
 			},
 			args: args{
-				in0:  nil,
 				resp: &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: nil}, // Set body to nil for this example
 				body: bytes.NewReader([]byte(`{"message": "Hello, World!"}`)),
 			},
@@ -123,7 +116,6 @@ func TestAssertResponse_Process(t *testing.T) {
 				Size:       &AssertSize{Val: 20, Op: "lt"},
 			},
 			args: args{
-				in0:  nil,
 				resp: &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: nil}, // Set body to nil for this example
 				body: bytes.NewReader([]byte(`{"message": "Hello, World!"}`)),
 			},
@@ -138,7 +130,6 @@ func TestAssertResponse_Process(t *testing.T) {
 				Size:       &AssertSize{Val: 40, Op: "gt"},
 			},
 			args: args{
-				in0:  nil,
 				resp: &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: nil}, // Set body to nil for this example
 				body: bytes.NewReader([]byte(`{"message": "Hello, World!"}`)),
 			},
@@ -153,7 +144,6 @@ func TestAssertResponse_Process(t *testing.T) {
 				Size:       &AssertSize{Val: 13, Op: "unknown"},
 			},
 			args: args{
-				in0:  nil,
 				resp: &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: nil}, // Set body to nil for this example
 				body: bytes.NewReader([]byte(`{"message": "Hello, World!"}`)),
 			},
@@ -168,7 +158,9 @@ func TestAssertResponse_Process(t *testing.T) {
 				StatusCode: tt.fields.StatusCode,
 				Size:       tt.fields.Size,
 			}
-			tt.wantErr(t, a.Process(tt.args.in0, tt.args.resp, tt.args.body), fmt.Sprintf("Process(%v, %v, %v)", tt.args.in0, tt.args.resp, tt.args.body))
+			process, err := a.Process(tt.args.resp, tt.args.body)
+			assert.Nil(t, process)
+			tt.wantErr(t, err, fmt.Sprintf("Process(%v, %v)", tt.args.resp, tt.args.body))
 		})
 	}
 }

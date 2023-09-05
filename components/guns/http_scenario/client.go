@@ -12,6 +12,8 @@ import (
 	"golang.org/x/net/http2"
 )
 
+//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Client --filename=mock_client.go
+
 type Client interface {
 	Do(req *http.Request) (*http.Response, error)
 	CloseIdleConnections() // We should close idle conns after gun close.

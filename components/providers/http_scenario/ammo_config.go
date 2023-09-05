@@ -5,7 +5,6 @@ import (
 )
 
 type AmmoConfig struct {
-	Variables       map[string]string
 	VariableSources []VariableSource `config:"variable_sources"`
 	Requests        []RequestConfig
 	Scenarios       []ScenarioConfig
@@ -27,5 +26,5 @@ type RequestConfig struct {
 	URI            string
 	Preprocessor   Preprocessor
 	Postprocessors []postprocessor.Postprocessor
-	Templater      string
+	Templater      Templater
 }

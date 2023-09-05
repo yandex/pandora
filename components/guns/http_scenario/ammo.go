@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Preprocessor --filename=mock_preprocessor.go
+//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Postprocessor --filename=mock_postprocessor.go
+//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Step --filename=mock_step.go
+//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Ammo --filename=mock_ammo.go
+
 type Preprocessor interface {
 	// Process is called before request is sent
 	// templateVars - variables from template. Can be modified
@@ -14,7 +19,7 @@ type Preprocessor interface {
 }
 
 type Postprocessor interface {
-	Process(requestVars map[string]any, resp *http.Response, body io.Reader) error
+	Process(resp *http.Response, body io.Reader) (map[string]any, error)
 }
 
 type VariableStorage interface {
@@ -28,13 +33,13 @@ type Step interface {
 	GetBody() []byte
 	GetHeaders() map[string]string
 	GetTag() string
-	GetTemplater() string
+	GetTemplater() Templater
 	GetPostProcessors() []Postprocessor
 	Preprocessor() Preprocessor
 	GetSleep() time.Duration
 }
 
-type requestParts struct {
+type RequestParts struct {
 	URL     string
 	Method  string
 	Body    []byte

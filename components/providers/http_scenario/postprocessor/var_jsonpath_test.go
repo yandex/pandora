@@ -97,9 +97,7 @@ func TestVarJsonpathPostprocessor_Process(t *testing.T) {
 			p := &VarJsonpathPostprocessor{Mapping: tc.mappings}
 			buf := bytes.NewReader(tc.body)
 
-			reqMap := make(map[string]interface{})
-
-			err := p.Process(reqMap, &http.Response{}, buf)
+			reqMap, err := p.Process(&http.Response{}, buf)
 			if tc.expectErr {
 				assert.Error(t, err, "Expected an error, but got none")
 				return

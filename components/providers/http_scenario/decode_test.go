@@ -4,8 +4,43 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/yandex/pandora/components/providers/http_scenario/postprocessor"
+	"github.com/yandex/pandora/core/plugin/pluginconfig"
 )
+
+func Test_parseAmmoConfig(t *testing.T) {
+	Import(nil)
+	testOnce.Do(func() {
+		pluginconfig.AddHooks()
+	})
+
+	fs := afero.NewOsFs()
+	file, err := fs.Open("decode_sample_config_test.yml")
+	require.NoError(t, err)
+
+	cfg, err := ParseAmmoConfig(file)
+	require.NoError(t, err)
+
+	assert.Equal(t, 5, len(cfg.VariableSources))
+	assert.Equal(t, "users", cfg.VariableSources[0].GetName())
+
+	assert.Equal(t, "users2", cfg.VariableSources[1].GetName())
+	assert.Equal(t, 3, len(cfg.Requests))
+	assert.Equal(t, "auth_req", cfg.Requests[0].Name)
+	require.Equal(t, 3, len(cfg.Requests[0].Postprocessors))
+	require.Equal(t, map[string]string{"Content-Type": "Content-Type|upper", "httpAuthorization": "Http-Authorization"}, cfg.Requests[0].Postprocessors[0].(*postprocessor.VarHeaderPostprocessor).Mapping)
+	require.Equal(t, map[string]string{"token": "$.auth_key"}, cfg.Requests[0].Postprocessors[1].(*postprocessor.VarJsonpathPostprocessor).Mapping)
+
+	assert.Equal(t, "list_req", cfg.Requests[1].Name)
+	assert.Equal(t, "item_req", cfg.Requests[2].Name)
+	assert.Equal(t, 2, len(cfg.Scenarios))
+	assert.Equal(t, "scenario1", cfg.Scenarios[0].Name)
+	assert.Equal(t, "scenario2", cfg.Scenarios[1].Name)
+
+}
 
 func Test_spreadNames(t *testing.T) {
 	tests := []struct {

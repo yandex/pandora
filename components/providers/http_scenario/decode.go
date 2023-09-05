@@ -97,6 +97,10 @@ func convertConfigToRequest(req RequestConfig, iter mp.Iterator) Request {
 	for i := range req.Postprocessors {
 		postprocessors[i] = req.Postprocessors[i].(httpscenario.Postprocessor)
 	}
+	templater := req.Templater
+	if templater == nil {
+		templater = NewTextTemplater()
+	}
 	result := Request{
 		method:         req.Method,
 		headers:        req.Headers,
@@ -106,7 +110,7 @@ func convertConfigToRequest(req RequestConfig, iter mp.Iterator) Request {
 		uri:            req.URI,
 		preprocessor:   req.Preprocessor,
 		postprocessors: postprocessors,
-		templater:      req.Templater,
+		templater:      templater,
 	}
 	result.preprocessor.iterator = iter
 

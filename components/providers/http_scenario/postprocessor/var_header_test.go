@@ -31,7 +31,7 @@ func TestVarHeaderPostprocessor_Process(t *testing.T) {
 			respHeaders: map[string]string{
 				"key1": "header1",
 				"key2": "header2"},
-			expectedMap: map[string]any{},
+			expectedMap: nil,
 		},
 		{
 			name: "Error in Fields",
@@ -75,8 +75,7 @@ func TestVarHeaderPostprocessor_Process(t *testing.T) {
 				resp.Header.Set(k, v)
 			}
 
-			reqMap := make(map[string]any)
-			err := p.Process(reqMap, resp, nil)
+			reqMap, err := p.Process(resp, nil)
 			if tt.expectErr {
 				assert.Error(t, err)
 				return

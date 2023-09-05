@@ -10,5 +10,5 @@ type Config struct {
 }
 
 type Postprocessor interface {
-	Process(reqMap map[string]any, resp *http.Response, body io.Reader) error
+	Process(resp *http.Response, body io.Reader) (map[string]any, error)
 }

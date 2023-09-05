@@ -29,27 +29,27 @@ type AssertResponse struct {
 	Size       *AssertSize
 }
 
-func (a AssertResponse) Process(_ map[string]any, resp *http.Response, body io.Reader) error {
+func (a AssertResponse) Process(resp *http.Response, body io.Reader) (map[string]any, error) {
 	var b []byte
 	var err error
 	if len(a.Body) > 0 && body != nil {
 		b, err = io.ReadAll(body)
 		if err != nil {
-			return fmt.Errorf("cant read body: %w", err)
+			return nil, fmt.Errorf("cant read body: %w", err)
 		}
 	}
 	for _, v := range a.Body {
 		if !bytes.Contains(b, []byte(v)) {
-			return &errAssert{pattern: v, t: "body"}
+			return nil, &errAssert{pattern: v, t: "body"}
 		}
 	}
 	for k, v := range a.Headers {
 		if !(strings.Contains(resp.Header.Get(k), v)) {
-			return &errAssert{pattern: v, t: "header " + k}
+			return nil, &errAssert{pattern: v, t: "header " + k}
 		}
 	}
 	if a.StatusCode != 0 && a.StatusCode != resp.StatusCode {
-		return &errAssert{
+		return nil, &errAssert{
 			pattern: fmt.Sprintf("expect code %d, recieve code %d", a.StatusCode, resp.StatusCode),
 			t:       "code",
 		}
@@ -59,31 +59,31 @@ func (a AssertResponse) Process(_ map[string]any, resp *http.Response, body io.R
 		switch a.Size.Op {
 		case "eq", "=":
 			if a.Size.Val != len(b) {
-				return &errAssert{
+				return nil, &errAssert{
 					pattern: pattern,
 					t:       "size",
 				}
 			}
 		case "lt", "<":
 			if a.Size.Val < len(b) {
-				return &errAssert{
+				return nil, &errAssert{
 					pattern: pattern,
 					t:       "size",
 				}
 			}
 		case "gt", ">":
 			if a.Size.Val > len(b) {
-				return &errAssert{
+				return nil, &errAssert{
 					pattern: pattern,
 					t:       "size",
 				}
 			}
 		default:
-			return fmt.Errorf("unknown op %s", a.Size.Op)
+			return nil, fmt.Errorf("unknown op %s", a.Size.Op)
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (a AssertResponse) Validate() error {

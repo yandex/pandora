@@ -32,7 +32,6 @@ type BaseGun struct {
 	hostname       string
 	targetResolved string
 	client         Client
-	templater      Templater
 }
 
 var _ Gun = (*BaseGun)(nil)
@@ -70,7 +69,11 @@ func (g *BaseGun) Shoot(ammo Ammo) {
 		}
 	}
 
-	err := g.shoot(ammo)
+	templateVars := map[string]any{
+		"source": ammo.Sources().Variables(),
+	}
+
+	err := g.shoot(ammo, templateVars)
 	if err != nil {
 		g.Log.Warn("Invalid ammo", zap.Uint64("request", ammo.ID()), zap.Error(err))
 		return
@@ -88,7 +91,7 @@ func (g *BaseGun) Close() error {
 	return nil
 }
 
-func (g *BaseGun) shoot(ammo Ammo) error {
+func (g *BaseGun) shoot(ammo Ammo, templateVars map[string]any) error {
 	// implement scenario generator
 	return nil
 }
