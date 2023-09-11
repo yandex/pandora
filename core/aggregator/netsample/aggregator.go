@@ -6,6 +6,8 @@ import (
 	"github.com/yandex/pandora/core"
 )
 
+//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Aggregator --filename=mock_aggregator.go
+
 type Aggregator interface {
 	Run(ctx context.Context, deps core.AggregatorDeps) error
 	Report(sample *Sample)

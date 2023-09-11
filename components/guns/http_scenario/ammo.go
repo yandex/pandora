@@ -6,10 +6,10 @@ import (
 	"time"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Preprocessor --filename=mock_preprocessor.go
-//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Postprocessor --filename=mock_postprocessor.go
-//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Step --filename=mock_step.go
-//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Ammo --filename=mock_ammo.go
+//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Preprocessor --filename=mock_preprocessor_test.go
+//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Postprocessor --filename=mock_postprocessor_test.go
+//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Step --filename=mock_step_test.go
+//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Ammo --filename=mock_ammo_test.go
 
 type Preprocessor interface {
 	// Process is called before request is sent
