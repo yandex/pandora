@@ -3,6 +3,9 @@ module github.com/yandex/pandora
 go 1.19
 
 require (
+	github.com/PaesslerAG/jsonpath v0.1.1
+	github.com/antchfx/htmlquery v1.2.4
+	github.com/antchfx/xpath v1.2.0
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052
@@ -21,7 +24,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/atomic v1.10.0
 	go.uber.org/zap v1.24.0
-	golang.org/x/net v0.10.0
+	golang.org/x/net v0.13.0
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
 	google.golang.org/grpc v1.54.0
 	gopkg.in/bluesuncorp/validator.v9 v9.10.0
@@ -29,13 +32,15 @@ require (
 )
 
 require (
+	github.com/PaesslerAG/gval v1.2.1 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/bufbuild/protocompile v0.5.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/frankban/quicktest v1.14.4 // indirect
+	github.com/frankban/quicktest v1.14.5 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -46,6 +51,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.6-0.20201009195203-85dd5c8bc61c // indirect
@@ -53,9 +59,9 @@ require (
 	github.com/subosito/gotenv v1.4.1 // indirect
 	go.uber.org/goleak v1.2.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/sync v0.2.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/sync v0.3.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/text v0.11.0 // indirect
 	google.golang.org/genproto v0.0.0-20230331144136-dcfb400f0633 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
@@ -65,3 +71,12 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
+// Workaround weird go.mod shipped with k8s.io submodules.
+// For the reasoning see
+// https://suraj.io/post/2021/05/k8s-import/
+//
+// The list was generated automatically with:
+//
+// ya grep --remote -f='vendor/k8s.io/.*/go.mod' 'v0.0.0$' | cut -d : -f 3 | sort | uniq
+
+// k8s.io replacement list ends here
