@@ -39,9 +39,16 @@ func NewProvider(fs afero.Fs, conf Config) (core.Provider, error) {
 	}
 	var ammoCfg AmmoConfig
 	lowerName := strings.ToLower(stat.Name())
-	if strings.HasSuffix(lowerName, ".yaml") || strings.HasPrefix(lowerName, ".yml") {
+	switch {
+	case strings.HasSuffix(lowerName, ".hcl"):
+		ammoHcl, er := ParseHCLFile(file)
+		if er != nil {
+			return nil, fmt.Errorf("%s ParseHCLFile %w", op, er)
+		}
+		ammoCfg, err = ConvertHCLToAmmo(ammoHcl, fs)
+	case strings.HasSuffix(lowerName, ".yaml") || strings.HasPrefix(lowerName, ".yml"):
 		ammoCfg, err = ParseAmmoConfig(file)
-	} else {
+	default:
 		return nil, fmt.Errorf("%s file extension should be .yaml or .yml", op)
 	}
 	if err != nil {
