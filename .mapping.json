@@ -288,6 +288,7 @@
   "lib/netutil/mocks/dns_cache.go":"load/projects/pandora/lib/netutil/mocks/dns_cache.go",
   "lib/netutil/netutil_suite_test.go":"load/projects/pandora/lib/netutil/netutil_suite_test.go",
   "lib/netutil/validator.go":"load/projects/pandora/lib/netutil/validator.go",
+  "lib/pointer/pointer.go":"load/projects/pandora/lib/pointer/pointer.go",
   "lib/str/format.go":"load/projects/pandora/lib/str/format.go",
   "lib/str/format_test.go":"load/projects/pandora/lib/str/format_test.go",
   "lib/str/string.go":"load/projects/pandora/lib/str/string.go",

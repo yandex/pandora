@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/components/providers/http_scenario/postprocessor"
 	"github.com/yandex/pandora/core/plugin/pluginconfig"
+	"github.com/yandex/pandora/lib/pointer"
 )
 
 func Test_convertingYamlToHCL(t *testing.T) {
@@ -46,19 +47,18 @@ func Test_convertingYamlToHCL(t *testing.T) {
 }
 
 func Example_encodeAmmoHCLVariablesSources() {
-	stringPointer := func(in string) *string { return &in }
 	app := AmmoHCL{
 		VariableSources: []SourceHCL{
 			{
 				Type:   "file/csv",
 				Name:   "user_srs",
-				File:   stringPointer("users.json"),
+				File:   pointer.ToString("users.json"),
 				Fields: &([]string{"id", "name", "email"}),
 			},
 			{
 				Type:   "file/json",
 				Name:   "data_srs",
-				File:   stringPointer("datas.json"),
+				File:   pointer.ToString("datas.json"),
 				Fields: &([]string{"id", "name", "email"}),
 			},
 		},
@@ -82,7 +82,6 @@ func Example_encodeAmmoHCLVariablesSources() {
 }
 
 func Test_decodeHCL(t *testing.T) {
-
 	fs := afero.NewOsFs()
 	file, err := fs.Open("decode_sample_config_test.hcl")
 	require.NoError(t, err)
@@ -91,14 +90,22 @@ func Test_decodeHCL(t *testing.T) {
 	ammoHCL, err := ParseHCLFile(file)
 	require.NoError(t, err)
 
-	assert.Equal(t, "scenario1", ammoHCL.Scenarios[0].Name)
-	assert.Len(t, ammoHCL.Scenarios[0].Shoots, 5)
-	assert.Equal(t, "scenario2", ammoHCL.Scenarios[1].Name)
-	assert.Len(t, ammoHCL.Scenarios[1].Shoots, 5)
+	assert.Len(t, ammoHCL.Scenarios, 2)
+	assert.Equal(t, ammoHCL.Scenarios[0], ScenarioHCL{
+		Name:           "scenario1",
+		Weight:         pointer.ToInt64(50),
+		MinWaitingTime: pointer.ToInt64(500),
+		Requests:       []string{"auth_req(1)", "sleep(100)", "list_req(1)", "sleep(100)", "item_req(3)"},
+	})
+	assert.Equal(t, ammoHCL.Scenarios[1], ScenarioHCL{
+		Name:           "scenario2",
+		Weight:         nil,
+		MinWaitingTime: nil,
+		Requests:       []string{"auth_req(1)", "sleep(100)", "list_req(1)", "sleep(100)", "item_req(2)"},
+	})
 }
 
 func TestConvertHCLToAmmo(t *testing.T) {
-	stringPointer := func(in string) *string { return &in }
 	fs := afero.NewMemMapFs()
 	templater := "html"
 	tests := []struct {
@@ -111,7 +118,7 @@ func TestConvertHCLToAmmo(t *testing.T) {
 			name: "BasicConversion",
 			ammo: AmmoHCL{
 				VariableSources: []SourceHCL{
-					{Name: "source1", Type: "file/json", File: stringPointer("data.json")},
+					{Name: "source1", Type: "file/json", File: pointer.ToString("data.json")},
 				},
 				Requests: []RequestHCL{
 					{
@@ -126,7 +133,7 @@ func TestConvertHCLToAmmo(t *testing.T) {
 					},
 				},
 				Scenarios: []ScenarioHCL{
-					{Name: "scenario1", Weight: 1, MinWaitingTime: 1000, Shoots: []string{"shoot1"}},
+					{Name: "scenario1", Weight: pointer.ToInt64(1), MinWaitingTime: pointer.ToInt64(1000), Requests: []string{"shoot1"}},
 				},
 			},
 			want: AmmoConfig{
@@ -147,7 +154,7 @@ func TestConvertHCLToAmmo(t *testing.T) {
 					},
 				},
 				Scenarios: []ScenarioConfig{
-					{Name: "scenario1", Weight: 1, MinWaitingTime: 1000, Shoots: []string{"shoot1"}},
+					{Name: "scenario1", Weight: 1, MinWaitingTime: 1000, Requests: []string{"shoot1"}},
 				},
 			},
 			wantErr: false,
@@ -156,7 +163,7 @@ func TestConvertHCLToAmmo(t *testing.T) {
 			name: "UnsupportedVariableSourceType",
 			ammo: AmmoHCL{
 				VariableSources: []SourceHCL{
-					{Name: "source1", Type: "unknown", File: stringPointer("data.csv")},
+					{Name: "source1", Type: "unknown", File: pointer.ToString("data.csv")},
 				},
 			},
 			want:    AmmoConfig{},
@@ -181,8 +188,8 @@ func TestConvertHCLToAmmo(t *testing.T) {
 			name: "MultipleVariableSources",
 			ammo: AmmoHCL{
 				VariableSources: []SourceHCL{
-					{Name: "source1", Type: "file/json", File: stringPointer("data.json")},
-					{Name: "source2", Type: "file/csv", File: stringPointer("data.csv")},
+					{Name: "source1", Type: "file/json", File: pointer.ToString("data.json")},
+					{Name: "source2", Type: "file/csv", File: pointer.ToString("data.csv")},
 				},
 			},
 			want: AmmoConfig{
@@ -215,15 +222,15 @@ func TestConvertHCLToAmmo(t *testing.T) {
 				Scenarios: []ScenarioHCL{
 					{
 						Name:           "scenario1",
-						Weight:         2,
-						MinWaitingTime: 2000,
-						Shoots:         []string{"shoot1", "shoot2"},
+						Weight:         pointer.ToInt64(2),
+						MinWaitingTime: pointer.ToInt64(2000),
+						Requests:       []string{"shoot1", "shoot2"},
 					},
 					{
 						Name:           "scenario2",
-						Weight:         1,
-						MinWaitingTime: 1000,
-						Shoots:         []string{"shoot3"},
+						Weight:         pointer.ToInt64(1),
+						MinWaitingTime: pointer.ToInt64(1000),
+						Requests:       []string{"shoot3"},
 					},
 				},
 			},
@@ -233,13 +240,13 @@ func TestConvertHCLToAmmo(t *testing.T) {
 						Name:           "scenario1",
 						Weight:         2,
 						MinWaitingTime: 2000,
-						Shoots:         []string{"shoot1", "shoot2"},
+						Requests:       []string{"shoot1", "shoot2"},
 					},
 					{
 						Name:           "scenario2",
 						Weight:         1,
 						MinWaitingTime: 1000,
-						Shoots:         []string{"shoot3"},
+						Requests:       []string{"shoot3"},
 					},
 				},
 			},
@@ -272,7 +279,6 @@ func (u unsupportedPostprocessor) Process(_ *http.Response, _ io.Reader) (map[st
 }
 
 func TestConvertAmmoToHCL(t *testing.T) {
-	stringPointer := func(in string) *string { return &in }
 	False := false
 	True := true
 	delimiter := ","
@@ -292,18 +298,18 @@ func TestConvertAmmoToHCL(t *testing.T) {
 					{Name: "req1", Method: "GET", URI: "/api"},
 				},
 				Scenarios: []ScenarioConfig{
-					{Name: "scenario1", Weight: 1, MinWaitingTime: 1000, Shoots: []string{"shoot1"}},
+					{Name: "scenario1", Weight: 1, MinWaitingTime: 1000, Requests: []string{"shoot1"}},
 				},
 			},
 			want: AmmoHCL{
 				VariableSources: []SourceHCL{
-					{Name: "source1", Type: "file/json", File: stringPointer("data.json")},
+					{Name: "source1", Type: "file/json", File: pointer.ToString("data.json")},
 				},
 				Requests: []RequestHCL{
-					{Name: "req1", Method: "GET", URI: "/api", Templater: stringPointer("text")},
+					{Name: "req1", Method: "GET", URI: "/api", Templater: pointer.ToString("text")},
 				},
 				Scenarios: []ScenarioHCL{
-					{Name: "scenario1", Weight: 1, MinWaitingTime: 1000, Shoots: []string{"shoot1"}},
+					{Name: "scenario1", Weight: pointer.ToInt64(1), MinWaitingTime: pointer.ToInt64(1000), Requests: []string{"shoot1"}},
 				},
 			},
 			wantErr: false,
@@ -343,8 +349,8 @@ func TestConvertAmmoToHCL(t *testing.T) {
 			},
 			want: AmmoHCL{
 				VariableSources: []SourceHCL{
-					{Name: "source1", Type: "file/json", File: stringPointer("data.json")},
-					{Name: "source2", Type: "file/csv", File: stringPointer("data.csv"), IgnoreFirstLine: &False, Delimiter: &delimiter, Fields: nil},
+					{Name: "source1", Type: "file/json", File: pointer.ToString("data.json")},
+					{Name: "source2", Type: "file/csv", File: pointer.ToString("data.csv"), IgnoreFirstLine: &False, Delimiter: &delimiter, Fields: nil},
 				},
 			},
 			wantErr: false,
@@ -360,9 +366,9 @@ func TestConvertAmmoToHCL(t *testing.T) {
 			},
 			want: AmmoHCL{
 				VariableSources: []SourceHCL{
-					{Name: "source2", Type: "file/csv", File: stringPointer("data.csv"), IgnoreFirstLine: &True, Delimiter: &delimiter, Fields: &([]string{"field1", "field2"})},
-					{Name: "source2", Type: "file/csv", File: stringPointer("data.csv"), IgnoreFirstLine: &True, Delimiter: &delimiter, Fields: &([]string{"field3", "field4"})},
-					{Name: "source1", Type: "file/json", File: stringPointer("data.json")},
+					{Name: "source2", Type: "file/csv", File: pointer.ToString("data.csv"), IgnoreFirstLine: &True, Delimiter: &delimiter, Fields: &([]string{"field1", "field2"})},
+					{Name: "source2", Type: "file/csv", File: pointer.ToString("data.csv"), IgnoreFirstLine: &True, Delimiter: &delimiter, Fields: &([]string{"field3", "field4"})},
+					{Name: "source1", Type: "file/json", File: pointer.ToString("data.json")},
 				},
 			},
 			wantErr: false,
@@ -377,8 +383,8 @@ func TestConvertAmmoToHCL(t *testing.T) {
 			},
 			want: AmmoHCL{
 				Requests: []RequestHCL{
-					{Name: "req1", Method: "GET", URI: "/api/1", Templater: stringPointer("text")},
-					{Name: "req2", Method: "POST", URI: "/api/2", Templater: stringPointer("html")},
+					{Name: "req1", Method: "GET", URI: "/api/1", Templater: pointer.ToString("text")},
+					{Name: "req2", Method: "POST", URI: "/api/2", Templater: pointer.ToString("html")},
 				},
 			},
 			wantErr: false,
@@ -387,14 +393,14 @@ func TestConvertAmmoToHCL(t *testing.T) {
 			name: "ComplexScenario",
 			ammo: AmmoConfig{
 				Scenarios: []ScenarioConfig{
-					{Name: "scenario1", Weight: 2, MinWaitingTime: 2000, Shoots: []string{"shoot1", "shoot2"}},
-					{Name: "scenario2", Weight: 1, MinWaitingTime: 1000, Shoots: []string{"shoot3"}},
+					{Name: "scenario1", Weight: 2, MinWaitingTime: 2000, Requests: []string{"shoot1", "shoot2"}},
+					{Name: "scenario2", Weight: 1, MinWaitingTime: 1000, Requests: []string{"shoot3"}},
 				},
 			},
 			want: AmmoHCL{
 				Scenarios: []ScenarioHCL{
-					{Name: "scenario1", Weight: 2, MinWaitingTime: 2000, Shoots: []string{"shoot1", "shoot2"}},
-					{Name: "scenario2", Weight: 1, MinWaitingTime: 1000, Shoots: []string{"shoot3"}},
+					{Name: "scenario1", Weight: pointer.ToInt64(2), MinWaitingTime: pointer.ToInt64(2000), Requests: []string{"shoot1", "shoot2"}},
+					{Name: "scenario2", Weight: pointer.ToInt64(1), MinWaitingTime: pointer.ToInt64(1000), Requests: []string{"shoot3"}},
 				},
 			},
 			wantErr: false,

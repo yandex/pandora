@@ -70,7 +70,7 @@ func decodeAmmo(cfg AmmoConfig, storage SourceStorage) ([]*Ammo, error) {
 func convertScenarioToAmmo(sc ScenarioConfig, reqs map[string]RequestConfig) (*Ammo, error) {
 	iter := mp.NewNextIterator(time.Now().UnixNano())
 	result := &Ammo{name: sc.Name, minWaitingTime: time.Millisecond * time.Duration(sc.MinWaitingTime)}
-	for _, sh := range sc.Shoots {
+	for _, sh := range sc.Requests {
 		name, cnt, err := parseShootName(sh)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse shoot %s: %w", sh, err)
@@ -142,9 +142,12 @@ func spreadNames(input []ScenarioConfig) (map[string]int, int) {
 
 	scenarioRegistry := map[string]ScenarioConfig{}
 	weights := make([]int64, len(input))
-	for i, sc := range input {
-		scenarioRegistry[sc.Name] = sc
-		weights[i] = sc.Weight
+	for i := range input {
+		scenarioRegistry[input[i].Name] = input[i]
+		if input[i].Weight == 0 {
+			input[i].Weight = 1
+		}
+		weights[i] = input[i].Weight
 	}
 
 	div := math.GCDM(weights...)

@@ -40,9 +40,9 @@ type RequestHCL struct {
 
 type ScenarioHCL struct {
 	Name           string   `hcl:"name,label"`
-	Weight         int64    `hcl:"weight"`
-	MinWaitingTime int64    `hcl:"min_waiting_time"`
-	Shoots         []string `hcl:"shoot"`
+	Weight         *int64   `hcl:"weight"`
+	MinWaitingTime *int64   `hcl:"min_waiting_time"`
+	Requests       []string `hcl:"requests"`
 }
 
 type AssertSizeHCL struct {
@@ -204,7 +204,16 @@ func ConvertHCLToAmmo(ammo AmmoHCL, fs afero.Fs) (AmmoConfig, error) {
 	if len(ammo.Scenarios) > 0 {
 		scenarios = make([]ScenarioConfig, len(ammo.Scenarios))
 		for i, s := range ammo.Scenarios {
-			scenarios[i] = ScenarioConfig(s)
+			scenarios[i] = ScenarioConfig{
+				Name:     s.Name,
+				Requests: s.Requests,
+			}
+			if s.Weight != nil {
+				scenarios[i].Weight = *s.Weight
+			}
+			if s.MinWaitingTime != nil {
+				scenarios[i].MinWaitingTime = *s.MinWaitingTime
+			}
 		}
 	}
 
@@ -346,7 +355,14 @@ func ConvertAmmoToHCL(ammo AmmoConfig) (AmmoHCL, error) {
 	if len(ammo.Scenarios) > 0 {
 		scenarios = make([]ScenarioHCL, len(ammo.Scenarios))
 		for i, s := range ammo.Scenarios {
-			scenarios[i] = ScenarioHCL(s)
+			weight := s.Weight
+			minWaitingTime := s.MinWaitingTime
+			scenarios[i] = ScenarioHCL{
+				Name:           s.Name,
+				Requests:       s.Requests,
+				Weight:         &weight,
+				MinWaitingTime: &minWaitingTime,
+			}
 		}
 	}
 

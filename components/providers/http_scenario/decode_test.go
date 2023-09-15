@@ -67,6 +67,18 @@ func Test_spreadNames(t *testing.T) {
 			want:      map[string]int{"a": 1},
 			wantTotal: 1,
 		},
+		{
+			name:      "",
+			input:     []ScenarioConfig{{Name: "a", Weight: 0}},
+			want:      map[string]int{"a": 1},
+			wantTotal: 1,
+		},
+		{
+			name:      "",
+			input:     []ScenarioConfig{{Name: "a", Weight: 0}, {Name: "b", Weight: 1}},
+			want:      map[string]int{"a": 1, "b": 1},
+			wantTotal: 2,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -79,23 +91,24 @@ func Test_spreadNames(t *testing.T) {
 
 func TestParseShootName(t *testing.T) {
 	testCases := []struct {
-		input    string
-		wantName string
-		wantCnt  int
-		wantErr  bool
+		input     string
+		wantName  string
+		wantCnt   int
+		wantSleep int
+		wantErr   bool
 	}{
-		{"shoot", "shoot", 1, false},
-		{"shoot(5)", "shoot", 5, false},
-		{"shoot(3,4,5)", "shoot", 3, false},
-		{"shoot(5,6)", "shoot", 5, false},
-		{"space test(7)", "space test", 7, false},
-		{"symbol#(3)", "symbol#", 3, false},
-		{"shoot(  9  )", "shoot", 9, false},
-		{"shoot (6)", "shoot", 6, false},
-		{"shoot()", "shoot", 1, false},
-		{"shoot(abc)", "", 0, true},
-		{"shoot(6", "", 0, true},
-		{"shoot(6),", "", 0, true},
+		{"shoot", "shoot", 1, 0, false},
+		{"shoot(5)", "shoot", 5, 0, false},
+		{"shoot(3,4,5)", "shoot", 3, 4, false},
+		{"shoot(5,6)", "shoot", 5, 6, false},
+		{"space test(7)", "space test", 7, 0, false},
+		{"symbol#(3)", "symbol#", 3, 0, false},
+		{"shoot(  9  )", "shoot", 9, 0, false},
+		{"shoot (6)", "shoot", 6, 0, false},
+		{"shoot()", "shoot", 1, 0, false},
+		{"shoot(abc)", "", 0, 0, true},
+		{"shoot(6", "", 0, 0, true},
+		{"shoot(6),", "", 0, 0, true},
 	}
 
 	for _, tc := range testCases {
@@ -142,12 +155,12 @@ func Test_convertScenarioToAmmo(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "",
+			name: "default",
 			sc: ScenarioConfig{
 				Name:           "testScenario",
 				Weight:         1,
 				MinWaitingTime: 1000,
-				Shoots: []string{
+				Requests: []string{
 					"req1",
 					"req2",
 					"req2(2)",
@@ -167,12 +180,38 @@ func Test_convertScenarioToAmmo(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "with cycle sleep",
+			sc: ScenarioConfig{
+				Name:           "testScenario",
+				Weight:         1,
+				MinWaitingTime: 1000,
+				Requests: []string{
+					"req1",
+					"req2",
+					"req2(3, 100)",
+					"sleep(500)",
+				},
+			},
+			want: &Ammo{
+				name:           "testScenario",
+				minWaitingTime: time.Millisecond * 1000,
+				Requests: []Request{
+					convertConfigToRequestWithSleep(req1, 0),
+					convertConfigToRequestWithSleep(req2, 0),
+					convertConfigToRequestWithSleep(req2, 0),
+					convertConfigToRequestWithSleep(req2, 0),
+					convertConfigToRequestWithSleep(req2, time.Millisecond*500),
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "Scenario with unknown request",
 			sc: ScenarioConfig{
 				Name:           "unknownScenario",
 				Weight:         1,
 				MinWaitingTime: 1000,
-				Shoots: []string{
+				Requests: []string{
 					"unknownReq",
 				},
 			},

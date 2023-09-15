@@ -108,10 +108,10 @@ request "item_req" {
 scenario "scenario1" {
   weight           = 50
   min_waiting_time = 500
-  shoot            = ["auth_req(1)", "sleep(100)", "list_req(1)", "sleep(100)", "item_req(3)"]
+  requests         = ["auth_req(1)", "sleep(100)", "list_req(1)", "sleep(100)", "item_req(3)"]
 }
 scenario "scenario2" {
   weight           = 40
   min_waiting_time = 400
-  shoot            = ["auth_req(2)", "sleep(200)", "list_req(2)", "sleep(200)", "item_req(4)"]
+  requests         = ["auth_req(2)", "sleep(200)", "list_req(2, 100)", "sleep(200)", "item_req(4)"]
 }

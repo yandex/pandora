@@ -14,7 +14,7 @@ type ScenarioConfig struct {
 	Name           string
 	Weight         int64
 	MinWaitingTime int64 `config:"min_waiting_time"`
-	Shoots         []string
+	Requests       []string
 }
 
 type RequestConfig struct {

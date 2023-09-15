@@ -101,7 +101,7 @@ EOF
 scenario "scenario1" {
   weight           = 50
   min_waiting_time = 500
-  shoot            = [
+  requests         = [
     "auth_req(1)",
     "sleep(100)",
     "list_req(1)",
@@ -110,9 +110,7 @@ scenario "scenario1" {
   ]
 }
 scenario "scenario2" {
-  weight           = 50
-  min_waiting_time = 500
-  shoot            = [
+  requests         = [
     "auth_req(1)",
     "sleep(100)",
     "list_req(1)",
