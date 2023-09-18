@@ -71,7 +71,7 @@ func convertScenarioToAmmo(sc ScenarioConfig, reqs map[string]RequestConfig) (*A
 	iter := mp.NewNextIterator(time.Now().UnixNano())
 	result := &Ammo{name: sc.Name, minWaitingTime: time.Millisecond * time.Duration(sc.MinWaitingTime)}
 	for _, sh := range sc.Requests {
-		name, cnt, err := parseShootName(sh)
+		name, cnt, sleep, err := parseShootName(sh)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse shoot %s: %w", sh, err)
 		}
@@ -84,6 +84,9 @@ func convertScenarioToAmmo(sc ScenarioConfig, reqs map[string]RequestConfig) (*A
 			return nil, fmt.Errorf("request %s not found", name)
 		}
 		r := convertConfigToRequest(req, iter)
+		if sleep > 0 {
+			r.sleep += time.Millisecond * time.Duration(sleep)
+		}
 		for i := 0; i < cnt; i++ {
 			result.Requests = append(result.Requests, r)
 		}
@@ -117,19 +120,26 @@ func convertConfigToRequest(req RequestConfig, iter mp.Iterator) Request {
 	return result
 }
 
-func parseShootName(shoot string) (string, int, error) {
+func parseShootName(shoot string) (string, int, int, error) {
 	name, args, err := str.ParseStringFunc(shoot)
 	if err != nil {
-		return "", 0, err
+		return "", 0, 0, err
 	}
 	cnt := 1
 	if len(args) > 0 && args[0] != "" {
 		cnt, err = strconv.Atoi(args[0])
 		if err != nil {
-			return "", 0, fmt.Errorf("failed to parse count: %w", err)
+			return "", 0, 0, fmt.Errorf("failed to parse count: %w", err)
 		}
 	}
-	return name, cnt, nil
+	sleep := 0
+	if len(args) > 1 && args[1] != "" {
+		sleep, err = strconv.Atoi(args[1])
+		if err != nil {
+			return "", 0, 0, fmt.Errorf("failed to parse count: %w", err)
+		}
+	}
+	return name, cnt, sleep, nil
 }
 
 func spreadNames(input []ScenarioConfig) (map[string]int, int) {

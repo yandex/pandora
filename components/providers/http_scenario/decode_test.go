@@ -113,13 +113,14 @@ func TestParseShootName(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.input, func(t *testing.T) {
-			name, cnt, err := parseShootName(tc.input)
+			name, cnt, sleep, err := parseShootName(tc.input)
 			if tc.wantErr {
 				assert.Error(t, err)
 				return
 			}
 			assert.NoError(t, err)
 			assert.Equal(t, tc.wantName, name, "Name does not match for input: %s", tc.input)
+			assert.Equal(t, tc.wantSleep, sleep, "Name does not match for input: %s", tc.input)
 			assert.Equal(t, tc.wantCnt, cnt, "Count does not match for input: %s", tc.input)
 		})
 	}
@@ -198,9 +199,9 @@ func Test_convertScenarioToAmmo(t *testing.T) {
 				Requests: []Request{
 					convertConfigToRequestWithSleep(req1, 0),
 					convertConfigToRequestWithSleep(req2, 0),
-					convertConfigToRequestWithSleep(req2, 0),
-					convertConfigToRequestWithSleep(req2, 0),
-					convertConfigToRequestWithSleep(req2, time.Millisecond*500),
+					convertConfigToRequestWithSleep(req2, time.Millisecond*100),
+					convertConfigToRequestWithSleep(req2, time.Millisecond*100),
+					convertConfigToRequestWithSleep(req2, time.Millisecond*600),
 				},
 			},
 			wantErr: false,
