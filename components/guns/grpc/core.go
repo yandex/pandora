@@ -125,7 +125,7 @@ func NewGun(conf GunConfig) *Gun {
 func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
 	conn, err := makeGRPCConnect(g.conf.Target, g.conf.TLS, g.conf.DialOptions)
 	if err != nil {
-		log.Fatalf("FATAL: grpc.Dial failed\n %s\n", err)
+		return fmt.Errorf("makeGRPCConnect fail %w", err)
 	}
 	g.client = conn
 	g.aggr = aggr
@@ -223,15 +223,15 @@ func makeGRPCConnect(target string, isTLS bool, dialOptions grpcDialOptions) (co
 	if dialOptions.Timeout != 0 {
 		timeout = dialOptions.Timeout
 	}
-	opts = append(opts, grpc.WithTimeout(timeout))
 	opts = append(opts, grpc.WithUserAgent("load test, pandora universal grpc shooter"))
 
 	if dialOptions.Authority != "" {
 		opts = append(opts, grpc.WithAuthority(dialOptions.Authority))
 	}
 
-	conn, err = grpc.Dial(target, opts...)
-	return
+	ctx, cncl := context.WithTimeout(context.Background(), timeout)
+	defer cncl()
+	return grpc.DialContext(ctx, target, opts...)
 }
 
 func convertGrpcStatus(err error) int {
