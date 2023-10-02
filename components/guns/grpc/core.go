@@ -178,7 +178,7 @@ func (g *Gun) shoot(ammo *ammo.Ammo) {
 
 	timeout := defaultTimeout
 	if g.conf.Timeout != 0 {
-		timeout = time.Second * g.conf.Timeout
+		timeout = g.conf.Timeout
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
