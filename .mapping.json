@@ -13,7 +13,6 @@
   "cli/expvar.go":"load/projects/pandora/cli/expvar.go",
   "components/grpc/import/import.go":"load/projects/pandora/components/grpc/import/import.go",
   "components/guns/grpc/core.go":"load/projects/pandora/components/guns/grpc/core.go",
-  "components/guns/grpc/core_tests/core_test.go":"load/projects/pandora/components/guns/grpc/core_tests/core_test.go",
   "components/guns/http/base.go":"load/projects/pandora/components/guns/http/base.go",
   "components/guns/http/base_test.go":"load/projects/pandora/components/guns/http/base_test.go",
   "components/guns/http/client.go":"load/projects/pandora/components/guns/http/client.go",

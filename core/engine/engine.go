@@ -76,7 +76,7 @@ func (e *Engine) Run(ctx context.Context) error {
 		go func() {
 			err := pool.Run(ctx)
 			select {
-			case runRes <- poolRunResult{pool.ID, err}:
+			case runRes <- poolRunResult{ID: pool.ID, Err: err}:
 			case <-ctx.Done():
 				pool.log.Info("Pool run result suppressed",
 					zap.String("id", pool.ID), zap.Error(err))
@@ -362,9 +362,15 @@ func (p *instancePool) startInstances(
 	newInstanceSchedule func() (core.Schedule, error),
 	runRes chan<- instanceRunResult) (started int, err error) {
 	deps := instanceDeps{
-		newInstanceSchedule,
-		p.NewGun,
-		instanceSharedDeps{p.Provider, p.metrics, p.gunWarmUpResult, p.Aggregator, p.DiscardOverflow},
+		newSchedule: newInstanceSchedule,
+		newGun:      p.NewGun,
+		instanceSharedDeps: instanceSharedDeps{
+			provider:        p.Provider,
+			metrics:         p.metrics,
+			gunWarmUpResult: p.gunWarmUpResult,
+			aggregator:      p.Aggregator,
+			discardOverflow: p.DiscardOverflow,
+		},
 	}
 
 	waiter := coreutil.NewWaiter(p.StartupSchedule, startCtx)

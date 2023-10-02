@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -19,6 +18,7 @@ import (
 	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/lib/answlog"
 	"go.uber.org/zap"
+	"golang.org/x/exp/maps"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -89,7 +89,8 @@ func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
 	refClient := grpcreflect.NewClient(refCtx, reflectpb.NewServerReflectionClient(conn))
 	listServices, err := refClient.ListServices()
 	if err != nil {
-		opts.Log.Fatal("Fatal: failed to get services list\n %s\n", zap.Error(err))
+		g.GunDeps.Log.Error("failed to get services list", zap.Error(err))
+		return nil, fmt.Errorf("refClient.ListServices err: %w", err)
 	}
 	services := make(map[string]desc.MethodDescriptor)
 	for _, s := range listServices {
@@ -98,7 +99,8 @@ func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
 			if grpcreflect.IsElementNotFoundError(err) {
 				continue
 			}
-			opts.Log.Fatal("FATAL ResolveService: %s", zap.Error(err))
+			g.GunDeps.Log.Error("cant resolveService", zap.String("service_name", s), zap.Error(err))
+			return nil, fmt.Errorf("cant resolveService %s; err: %w", s, err)
 		}
 		listMethods := service.GetMethods()
 		for _, m := range listMethods {
@@ -133,7 +135,7 @@ func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
 	g.stub = grpcdynamic.NewStub(conn)
 
 	if ent := deps.Log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
-		log.Printf("Deprecation Warning: log level: debug doesn't produce request/response logs anymore. Please use AnswLog option instead:\nanswlog:\n  enabled: true\n  filter: all|warning|error\n  path: answ.log")
+		deps.Log.Warn("Deprecation Warning: log level: debug doesn't produce request/response logs anymore. Please use AnswLog option instead:\nanswlog:\n  enabled: true\n  filter: all|warning|error\n  path: answ.log")
 		g.DebugLog = true
 	}
 
@@ -146,7 +148,6 @@ func (g *Gun) Shoot(am core.Ammo) {
 }
 
 func (g *Gun) shoot(ammo *ammo.Ammo) {
-
 	code := 0
 	sample := netsample.Acquire(ammo.Tag)
 	defer func() {
@@ -156,13 +157,14 @@ func (g *Gun) shoot(ammo *ammo.Ammo) {
 
 	method, ok := g.services[ammo.Call]
 	if !ok {
-		log.Fatalf("Fatal: No such method %s\n", ammo.Call)
+		g.GunDeps.Log.Error("invalid ammo.Call", zap.String("method", ammo.Call),
+			zap.Strings("allowed_methods", maps.Keys(g.services)))
 		return
 	}
 
 	payloadJSON, err := json.Marshal(ammo.Payload)
 	if err != nil {
-		log.Fatalf("FATAL: Payload parsing error %s\n", err)
+		g.GunDeps.Log.Error("invalid payload. Cant unmarshal json", zap.Error(err))
 		return
 	}
 	md := method.GetInputType()
@@ -170,7 +172,7 @@ func (g *Gun) shoot(ammo *ammo.Ammo) {
 	err = message.UnmarshalJSON(payloadJSON)
 	if err != nil {
 		code = 400
-		log.Printf("BAD REQUEST: %s\n", err)
+		g.GunDeps.Log.Error("invalid payload. Cant unmarshal gRPC", zap.Error(err))
 		return
 	}
 
@@ -186,7 +188,7 @@ func (g *Gun) shoot(ammo *ammo.Ammo) {
 	code = convertGrpcStatus(grpcErr)
 
 	if grpcErr != nil {
-		log.Printf("Response error: %s\n", grpcErr)
+		g.GunDeps.Log.Error("response error", zap.Error(err))
 	}
 
 	if g.conf.AnswLog.Enabled {
@@ -270,3 +272,5 @@ func convertGrpcStatus(err error) int {
 		return 500
 	}
 }
+
+var _ warmup.WarmedUp = (*Gun)(nil)
