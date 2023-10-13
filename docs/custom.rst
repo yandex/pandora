@@ -1,6 +1,10 @@
 Custom guns
 ===========
 
+.. warning::
+
+  New Documentation https://yandex.github.io/pandora/
+
 
 Basic tutorial
 --------------

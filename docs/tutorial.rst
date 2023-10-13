@@ -1,6 +1,10 @@
 Your first test
 ===============
 
+.. warning::
+
+  New Documentation https://yandex.github.io/pandora/
+;
 You can use Pandora alone or use it with `Yandex.Tank`_ as a test runner and
 `Overload`_ as a result viewer. In the second case Pandora's configuration is the same, but you will embed it into Yandex.Tank's config.
 

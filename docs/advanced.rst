@@ -1,6 +1,10 @@
 HTTP Ammo providers
 ===================
 
+.. warning::
+
+  New Documentation https://yandex.github.io/pandora/
+
 HTTP Ammo provider is a source of test data: it makes ammo object.
 
 There is a common rule for any (built-in) provider: data supplied by ammo provider are records that will be pushed via established connection to external host (defined in pandora config via `pool.gun.target` option). Thus, you cannot define in the ammofile to which `physical` host your ammo will be sent.

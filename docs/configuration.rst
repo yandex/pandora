@@ -1,6 +1,10 @@
 Configuration
 ===============
 
+.. warning::
+
+  New Documentation https://yandex.github.io/pandora/
+
 Basic configuration
 -------------------
 

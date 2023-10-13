@@ -1,6 +1,10 @@
 Pandora's performance
 =====================
 
+.. warning::
+
+  New Documentation https://yandex.github.io/pandora/
+
 `Alexander Ivanov`_ made some performance tests for the gun itself. Here are the results.
 
 * Server: NGinx, 32 cores, 64G RAM.

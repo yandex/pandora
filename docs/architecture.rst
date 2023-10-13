@@ -1,6 +1,10 @@
 Architectural overview
 ======================
 
+.. warning::
+
+  New Documentation https://yandex.github.io/pandora/
+
 Architectural scheme
 --------------------
 

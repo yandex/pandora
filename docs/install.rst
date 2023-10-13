@@ -1,6 +1,10 @@
 Installation
 ============
 
+.. warning::
+
+  New Documentation https://yandex.github.io/pandora/
+
 `Download <https://github.com/yandex/pandora/releases>`_ binary release or build from source.
 
 We use go 1.11 modules.
