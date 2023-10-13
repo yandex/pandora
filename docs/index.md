@@ -16,4 +16,4 @@ write your own load scenarios in Go, compiling them just before your test.
 
 ---
 
-[Русский](../rus/index.md)
+[Русский](rus/index.md)

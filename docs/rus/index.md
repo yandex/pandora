@@ -15,4 +15,4 @@ Pandora - это высокопроизводительный генератор
 
 ---
 
-[English](../eng/index.md)
+[English](../index.md)
