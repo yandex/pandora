@@ -23,7 +23,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
-	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 	"google.golang.org/grpc/status"
 )
 
@@ -86,7 +85,7 @@ func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
 
 	meta := make(metadata.MD)
 	refCtx := metadata.NewOutgoingContext(context.Background(), meta)
-	refClient := grpcreflect.NewClient(refCtx, reflectpb.NewServerReflectionClient(conn))
+	refClient := grpcreflect.NewClientAuto(refCtx, conn)
 	listServices, err := refClient.ListServices()
 	if err != nil {
 		g.GunDeps.Log.Error("failed to get services list", zap.Error(err))
