@@ -9,6 +9,8 @@ Pandora - это высокопроизводительный генератор
 - [Первый тест](tuturial.md)
 - [Профиль нагрузки](load-profile.md)
 - [HTTP providers](providers.md)
+- [HTTP генератор](http-generator.md)
+- [Сценарный генератор / HTTP](scenario-http-generator.md)
 - [Custom](custom.md)
 - [Производительность Pandora](performance.md)
 - [Архитектура](architecture.md)
