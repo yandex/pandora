@@ -5,15 +5,16 @@
 # Scenario generator / HTTP
 
 - [Configuration](#configuration)
-    - [Генератор](#генератор)
-    - [Провайдер](#провайдер)
-- [Описание формата сценариев](#описание-формата-сценариев)
-    - [Описание формата в HCL](#описание-формата-в-hcl)
-    - [Пример в YAML](#пример-в-yaml)
-- [Возможности](#возможности)
+    - [Generator](#generator)
+    - [Provider](#provider)
+- [Description of the scenario format](#description-of-the-scenario-format)
+    - [General principle](#general-principle)
+    - [HCL example](#hcl-example)
+    - [YAML example](#yaml-example)
+- [Features](#features)
     - [Requests](#requests)
-        - [Шаблонизатор](#шаблонизатор)
-            - [Имена переменных в шаблонрах](#имена-переменных-в-шаблонах)
+        - [Templater](#templater)
+            - [Variable names in templates](#variable-names-in-templates)
         - [Preprocessors](#preprocessors)
         - [Postprocessors](#postprocessors)
             - [var/jsonpath](#varjsonpath)
@@ -28,7 +29,7 @@
 
 ## Configuration
 
-Вам необходимо использовать генератор и провайдер типа `http/scenario`
+You need to use a generator and a provider of type `http/scenario`
 
 ```yaml
 pools:
@@ -41,9 +42,9 @@ pools:
       file: payload.hcl
 ```
 
-### Генератор
+### Generator
 
-Минимальная конфигурация генератора выглядит так
+The minimum generator configuration is as follows
 
 ```yaml
 gun:
@@ -51,7 +52,7 @@ gun:
   target: localhost:80
 ```
 
-Так же есть `type: http2/scenario` генератор
+There is also a `type: http2/scenario` generator
 
 ```yaml
 gun:
@@ -59,11 +60,11 @@ gun:
   target: localhost:80
 ```
 
-Для сценарного генератора поддерживаются все настройки обычного [HTTP генератора](http-generator.md)
+All the settings of the regular [HTTP generator](http-generator.md) are supported for the scenario generator
 
-### Провайдер
+### Provider
 
-Провайдер принимает всего один параметр - путь до файла с описанием сценария
+The provider accepts only one parameter - the path to the file with the scenario description
 
 ```yaml
 ammo:
@@ -71,30 +72,30 @@ ammo:
   file: payload.hcl
 ```
 
-Поддерживает файлы расширений
+Supports file extensions
 
 - hcl
 - yaml
 - json
 
-## Описание формата сценариев
+## Description of the scenario format
 
-Поддерживает форматы
+Supports formats
 
 - hcl
 - yaml
 - json
 
-### Общий принцип
+### General principle
 
-В одном файле можно описывать несколько сценариев. У сценария есть имя по которому один сценарий отличается от другого.
+Several scenarios can be described in one file. A scenario has a name that distinguishes one scenario from another.
 
-Сценарий - это последовательность запросов. То есть вам потребуется описать в сценарии какие запросы в каком порядке
-должны выполняться.
+A scenario is a sequence of requests. That is, you will need to describe in the script which requests in what order
+should be executed.
 
-Запрос - HTTP запрос. То есть имеет все стандартные поля HTTP запроса. И дополнительные для работы в сценарии
+Request - HTTP request. Has the standard HTTP request fields plus additional fields. See [Requests](#requests).
 
-### Описание формата в HCL
+### HCL example
 
 ```terraform
 variable_source "source_name" "file/csv" {
@@ -138,7 +139,7 @@ scenario "scenario_name" {
 }
 ```
 
-### Пример в YAML
+### YAML example
 
 ```yaml
 variable_sources:
@@ -176,7 +177,7 @@ scenarios:
     ]
 ```
 
-## Возможности
+## Features
 
 ### Requests
 
@@ -192,32 +193,31 @@ scenarios:
 - preprocessors
 - postprocessors
 
-### Шаблонизатор
+### Templater
 
-Поля `uri`, `headers`, `body` шаблонризируются.
+The `uri`, `headers`, `body` fields are templateized.
 
-Используется стандартный go template.
+The standard go template is used.
 
-#### Имена переменных в шаблонах
+#### Variable names in templates
 
-Имена переменных имеют полный путь их определения.
+Variable names have the full path of their definition.
 
-Например
+For example
 
-Переменная `users` из источника `user_file` - `{% raw %}{{.source.user_file.users}}{% endraw %}`
+Variable `users` from source `user_file` - `{% raw %}{{.source.user_file.users}}{% endraw %}`
 
-Переменная `token` из постпроцессора запроса `list_req` - `{% raw %}{{.request.list_req.postprocessor.token}}{% endraw %}`
+Variable `token` from the `list_req` query postprocessor - `{% raw %}{{.request.list_req.postprocessor.token}}{% endraw %}`
 
-Переменная `item` из препроцессора запроса `list_req` - `{% raw %}{{.request.list_req.preprocessor.item}}{% endraw %}`
+Variable `item` from the `list_req` query preprocessor - `{% raw %}{{.request.list_req.preprocessor.item}}{% endraw %}`
 
 #### Preprocessors
 
-Препроцессор - действия выполняются перед шаблонизацией
+Preprocessor - actions are performed before templating
 
-Используется для нового маппинга переменных
+It is used for creating new variable mapping
 
-У препроцессора есть возможность работать с массивами с помощью модификаторов
--
+The preprocessor has the ability to work with arrays using modifiers
 
 - next
 - last
@@ -250,7 +250,7 @@ request "req_name" {
 
 ##### var/jsonpath
 
-Пример hcl
+HCL example
 
 ```terraform
 postprocessor "var/jsonpath" {
@@ -272,9 +272,9 @@ postprocessor "var/xpath" {
 
 ##### var/header
 
-Создает новую переменную из заголовков ответа
+Creates a new variable from response headers
 
-Есть возможность через pipe указывать простейшие строковые манипуляции
+It is possible to specify simple string manipulations via pipe
 
 - lower
 - upper
@@ -292,9 +292,9 @@ postprocessor "var/header" {
 
 ##### assert/response
 
-Проверяет значения заголовков и тела
+Checks header and body content
 
-Если матчинг не срабатывает, прекращает дальнейшее выполнение сценария
+Upon assertion, further scenario execution is dropped
 
 ```terraform
 postprocessor "assert/response" {
@@ -313,7 +313,7 @@ postprocessor "assert/response" {
 
 ### Scenarios
 
-Минимальные поля для сценария - имя и перечень запросов
+The minimum fields for the script are name and list of requests
 
 ```terraform
 scenario "scenario_name" {
@@ -326,7 +326,7 @@ scenario "scenario_name" {
 }
 ```
 
-Можно указать мултипликатор повторения запросов
+You can specify a multiplicator for request repetition
 
 ```terraform
 scenario "scenario_name" {
@@ -337,7 +337,7 @@ scenario "scenario_name" {
 }
 ```
 
-Можно указать задержку sleep(). Параметр в миллисекундах
+You can specify the sleep() delay. Parameter in milliseconds
 
 ```terraform
 scenario "scenario_name" {
@@ -349,7 +349,7 @@ scenario "scenario_name" {
 }
 ```
 
-Вторым аргументом в запросы указывается sleep для запросов с мултипликаторами
+The second argument to request is **sleep** for requests with multipliers
 
 ```terraform
 scenario "scenario_name" {
@@ -361,8 +361,8 @@ scenario "scenario_name" {
 }
 ```
 
-Параметр `min_waiting_time` описывает минимальное время выполнения сценария. То есть будет добавлен sleep в конце всего
-сценария, если сценарий выполнится быстрее этого параметра.
+The `min_waiting_time` parameter describes the minimum scenario execution time. That is, a **sleep** will be added at the end of the entire
+scenario if the scenario is executed faster than this parameter.
 
 ```terraform
 scenario "scenario_name" {
@@ -375,9 +375,9 @@ scenario "scenario_name" {
 }
 ```
 
-В одном файле можно описывать множество сценариев
+Multiple scenarios can be described in one file.
 
-Параметр `weight` - вес распределения каждого сценария. Чем больше вес, тем чаще будет выполняться сценарий.
+The `weight` parameter is the distribution weight of each scenario. The greater the weight, the more often the scenario will be executed.
 
 
 ```terraform
@@ -401,11 +401,11 @@ scenario "scenario_second" {
 
 ### Sources
 
-Источники переменных
+Variable sources
 
 #### csv file
 
-Пример
+Example
 
 ```terraform
 variable_source "users" "file/csv" {
@@ -416,20 +416,20 @@ variable_source "users" "file/csv" {
 }
 ```
 
-Создание источника из csv. Добавление ему имени `users`.
+Creating a source from csv. Adding the name `users` to it.
 
-Использование переменных из данного источника
+Using variables from this source
 
 ```gotempate
 {% raw %}{{.source.users[0].user_id}}{% endraw %}
 ```
 
-Параметр `fields` является необязательным.
+The `fields` parameter is optional.
 
-Если этого параметра нет, то в качестве имен полей будет использоваться имена в первой строке csv файла,
-если `ignore_first_line = false`.
+If this parameter is not present, the names in the first line of the csv file will be used as field names,
+if `ignore_first_line = false`.
 
-Если `ignore_first_line = true` и отсутствуют поля, то в качестве имен будут использоваться порядковые номер
+If `ignore_first_line = true` and there are no fields, then ordinal numbers will be used as names
 
 ```gotempate
 {% raw %}{{.source.users[0].0}}{% endraw %}
@@ -437,7 +437,7 @@ variable_source "users" "file/csv" {
 
 #### json file
 
-Пример
+Example
 
 ```terraform
 variable_source "users" "file/json" {
@@ -445,9 +445,9 @@ variable_source "users" "file/json" {
 }
 ```
 
-Создание источника из json файла. Добавление ему имени `users`.
+Creating a source from a json file. Add the name `users` to it.
 
-Файл должен содержать любой валидный json. Например:
+The file must contain any valid json. For example:
 
 ```json
 {
@@ -464,7 +464,7 @@ variable_source "users" "file/json" {
 }
 ```
 
-Использование переменных из данного источника
+Using variables from this source
 
 ```gotempate
 {% raw %}{{.source.users.data[next].id}}{% endraw %}
@@ -485,7 +485,7 @@ variable_source "users" "file/json" {
 ]
 ```
 
-Использование переменных из данного источника
+Using variables from this source
 
 ```gotempate
 {% raw %}{{.source.users[next].id}}{% endraw %}
@@ -504,9 +504,9 @@ variable_source "variables" "variables" {
 }
 ```
 
-Создание источника с переменными. Добавление ему имени `variables`.
+Creating a source with variables. Add the name `variables` to it.
 
-Использование переменных из данного источника
+Using variables from this source
 
 ```gotempate
 {% raw %}{{.source.variables.host}}:{{.source.variables.port}}{% endraw %}
