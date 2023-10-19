@@ -82,10 +82,14 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 				return nil
 			}
 		}
+		err := scanner.Err()
+		if err != nil {
+			return errors.Wrap(err, "gPRC Provider scan() err")
+		}
 		if p.Passes != 0 && passNum >= p.Passes {
 			break
 		}
-		_, err := ammoFile.Seek(0, 0)
+		_, err = ammoFile.Seek(0, 0)
 		if err != nil {
 			return errors.Wrap(err, "Failed to seek ammo file")
 		}

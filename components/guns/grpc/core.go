@@ -88,7 +88,7 @@ func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
 	refClient := grpcreflect.NewClientAuto(refCtx, conn)
 	listServices, err := refClient.ListServices()
 	if err != nil {
-		g.GunDeps.Log.Error("failed to get services list", zap.Error(err))
+		opts.Log.Error("failed to get services list", zap.Error(err)) // WarmUp calls before Bind()
 		return nil, fmt.Errorf("refClient.ListServices err: %w", err)
 	}
 	services := make(map[string]desc.MethodDescriptor)
@@ -98,7 +98,7 @@ func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
 			if grpcreflect.IsElementNotFoundError(err) {
 				continue
 			}
-			g.GunDeps.Log.Error("cant resolveService", zap.String("service_name", s), zap.Error(err))
+			opts.Log.Error("cant resolveService", zap.String("service_name", s), zap.Error(err)) // WarmUp calls before Bind()
 			return nil, fmt.Errorf("cant resolveService %s; err: %w", s, err)
 		}
 		listMethods := service.GetMethods()
