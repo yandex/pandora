@@ -103,6 +103,11 @@ func Test_decodeHCL(t *testing.T) {
 		MinWaitingTime: nil,
 		Requests:       []string{"auth_req(1)", "sleep(100)", "list_req(1)", "sleep(100)", "item_req(2)"},
 	})
+	assert.Len(t, ammoHCL.VariableSources, 3)
+	assert.Equal(t, ammoHCL.VariableSources[2], SourceHCL{
+		Name:      "variables",
+		Type:      "variables",
+		Variables: &(map[string]string{"header": "yandex", "b": "s"})})
 }
 
 func TestConvertHCLToAmmo(t *testing.T) {
@@ -190,12 +195,14 @@ func TestConvertHCLToAmmo(t *testing.T) {
 				VariableSources: []SourceHCL{
 					{Name: "source1", Type: "file/json", File: pointer.ToString("data.json")},
 					{Name: "source2", Type: "file/csv", File: pointer.ToString("data.csv")},
+					{Name: "source3", Type: "variables", Variables: &(map[string]string{"a": "b"})},
 				},
 			},
 			want: AmmoConfig{
 				VariableSources: []VariableSource{
 					&VariableSourceJSON{Name: "source1", File: "data.json", fs: fs},
 					&VariableSourceCsv{Name: "source2", File: "data.csv", fs: fs},
+					&VariableSourceVariables{Name: "source3", Variables: map[string]any{"a": "b"}},
 				},
 			},
 			wantErr: false,

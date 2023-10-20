@@ -9,6 +9,10 @@ variable_source "filter_src" "file/json" {
   file = "files/filter.json"
 }
 variable_source "variables" "variables" {
+  variables = {
+    header = "yandex"
+    b = "s"
+  }
 }
 
 request "auth_req" {

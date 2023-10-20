@@ -90,6 +90,18 @@ func ConvertHCLToAmmo(ammo AmmoHCL, fs afero.Fs) (AmmoConfig, error) {
 				file = *s.File
 			}
 			switch s.Type {
+			case "variables":
+				if s.Variables == nil {
+					return AmmoConfig{}, fmt.Errorf("%s, variables cant be nil: %s", op, s.Type)
+				}
+				vars := make(map[string]any, len(*s.Variables))
+				for k, v := range *s.Variables {
+					vars[k] = v
+				}
+				sources[i] = &VariableSourceVariables{
+					Name:      s.Name,
+					Variables: vars,
+				}
 			case "file/json":
 				sources[i] = &VariableSourceJSON{
 					Name: s.Name,
