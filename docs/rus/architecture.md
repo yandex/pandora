@@ -2,15 +2,15 @@
 
 ---
 
-# Архитектура 
+# Архитектура
 
 - [Схема](#схема)
 - [Типы компонентов](#типы-компонентов)
-  - [Provider](#provider)
-  - [Instances Pool](#instances-pool)
-  - [Scheduler](#scheduler)
-  - [Instances and Guns](#instances-and-guns)
-  - [Aggregator](#aggregator)
+    - [Provider](#provider)
+    - [Instances Pool](#instances-pool)
+    - [Scheduler](#scheduler)
+    - [Instances and Guns](#instances-and-guns)
+    - [Aggregator](#aggregator)
 
 ## Схема
 
@@ -25,8 +25,8 @@ Pandora - это набор компонентов, взаимодействую
 
 ### Provider
 
-Ammo Provider knows how to make an ammo object from an ammo file or other external resource. Instances get ammo objects
-from Ammo Provider.
+Ammo Provider знает, как создать объект Payload из payload файла (ammo file) или другого внешнего ресурса.
+И их задача передать Payload Instance'у. См метод `func (p *Provider) Acquire() (core.Ammo, bool)`
 
 ### Instances Pool
 

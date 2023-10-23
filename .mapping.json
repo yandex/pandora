@@ -1,4 +1,5 @@
 {
+  ".github/workflows/test.yml":"load/projects/pandora/.github/workflows/test.yml",
   ".gitignore":"load/projects/pandora/.gitignore",
   ".goxc.json":"load/projects/pandora/.goxc.json",
   ".travis.yml":"load/projects/pandora/.travis.yml",

@@ -76,7 +76,9 @@ func TestProvider_runPreloaded(t *testing.T) {
 			defer cancel()
 
 			i := 0
+			cl := make(chan struct{})
 			go func() {
+				defer close(cl)
 				for a := range provider.Sink {
 					req, err := a.BuildRequest()
 					assert.NoError(t, err)
@@ -96,7 +98,8 @@ func TestProvider_runPreloaded(t *testing.T) {
 			err := provider.runPreloaded(ctx)
 			assert.EqualError(t, err, tt.wantErr)
 
-			time.Sleep(30 * time.Millisecond)
+			close(provider.Sink)
+			<-cl
 			assert.Equal(t, tt.wantAmmos, i)
 		})
 	}
