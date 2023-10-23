@@ -6,6 +6,7 @@
 package schedule
 
 import (
+	"sync"
 	"time"
 
 	"github.com/yandex/pandora/core"
@@ -29,6 +30,7 @@ type unlimitedSchedule struct {
 
 	StartSync
 	finish time.Time
+	mx     sync.RWMutex
 }
 
 func (s *unlimitedSchedule) Start(startAt time.Time) {
@@ -41,17 +43,25 @@ func (s *unlimitedSchedule) Start(startAt time.Time) {
 func (s *unlimitedSchedule) Next() (tx time.Time, ok bool) {
 	s.startOnce.Do(func() {
 		s.MarkStarted()
+		s.mx.Lock()
 		s.finish = time.Now().Add(s.duration)
+		s.mx.Unlock()
 	})
 	now := time.Now()
 	if now.Before(s.finish) {
 		return now, true
 	}
-	return s.finish, false
+	s.mx.RLock()
+	f := s.finish
+	s.mx.RUnlock()
+	return f, false
 }
 
 func (s *unlimitedSchedule) Left() int {
-	if !s.IsStarted() || time.Now().Before(s.finish) {
+	s.mx.RLock()
+	f := s.finish
+	s.mx.RUnlock()
+	if !s.IsStarted() || time.Now().Before(f) {
 		return -1
 	}
 	return 0
