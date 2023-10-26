@@ -46,7 +46,7 @@ Or use Pandora with [Yandex.Tank](https://yandextank.readthedocs.io/en/latest/co
 [Overload](https://overload.yandex.net).
 
 ### Documentation
-[Documentation](documentation/eng/index.md)
+[Documentation](docs/index.md)
 
 ### Old Documentation
 [ReadTheDocs](https://yandexpandora.readthedocs.io/)
