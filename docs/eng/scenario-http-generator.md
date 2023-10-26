@@ -195,7 +195,7 @@ scenarios:
 
 ### Templater
 
-The `uri`, `headers`, `body` fields are templateized.
+The `uri`, `headers`, `body` fields are templatized.
 
 The standard go template is used.
 
