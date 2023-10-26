@@ -98,14 +98,14 @@ func (p *Provider) runFullScan(ctx context.Context) error {
 			return err
 		}
 		ammo, err := p.Decoder.Scan(ctx)
-		if !confutil.IsChosenCase(ammo.Tag(), p.Config.ChosenCases) {
-			continue
-		}
 		if err != nil {
 			if errors.Is(err, decoders.ErrAmmoLimit) || errors.Is(err, decoders.ErrPassLimit) {
 				err = nil
 			}
 			return err
+		}
+		if !confutil.IsChosenCase(ammo.Tag(), p.Config.ChosenCases) {
+			continue
 		}
 
 		select {

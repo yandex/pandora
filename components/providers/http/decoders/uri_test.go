@@ -91,7 +91,7 @@ func Test_uriDecoder_readLine(t *testing.T) {
 	}
 }
 
-const uriInput = ` /0
+const uriDecoderInput = ` /0
 [A:b]
 /1
 [Host : example.com]
@@ -120,7 +120,7 @@ func getURIAmmoWants(t *testing.T) []DecodedAmmo {
 }
 
 func Test_uriDecoder_Scan(t *testing.T) {
-	decoder := newURIDecoder(strings.NewReader(uriInput), config.Config{
+	decoder := newURIDecoder(strings.NewReader(uriDecoderInput), config.Config{
 		Limit: 10,
 	}, http.Header{"Content-Type": []string{"application/json"}})
 
@@ -143,7 +143,7 @@ func Test_uriDecoder_Scan(t *testing.T) {
 }
 
 func Test_uriDecoder_LoadAmmo(t *testing.T) {
-	decoder := newURIDecoder(strings.NewReader(uriInput), config.Config{
+	decoder := newURIDecoder(strings.NewReader(uriDecoderInput), config.Config{
 		Limit: 10,
 	}, http.Header{"Content-Type": []string{"application/json"}})
 
@@ -157,4 +157,18 @@ func Test_uriDecoder_LoadAmmo(t *testing.T) {
 	assert.Equal(t, wants, ammos)
 	assert.Equal(t, decoder.config.Limit, uint(10))
 	assert.Equal(t, decoder.config.Passes, uint(0))
+}
+
+func Benchmark_uriDecoder_Scan(b *testing.B) {
+	decoder := newURIDecoder(
+		strings.NewReader(uriDecoderInput), config.Config{},
+		http.Header{"Content-Type": []string{"application/json"}},
+	)
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := decoder.Scan(ctx)
+		require.NoError(b, err)
+	}
 }

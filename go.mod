@@ -53,7 +53,7 @@ require (
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/huandu/xstrings v1.3.3 // indirect
+	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
@@ -77,7 +77,7 @@ require (
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
-	golang.org/x/tools v0.11.2-0.20230810185051-cc6b5804b8cf // indirect
+	golang.org/x/tools v0.12.1-0.20230825192346-2191a27a6dc5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
@@ -88,21 +88,6 @@ require (
 
 replace github.com/insomniacslk/dhcp => github.com/insomniacslk/dhcp v0.0.0-20210120172423-cc9239ac6294
 
-// yo: update cloud.google.com/go/pubsub v1.30.0 => v1.32.0
-// yo: failed to generate ya.make files for module "cloud.google.com/go/pubsub": cannot query module due to -mod=vendor
-// (Go version in go.mod is at least 1.14 and vendor directory exists.)
 replace cloud.google.com/go/pubsub => cloud.google.com/go/pubsub v1.30.0
 
 replace google.golang.org/grpc => google.golang.org/grpc v1.56.2
-
-// Workaround weird go.mod shipped with k8s.io submodules.
-// For the reasoning see
-// https://suraj.io/post/2021/05/k8s-import/
-//
-// The list was generated automatically with:
-//
-// ya grep --remote -f='vendor/k8s.io/.*/go.mod' 'v0.0.0$' | cut -d : -f 3 | sort | uniq
-
-// replace github.com/docker/docker => github.com/docker/docker v17.12.0-ce-rc1.0.20190822180741-9552f2b2fdde+incompatible
-
-// k8s.io replacement list ends here

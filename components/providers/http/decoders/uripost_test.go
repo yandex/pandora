@@ -13,7 +13,7 @@ import (
 	"github.com/yandex/pandora/components/providers/http/decoders/ammo"
 )
 
-const uripostInput = `5 /0
+const uripostDecoderInput = `5 /0
 class
 [A:b]
 5 /1
@@ -46,7 +46,7 @@ func getUripostAmmoWants(t *testing.T) []DecodedAmmo {
 
 func Test_uripostDecoder_Scan(t *testing.T) {
 
-	decoder := newURIPostDecoder(strings.NewReader(uripostInput), config.Config{
+	decoder := newURIPostDecoder(strings.NewReader(uripostDecoderInput), config.Config{
 		Limit: 8,
 	}, http.Header{"Content-Type": []string{"application/json"}})
 
@@ -69,7 +69,7 @@ func Test_uripostDecoder_Scan(t *testing.T) {
 }
 
 func Test_uripostDecoder_LoadAmmo(t *testing.T) {
-	decoder := newURIPostDecoder(strings.NewReader(uripostInput), config.Config{
+	decoder := newURIPostDecoder(strings.NewReader(uripostDecoderInput), config.Config{
 		Limit: 8,
 	}, http.Header{"Content-Type": []string{"application/json"}})
 
@@ -83,4 +83,18 @@ func Test_uripostDecoder_LoadAmmo(t *testing.T) {
 	assert.Equal(t, wants, ammos)
 	assert.Equal(t, decoder.config.Limit, uint(8))
 	assert.Equal(t, decoder.config.Passes, uint(0))
+}
+
+func Benchmark_uripostDecoder_Scan(b *testing.B) {
+	decoder := newURIPostDecoder(
+		strings.NewReader(uripostDecoderInput), config.Config{},
+		http.Header{"Content-Type": []string{"application/json"}},
+	)
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := decoder.Scan(ctx)
+		require.NoError(b, err)
+	}
 }
