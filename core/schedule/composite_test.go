@@ -97,7 +97,7 @@ var _ = Describe("composite", func() {
 
 		unlimitedFinish := startAt.Add(unlimitedDuration)
 		sched := testee.(*compositeSchedule).scheds[0]
-		Expect(sched.(*unlimitedSchedule).finish).To(Equal(unlimitedFinish))
+		Expect(sched.(*unlimitedSchedule).finish.Load()).To(Equal(unlimitedFinish))
 
 		Expect(testee.Left()).To(Equal(3))
 

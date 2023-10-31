@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/components/providers/http/config"
 )
 
@@ -119,4 +120,18 @@ func Test_rawDecoder_LoadAmmo(t *testing.T) {
 	assert.Equal(t, decoder.config.Limit, uint(8))
 	assert.Equal(t, decoder.config.Passes, uint(0))
 
+}
+
+func Benchmark_rawDecoder_Scan(b *testing.B) {
+	decoder := newRawDecoder(
+		strings.NewReader(rawDecoderInput), config.Config{},
+		http.Header{"Content-Type": []string{"application/json"}},
+	)
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := decoder.Scan(ctx)
+		require.NoError(b, err)
+	}
 }

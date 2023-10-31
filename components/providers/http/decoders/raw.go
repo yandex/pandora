@@ -112,7 +112,7 @@ func (d *rawDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 		d.ammoNum++
 		reqSize, tag, err := raw.DecodeHeader(data)
 		if err != nil {
-			return nil, xerrors.Errorf("header decoding error: %w", err)
+			return nil, xerrors.Errorf("header decoding error for ammoNum %d: %w", d.ammoNum, err)
 		}
 
 		a := d.pool.Get().(*ammo.RawAmmo)

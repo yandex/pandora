@@ -6,15 +6,15 @@
 package schedule
 
 import (
-	"sync"
 	"time"
 
 	"github.com/yandex/pandora/core"
+	"go.uber.org/atomic"
 )
 
 // NewUnlimited returns schedule that generates unlimited ops for passed duration.
 func NewUnlimited(duration time.Duration) core.Schedule {
-	return &unlimitedSchedule{duration: duration}
+	return &unlimitedSchedule{duration: duration, finish: atomic.NewTime(time.Now())}
 }
 
 type UnlimitedConfig struct {
@@ -29,39 +29,30 @@ type unlimitedSchedule struct {
 	duration time.Duration
 
 	StartSync
-	finish time.Time
-	mx     sync.RWMutex
+	finish *atomic.Time
 }
 
 func (s *unlimitedSchedule) Start(startAt time.Time) {
 	s.MarkStarted()
 	s.startOnce.Do(func() {
-		s.finish = startAt.Add(s.duration)
+		s.finish.Store(startAt.Add(s.duration))
 	})
 }
 
 func (s *unlimitedSchedule) Next() (tx time.Time, ok bool) {
 	s.startOnce.Do(func() {
 		s.MarkStarted()
-		s.mx.Lock()
-		s.finish = time.Now().Add(s.duration)
-		s.mx.Unlock()
+		s.finish.Store(time.Now().Add(s.duration))
 	})
 	now := time.Now()
-	if now.Before(s.finish) {
+	if now.Before(s.finish.Load()) {
 		return now, true
 	}
-	s.mx.RLock()
-	f := s.finish
-	s.mx.RUnlock()
-	return f, false
+	return s.finish.Load(), false
 }
 
 func (s *unlimitedSchedule) Left() int {
-	s.mx.RLock()
-	f := s.finish
-	s.mx.RUnlock()
-	if !s.IsStarted() || time.Now().Before(f) {
+	if !s.IsStarted() || time.Now().Before(s.finish.Load()) {
 		return -1
 	}
 	return 0
