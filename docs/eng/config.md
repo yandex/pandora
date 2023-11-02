@@ -7,7 +7,6 @@
 - [Basic configuration](#basic-configuration)
 - [Monitoring and Logging](#monitoring-and-logging)
 - [Variables from env and files](#variables-from-env-and-files)
-- [Variables from env and files](#variables-from-env-and-files)
 
 ## Basic configuration
 

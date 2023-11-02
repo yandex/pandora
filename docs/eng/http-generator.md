@@ -35,7 +35,7 @@ gun:
     uri-elements: 2         # URI elements used to autotagging. Default: 2
     no-tag-only: true       # When true, autotagged only ammo that has no tag before. Default: true
   httptrace:
-    dump: true              # calculate responce bytes
+    dump: true              # calculate response bytes
     trace: true             # calculate different request stages: connect time, send time, latency, request bytes
 ```
 
