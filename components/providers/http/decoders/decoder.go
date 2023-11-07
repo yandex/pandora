@@ -71,7 +71,7 @@ func NewDecoder(conf config.Config, file io.ReadSeeker) (d Decoder, err error) {
 
 	switch conf.Decoder {
 	case config.DecoderJSONLine:
-		d = newJsonlineDecoder(file, conf, decodedConfigHeaders)
+		d, err = newJsonlineDecoder(file, conf, decodedConfigHeaders)
 	case config.DecoderRaw:
 		d = newRawDecoder(file, conf, decodedConfigHeaders)
 	case config.DecoderURI:

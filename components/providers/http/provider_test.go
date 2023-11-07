@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/components/providers/http/config"
 	"github.com/yandex/pandora/components/providers/http/provider"
 )
@@ -24,18 +26,12 @@ func TestNewProvider_invalidDecoder(t *testing.T) {
 func TestNewProvider(t *testing.T) {
 	fs := afero.NewMemMapFs()
 
-	t.Run("InvalidDecoder", func(t *testing.T) {
-	})
-
 	tmpFile, err := fs.Create("ammo")
-	if err != nil {
-		t.Fatalf("failed to create temp file: %s", err)
-	}
+	require.NoError(t, err)
 	defer os.Remove(tmpFile.Name())
 
-	if _, err := tmpFile.Write([]byte("GET / HTTP/1.1\nHost: example.com\n\n")); err != nil {
-		t.Fatalf("failed to write data to temp file: %s", err)
-	}
+	_, err = tmpFile.Write([]byte("  {}\n\n")) // content is important only for jsonDecoder
+	require.NoError(t, err)
 
 	cases := []struct {
 		name     string
@@ -77,42 +73,27 @@ func TestNewProvider(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			providr, err := NewProvider(fs, tc.conf)
+			provdr, err := NewProvider(fs, tc.conf)
 			if err != nil {
 				t.Fatalf("failed to create provider: %s", err)
 			}
 
-			provider, _ := providr.(*provider.Provider)
-
+			p, ok := provdr.(*provider.Provider)
+			require.True(t, ok)
+			require.NotNil(t, p)
 			defer func() {
-				if err := provider.Close(); err != nil {
-					t.Fatalf("failed to close provider: %s", err)
-				}
+				err := p.Close()
+				require.NoError(t, err)
 			}()
 
-			if provider == nil {
-				t.Fatal("provider is nil")
-			}
+			assert.NotNil(t, p.Sink)
+			assert.Equal(t, fs, p.FS)
+			assert.Equal(t, tc.expected, p.Config.Decoder)
+			assert.Equal(t, tc.filePath, p.Config.File)
 
-			if provider.Config.Decoder != tc.expected {
-				t.Errorf("unexpected decoder type: got %s, want %s", provider.Config.Decoder, tc.expected)
-			}
-			if provider.Config.File != tc.filePath {
-				t.Errorf("unexpected file path: got %s, want %s", provider.Config.File, tc.filePath)
-			}
-
-			if provider.Decoder == nil && tc.expected != "" {
+			if p.Decoder == nil && tc.expected != "" {
 				t.Error("decoder is nil")
-			}
-
-			if provider.FS != fs {
-				t.Errorf("unexpected FS: got %v, want %v", provider.FS, fs)
-			}
-
-			if provider.Sink == nil {
-				t.Error("sink is nil")
 			}
 		})
 	}
-
 }
