@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"strconv"
@@ -24,7 +25,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const Version = "0.5.15"
+const Version = "0.5.16"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 
@@ -211,6 +212,9 @@ func readConfig(args []string) *cliConfig {
 			useStdinConfig = true
 		default:
 			v.SetConfigFile(args[0])
+			if filepath.Ext(args[0]) == "" {
+				v.SetConfigType("yaml")
+			}
 		}
 	}
 
