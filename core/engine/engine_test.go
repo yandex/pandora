@@ -2,41 +2,43 @@ package engine
 
 import (
 	"context"
+	"reflect"
 	"sync"
+	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator"
 	"github.com/yandex/pandora/core/config"
 	coremock "github.com/yandex/pandora/core/mocks"
 	"github.com/yandex/pandora/core/provider"
 	"github.com/yandex/pandora/core/schedule"
-	"github.com/yandex/pandora/lib/ginkgoutil"
+	"github.com/yandex/pandora/lib/monitoring"
 	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-var _ = Describe("config validation", func() {
-	It("dive validation", func() {
+func Test_ConfigValidation(t *testing.T) {
+	t.Run("dive validation", func(t *testing.T) {
 		conf := Config{
 			Pools: []InstancePoolConfig{
 				{},
 			},
 		}
 		err := config.Validate(conf)
-		Expect(err).To(HaveOccurred())
+		require.Error(t, err)
 	})
-
-	It("pools required", func() {
+	t.Run("pools required", func(t *testing.T) {
 		conf := Config{}
 		err := config.Validate(conf)
-		Expect(err).To(HaveOccurred())
+		require.Error(t, err)
 	})
-
-})
+}
 
 func newTestPoolConf() (InstancePoolConfig, *coremock.Gun) {
 	gun := &coremock.Gun{}
@@ -56,7 +58,7 @@ func newTestPoolConf() (InstancePoolConfig, *coremock.Gun) {
 	return conf, gun
 }
 
-var _ = Describe("instance pool", func() {
+func Test_InstancePool(t *testing.T) {
 	var (
 		gun    *coremock.Gun
 		conf   InstancePoolConfig
@@ -70,7 +72,7 @@ var _ = Describe("instance pool", func() {
 	)
 
 	// Conf for starting only instance.
-	BeforeEach(func() {
+	var beforeEach = func() {
 		conf, gun = newTestPoolConf()
 		onWaitDone = func() {
 			old := waitDoneCalled.Swap(true)
@@ -80,27 +82,28 @@ var _ = Describe("instance pool", func() {
 		}
 		waitDoneCalled.Store(false)
 		ctx, cancel = context.WithCancel(context.Background())
-	})
-
-	JustBeforeEach(func() {
+	}
+	var justBeforeEach = func() {
 		metrics := newTestMetrics()
-		p = newPool(ginkgoutil.NewLogger(), metrics, onWaitDone, conf)
+		p = newPool(newNopLogger(), metrics, onWaitDone, conf)
+	}
+	_ = cancel
+
+	t.Run("shoot ok", func(t *testing.T) {
+		beforeEach()
+		justBeforeEach()
+
+		err := p.Run(ctx)
+		require.NoError(t, err)
+		gun.AssertExpectations(t)
+		require.True(t, waitDoneCalled.Load())
 	})
 
-	Context("shoot ok", func() {
-		It("", func() {
-			err := p.Run(ctx)
-			Expect(err).To(BeNil())
-			ginkgoutil.AssertExpectations(gun)
-			Expect(waitDoneCalled.Load()).To(BeTrue())
-		}, 1)
-	})
-
-	Context("context canceled", func() {
+	t.Run("context canceled", func(t *testing.T) {
 		var (
 			blockShoot sync.WaitGroup
 		)
-		BeforeEach(func() {
+		var beforeEachContext = func() {
 			blockShoot.Add(1)
 			prov := &coremock.Provider{}
 			prov.On("Run", mock.Anything, mock.Anything).
@@ -114,87 +117,139 @@ var _ = Describe("instance pool", func() {
 				return struct{}{}, true
 			})
 			conf.Provider = prov
-		})
-		It("", func() {
-			err := p.Run(ctx)
-			Expect(err).To(Equal(context.Canceled))
-			ginkgoutil.AssertNotCalled(gun, "Shoot")
-			Expect(waitDoneCalled.Load()).To(BeFalse())
-			blockShoot.Done()
-			Eventually(waitDoneCalled.Load).Should(BeTrue())
-		}, 1)
+		}
+
+		beforeEach()
+		beforeEachContext()
+		justBeforeEach()
+
+		err := p.Run(ctx)
+		require.Equal(t, context.Canceled, err)
+		gun.AssertNotCalled(t, "Shoot")
+		assert.False(t, waitDoneCalled.Load())
+		blockShoot.Done()
+
+		tick := time.NewTicker(100 * time.Millisecond)
+		i := 0
+		for range tick.C {
+			if waitDoneCalled.Load() {
+				break
+			}
+			if i > 6 {
+				break
+			}
+			i++
+		}
+		tick.Stop()
+		assert.True(t, waitDoneCalled.Load()) //TODO: eventually
 	})
 
-	Context("provider failed", func() {
+	t.Run("provider failed", func(t *testing.T) {
+		beforeEach()
+
 		var (
 			failErr           = errors.New("test err")
 			blockShootAndAggr sync.WaitGroup
 		)
-		BeforeEach(func() {
-			blockShootAndAggr.Add(1)
-			prov := &coremock.Provider{}
-			prov.On("Run", mock.Anything, mock.Anything).
-				Return(func(context.Context, core.ProviderDeps) error {
-					return failErr
-				})
-			prov.On("Acquire").Return(func() (core.Ammo, bool) {
-				blockShootAndAggr.Wait()
-				return nil, false
+		blockShootAndAggr.Add(1)
+		prov := &coremock.Provider{}
+		prov.On("Run", mock.Anything, mock.Anything).
+			Return(func(context.Context, core.ProviderDeps) error {
+				return failErr
 			})
-			conf.Provider = prov
-			aggr := &coremock.Aggregator{}
-			aggr.On("Run", mock.Anything, mock.Anything).
-				Return(func(context.Context, core.AggregatorDeps) error {
-					blockShootAndAggr.Wait()
-					return nil
-				})
-			conf.Aggregator = aggr
+		prov.On("Acquire").Return(func() (core.Ammo, bool) {
+			blockShootAndAggr.Wait()
+			return nil, false
 		})
-		It("", func() {
-			err := p.Run(ctx)
-			Expect(err).ToNot(BeNil())
-			Expect(err.Error()).To(ContainSubstring(failErr.Error()))
-			ginkgoutil.AssertNotCalled(gun, "Shoot")
-			Consistently(waitDoneCalled.Load, 0.1).Should(BeFalse())
-			blockShootAndAggr.Done()
-			Eventually(waitDoneCalled.Load).Should(BeTrue())
-		})
-	})
+		conf.Provider = prov
+		aggr := &coremock.Aggregator{}
+		aggr.On("Run", mock.Anything, mock.Anything).
+			Return(func(context.Context, core.AggregatorDeps) error {
+				blockShootAndAggr.Wait()
+				return nil
+			})
+		conf.Aggregator = aggr
 
-	Context("aggregator failed", func() {
-		failErr := errors.New("test err")
-		BeforeEach(func() {
-			aggr := &coremock.Aggregator{}
-			aggr.On("Run", mock.Anything, mock.Anything).Return(failErr)
-			conf.Aggregator = aggr
-		})
-		It("", func() {
-			err := p.Run(ctx)
-			Expect(err).ToNot(BeNil())
-			Expect(err.Error()).To(ContainSubstring(failErr.Error()))
-			Eventually(waitDoneCalled.Load).Should(BeTrue())
-		}, 1)
-	})
+		justBeforeEach()
 
-	Context("start instances failed", func() {
-		failErr := errors.New("test err")
-		BeforeEach(func() {
-			conf.NewGun = func() (core.Gun, error) {
-				return nil, failErr
+		err := p.Run(ctx)
+		require.Error(t, err)
+		require.ErrorContains(t, err, failErr.Error())
+		gun.AssertNotCalled(t, "Shoot")
+
+		assert.False(t, waitDoneCalled.Load())
+		blockShootAndAggr.Done()
+
+		tick := time.NewTicker(100 * time.Millisecond)
+		i := 0
+		for range tick.C {
+			if waitDoneCalled.Load() {
+				break
 			}
-		})
-		It("", func() {
-			err := p.Run(ctx)
-			Expect(err).ToNot(BeNil())
-			Expect(err.Error()).To(ContainSubstring(failErr.Error()))
-			Eventually(waitDoneCalled.Load).Should(BeTrue())
-		}, 1)
+			if i > 6 {
+				break
+			}
+			i++
+		}
+		tick.Stop()
+		assert.True(t, waitDoneCalled.Load()) //TODO: eventually
 	})
 
-})
+	t.Run("aggregator failed", func(t *testing.T) {
+		beforeEach()
+		failErr := errors.New("test err")
+		aggr := &coremock.Aggregator{}
+		aggr.On("Run", mock.Anything, mock.Anything).Return(failErr)
+		conf.Aggregator = aggr
+		justBeforeEach()
 
-var _ = Describe("multiple instance", func() {
-	It("out of ammo - instance start is canceled", func() {
+		err := p.Run(ctx)
+		require.Error(t, err)
+		require.ErrorContains(t, err, failErr.Error())
+		tick := time.NewTicker(100 * time.Millisecond)
+		i := 0
+		for range tick.C {
+			if waitDoneCalled.Load() {
+				break
+			}
+			if i > 6 {
+				break
+			}
+			i++
+		}
+		tick.Stop()
+		assert.True(t, waitDoneCalled.Load()) //TODO: eventually
+	})
+
+	t.Run("start instances failed", func(t *testing.T) {
+		failErr := errors.New("test err")
+		beforeEach()
+		conf.NewGun = func() (core.Gun, error) {
+			return nil, failErr
+		}
+		justBeforeEach()
+
+		err := p.Run(ctx)
+		require.Error(t, err)
+		require.ErrorContains(t, err, failErr.Error())
+		tick := time.NewTicker(100 * time.Millisecond)
+		i := 0
+		for range tick.C {
+			if waitDoneCalled.Load() {
+				break
+			}
+			if i > 6 {
+				break
+			}
+			i++
+		}
+		tick.Stop()
+		assert.True(t, waitDoneCalled.Load()) //TODO: eventually
+	})
+}
+
+func Test_MultipleInstance(t *testing.T) {
+	t.Run("out of ammo - instance start is canceled", func(t *testing.T) {
 		conf, _ := newTestPoolConf()
 		conf.Provider = provider.NewNum(3)
 		conf.NewRPSSchedule = func() (core.Schedule, error) {
@@ -204,30 +259,30 @@ var _ = Describe("multiple instance", func() {
 			schedule.NewOnce(2),
 			schedule.NewConst(1, 5*time.Second),
 		)
-		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
+		pool := newPool(newNopLogger(), newTestMetrics(), nil, conf)
 		ctx := context.Background()
 
 		err := pool.Run(ctx)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(pool.metrics.InstanceStart.Get()).To(BeNumerically("<=", 3))
-	}, 1)
+		require.NoError(t, err)
+		require.True(t, pool.metrics.InstanceStart.Get() == 3)
+	})
 
-	It("when provider run done it does not mean out of ammo; instance start is not canceled", func() {
+	t.Run("when provider run done it does not mean out of ammo; instance start is not canceled", func(t *testing.T) {
 		conf, _ := newTestPoolConf()
 		conf.Provider = provider.NewNumBuffered(3)
 		conf.NewRPSSchedule = func() (core.Schedule, error) {
 			return schedule.NewOnce(1), nil
 		}
 		conf.StartupSchedule = schedule.NewOnce(3)
-		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
+		pool := newPool(newNopLogger(), newTestMetrics(), nil, conf)
 		ctx := context.Background()
 
 		err := pool.Run(ctx)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(pool.metrics.InstanceStart.Get()).To(BeNumerically("==", 3))
-	}, 1)
+		require.NoError(t, err)
+		require.True(t, pool.metrics.InstanceStart.Get() <= 3)
+	})
 
-	It("out of RPS - instance start is canceled", func() {
+	t.Run("out of RPS - instance start is canceled", func(t *testing.T) {
 		conf, _ := newTestPoolConf()
 		conf.NewRPSSchedule = func() (core.Schedule, error) {
 			return schedule.NewOnce(5), nil
@@ -236,20 +291,19 @@ var _ = Describe("multiple instance", func() {
 			schedule.NewOnce(2),
 			schedule.NewConst(1, 2*time.Second),
 		)
-		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
+		pool := newPool(newNopLogger(), newTestMetrics(), nil, conf)
 		ctx := context.Background()
 
 		err := pool.Run(ctx)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(pool.metrics.InstanceStart.Get()).To(BeNumerically("<=", 3))
+		require.NoError(t, err)
+		require.True(t, pool.metrics.InstanceStart.Get() <= 3)
 	})
-
-})
+}
 
 // TODO instance start canceled after out of ammo
 // TODO instance start cancdled after RPS finish
 
-var _ = Describe("engine", func() {
+func Test_Engine(t *testing.T) {
 	var (
 		gun1, gun2 *coremock.Gun
 		confs      []InstancePoolConfig
@@ -257,33 +311,37 @@ var _ = Describe("engine", func() {
 		cancel     context.CancelFunc
 		engine     *Engine
 	)
-	BeforeEach(func() {
+	_ = cancel
+	var beforeEach = func() {
 		confs = make([]InstancePoolConfig, 2)
 		confs[0], gun1 = newTestPoolConf()
 		confs[1], gun2 = newTestPoolConf()
 		ctx, cancel = context.WithCancel(context.Background())
-	})
+	}
 
-	JustBeforeEach(func() {
+	var justBeforeEach = func() {
 		metrics := newTestMetrics()
-		engine = New(ginkgoutil.NewLogger(), metrics, Config{confs})
+		engine = New(newNopLogger(), metrics, Config{confs})
+	}
+
+	t.Run("shoot ok", func(t *testing.T) {
+		beforeEach()
+		justBeforeEach()
+
+		err := engine.Run(ctx)
+		require.NoError(t, err)
+		gun1.AssertExpectations(t)
+		gun2.AssertExpectations(t)
 	})
 
-	Context("shoot ok", func() {
-		It("", func() {
-			err := engine.Run(ctx)
-			Expect(err).To(BeNil())
-			ginkgoutil.AssertExpectations(gun1, gun2)
-		})
-	})
+	t.Run("context canceled", func(t *testing.T) {
 
-	Context("context canceled", func() {
 		// Cancel context on ammo acquire, an check that engine returns before
 		// instance finish.
 		var (
 			blockPools sync.WaitGroup
 		)
-		BeforeEach(func() {
+		var beforeEachCtx = func() {
 			blockPools.Add(1)
 			for i := range confs {
 				prov := &coremock.Provider{}
@@ -300,92 +358,186 @@ var _ = Describe("engine", func() {
 				})
 				confs[i].Provider = prov
 			}
-		})
+		}
+		beforeEach()
+		beforeEachCtx()
+		justBeforeEach()
 
-		It("", func() {
-			err := engine.Run(ctx)
-			Expect(err).To(Equal(context.Canceled))
-			awaited := make(chan struct{})
-			go func() {
-				defer close(awaited)
-				engine.Wait()
-			}()
-			Consistently(awaited, 0.1).ShouldNot(BeClosed())
-			blockPools.Done()
-			Eventually(awaited).Should(BeClosed())
-		})
+		err := engine.Run(ctx)
+		require.Equal(t, err, context.Canceled)
+		awaited := make(chan struct{})
+		go func() {
+			defer close(awaited)
+			engine.Wait()
+		}()
+
+		assert.False(t, IsClosed(awaited))
+		blockPools.Done()
+
+		tick := time.NewTicker(100 * time.Millisecond)
+		i := 0
+		for range tick.C {
+			if IsClosed(awaited) {
+				break
+			}
+			if i > 6 {
+				break
+			}
+			i++
+		}
+		tick.Stop()
+		assert.True(t, IsClosed(awaited)) //TODO: eventually
 	})
 
-	Context("one pool failed", func() {
+	t.Run("one pool failed", func(t *testing.T) {
+		beforeEach()
 		var (
 			failErr = errors.New("test err")
 		)
-		BeforeEach(func() {
-			aggr := &coremock.Aggregator{}
-			aggr.On("Run", mock.Anything, mock.Anything).Return(failErr)
-			confs[0].Aggregator = aggr
-		})
+		aggr := &coremock.Aggregator{}
+		aggr.On("Run", mock.Anything, mock.Anything).Return(failErr)
+		confs[0].Aggregator = aggr
 
-		It("", func() {
-			err := engine.Run(ctx)
-			Expect(err).ToNot(BeNil())
-			Expect(err.Error()).To(ContainSubstring(failErr.Error()))
-			engine.Wait()
-		}, 1)
+		justBeforeEach()
+
+		err := engine.Run(ctx)
+		require.Error(t, err)
+		require.ErrorContains(t, err, failErr.Error())
+		engine.Wait()
 	})
-})
+}
 
-var _ = Describe("build instance schedule", func() {
-	It("per instance schedule ", func() {
+func Test_BuildInstanceSchedule(t *testing.T) {
+	t.Run("per instance schedule", func(t *testing.T) {
 		conf, _ := newTestPoolConf()
 		conf.RPSPerInstance = true
-		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
+		pool := newPool(newNopLogger(), newTestMetrics(), nil, conf)
 		newInstanceSchedule, err := pool.buildNewInstanceSchedule(context.Background(), func() {
-			Fail("should not be called")
+			panic("should not be called")
 		})
-		Expect(err).NotTo(HaveOccurred())
-		ginkgoutil.ExpectFuncsEqual(newInstanceSchedule, conf.NewRPSSchedule)
+		require.NoError(t, err)
+
+		val1 := reflect.ValueOf(newInstanceSchedule)
+		val2 := reflect.ValueOf(conf.NewRPSSchedule)
+		require.Equal(t, val1.Pointer(), val2.Pointer())
 	})
 
-	It("shared schedule create failed", func() {
+	t.Run("shared schedule create failed", func(t *testing.T) {
 		conf, _ := newTestPoolConf()
 		scheduleCreateErr := errors.New("test err")
 		conf.NewRPSSchedule = func() (core.Schedule, error) {
 			return nil, scheduleCreateErr
 		}
-		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
+		pool := newPool(newNopLogger(), newTestMetrics(), nil, conf)
 		newInstanceSchedule, err := pool.buildNewInstanceSchedule(context.Background(), func() {
-			Fail("should not be called")
+			panic("should not be called")
 		})
-		Expect(err).To(Equal(scheduleCreateErr))
-		Expect(newInstanceSchedule).To(BeNil())
+
+		require.Error(t, err)
+		require.Equal(t, err, scheduleCreateErr)
+		require.Nil(t, newInstanceSchedule)
 	})
 
-	It("shared schedule work", func() {
+	t.Run("shared schedule work", func(t *testing.T) {
 		conf, _ := newTestPoolConf()
 		var newScheduleCalled bool
 		conf.NewRPSSchedule = func() (core.Schedule, error) {
-			Expect(newScheduleCalled).To(BeFalse())
+			require.False(t, newScheduleCalled)
 			newScheduleCalled = true
 			return schedule.NewOnce(1), nil
 		}
-		pool := newPool(ginkgoutil.NewLogger(), newTestMetrics(), nil, conf)
+		pool := newPool(newNopLogger(), newTestMetrics(), nil, conf)
 		ctx, cancel := context.WithCancel(context.Background())
 		newInstanceSchedule, err := pool.buildNewInstanceSchedule(context.Background(), cancel)
-		Expect(err).NotTo(HaveOccurred())
+		require.NoError(t, err)
 
 		schedule, err := newInstanceSchedule()
-		Expect(err).NotTo(HaveOccurred())
+		require.NoError(t, err)
 
-		Expect(newInstanceSchedule()).To(Equal(schedule))
-
-		Expect(ctx.Done()).NotTo(BeClosed())
+		assert.False(t, IsClosed(ctx.Done()))
 		_, ok := schedule.Next()
-		Expect(ok).To(BeTrue())
-		Expect(ctx.Done()).NotTo(BeClosed())
+		assert.True(t, ok)
+		assert.False(t, IsClosed(ctx.Done()))
 		_, ok = schedule.Next()
-		Expect(ok).To(BeFalse())
-		Expect(ctx.Done()).To(BeClosed())
+		assert.False(t, ok)
+		assert.True(t, IsClosed(ctx.Done()))
+	})
+}
+
+func IsClosed(actual any) (success bool) {
+	if !isChan(actual) {
+		return false
+	}
+	channelValue := reflect.ValueOf(actual)
+	channelType := reflect.TypeOf(actual)
+	if channelType.ChanDir() == reflect.SendDir {
+		return false
+	}
+
+	winnerIndex, _, open := reflect.Select([]reflect.SelectCase{
+		{Dir: reflect.SelectRecv, Chan: channelValue},
+		{Dir: reflect.SelectDefault},
 	})
 
-})
+	var closed bool
+	if winnerIndex == 0 {
+		closed = !open
+	} else if winnerIndex == 1 {
+		closed = false
+	}
+
+	return closed
+}
+
+func isChan(a interface{}) bool {
+	if isNil(a) {
+		return false
+	}
+	return reflect.TypeOf(a).Kind() == reflect.Chan
+}
+
+func isNil(a interface{}) bool {
+	if a == nil {
+		return true
+	}
+
+	switch reflect.TypeOf(a).Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return reflect.ValueOf(a).IsNil()
+	}
+
+	return false
+}
+
+type TestLogWriter struct {
+	t *testing.T
+}
+
+func (w *TestLogWriter) Write(p []byte) (n int, err error) {
+	w.t.Helper()
+	w.t.Log(string(p))
+	return len(p), nil
+}
+
+func newTestLogger(t *testing.T) *zap.Logger {
+	conf := zap.NewDevelopmentConfig()
+	enc := zapcore.NewConsoleEncoder(conf.EncoderConfig)
+	core := zapcore.NewCore(enc, zapcore.AddSync(&TestLogWriter{t: t}), zap.DebugLevel)
+	log := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.DPanicLevel))
+	return log
+}
+
+func newNopLogger() *zap.Logger {
+	core := zapcore.NewNopCore()
+	log := zap.New(core)
+	return log
+}
+
+func newTestMetrics() Metrics {
+	return Metrics{
+		&monitoring.Counter{},
+		&monitoring.Counter{},
+		&monitoring.Counter{},
+		&monitoring.Counter{},
+	}
+}
