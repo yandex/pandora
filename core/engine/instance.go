@@ -80,10 +80,10 @@ func (i *instance) Run(ctx context.Context) (recoverErr error) {
 	i.log.Debug("Instance started")
 	i.metrics.InstanceStart.Add(1)
 
-	waiter := coreutil.NewWaiter(i.schedule, ctx)
+	waiter := coreutil.NewWaiter(i.schedule)
 	// Checking, that schedule is not finished, required, to not consume extra ammo,
 	// on finish in case of per instance schedule.
-	for !waiter.IsFinished() {
+	for !waiter.IsFinished(ctx) {
 		err := func() error {
 			ammo, ok := i.provider.Acquire()
 			if !ok {
@@ -94,10 +94,10 @@ func (i *instance) Run(ctx context.Context) (recoverErr error) {
 			if tag.Debug {
 				i.log.Debug("Ammo acquired", zap.Any("ammo", ammo))
 			}
-			if !waiter.Wait() {
+			if !waiter.Wait(ctx) {
 				return nil
 			}
-			if !i.discardOverflow || !waiter.IsSlowDown() {
+			if !i.discardOverflow || !waiter.IsSlowDown(ctx) {
 				i.metrics.Request.Add(1)
 				if tag.Debug {
 					i.log.Debug("Shooting", zap.Any("ammo", ammo))

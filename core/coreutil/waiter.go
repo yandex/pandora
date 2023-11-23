@@ -15,7 +15,6 @@ import (
 // Waiter goroutine unsafe wrapper for efficient waiting schedule.
 type Waiter struct {
 	sched         core.Schedule
-	ctx           context.Context
 	slowDownItems int
 
 	// Lazy initialized.
@@ -23,17 +22,17 @@ type Waiter struct {
 	lastNow time.Time
 }
 
-func NewWaiter(sched core.Schedule, ctx context.Context) *Waiter {
-	return &Waiter{sched: sched, ctx: ctx}
+func NewWaiter(sched core.Schedule) *Waiter {
+	return &Waiter{sched: sched}
 }
 
 // Wait waits for next waiter schedule event.
 // Returns true, if event successfully waited, or false
 // if waiter context is done, or schedule finished.
-func (w *Waiter) Wait() (ok bool) {
+func (w *Waiter) Wait(ctx context.Context) (ok bool) {
 	// Check, that context is not done. Very quick: 5 ns for op, due to benchmark.
 	select {
-	case <-w.ctx.Done():
+	case <-ctx.Done():
 		w.slowDownItems = 0
 		return false
 	default:
@@ -65,15 +64,15 @@ func (w *Waiter) Wait() (ok bool) {
 	select {
 	case <-w.timer.C:
 		return true
-	case <-w.ctx.Done():
+	case <-ctx.Done():
 		return false
 	}
 }
 
 // IsSlowDown returns true, if schedule contains 2 elements before current time.
-func (w *Waiter) IsSlowDown() (ok bool) {
+func (w *Waiter) IsSlowDown(ctx context.Context) (ok bool) {
 	select {
-	case <-w.ctx.Done():
+	case <-ctx.Done():
 		return false
 	default:
 		return w.slowDownItems >= 2
@@ -82,9 +81,9 @@ func (w *Waiter) IsSlowDown() (ok bool) {
 
 // IsFinished is quick check, that wait context is not canceled and there are some tokens left in
 // schedule.
-func (w *Waiter) IsFinished() (ok bool) {
+func (w *Waiter) IsFinished(ctx context.Context) (ok bool) {
 	select {
-	case <-w.ctx.Done():
+	case <-ctx.Done():
 		return true
 	default:
 		return w.sched.Left() == 0
