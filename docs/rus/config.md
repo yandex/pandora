@@ -1,17 +1,17 @@
-[Home](index.md)
+[К содержанию](index.md)
 
 ---
 
-# Архитектура
+# Конфигурация
 
-- [Basic configuration](#basic-configuration)
-- [Monitoring and Logging](#monitoring-and-logging)
-- [Variables from env and files](#variables-from-env-and-files)
+- [Основная конфигурация](#basic-configuration)
+- [Мониторинг и логирование](#monitoring-and-logging)
+- [Переменные из переменных окружения и файлов](#variables-from-env-and-files)
 
-## Basic configuration
+## Основная конфигурация
 
-Pandora supports config files in `YAML` format. Create a new file named `load.yaml` and add following lines in your
-favourite editor:
+Pandora поддерживает файлы конфигурации в формате `YAML`. Создайте новый файл с именем `load.yaml` и добавьте
+в него следующие строки:
 
 ```yaml
 pools:
@@ -37,9 +37,9 @@ pools:
       times: 10
 ```
 
-## Monitoring and Logging
+## Мониторинг и логирование
 
-You can enable debug information about gun (e.g. monitoring and additional logging).
+Вы можете включить отладочную информацию (мониторинг и профилирование).
 
 ```yaml
 log:                                 # gun logging configuration
@@ -58,20 +58,19 @@ monitoring:
 ```
 
 
-## Variables from env and files
+## Переменные из переменных окружения и файлов
 
-You can use variables in the config from environment variables or from files.
+В конфигурации можно использовать переменные из переменных окружения или из файлов.
 
-The template format is `${...}`.
+Используйте шаблон - `${...}`.
 
-Environment variable `${env:MY_ENV}`
-Variable from file `${property:path/file.property#MY_FIELD}`.
+Переменные окружения: `${env:MY_ENV}`
 
-The contents of the file must be
+Переменные из файлов: `${property:path/file.property#MY_FIELD}`.
 
-`MY_FIELD=data`
+Содержимое файла должно быть: `MY_FIELD=data`
 
-Example config
+Пример:
 
 ```yaml
 pools:
@@ -84,8 +83,8 @@ pools:
       - "[Custom-Header: ${property:path/file.property#MY_FIELD}]"
 ```
 
-You can use variables not only in the header section but also in other configuration fields.
+Переменные можно использовать не только в секции `headers`, но и в любых других полях конфигурации.
 
 ---
 
-[Home](index.md)
+[К содержанию](index.md)

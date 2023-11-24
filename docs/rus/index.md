@@ -5,7 +5,7 @@ Pandora - это высокопроизводительный генератор
 ## Содержание
 
 - [Установка](install.md)
-- [Архитектура](config.md)
+- [Конфигурация](config.md)
 - [Первый тест](tuturial.md)
 - [Профиль нагрузки](load-profile.md)
 - [HTTP providers](providers.md)

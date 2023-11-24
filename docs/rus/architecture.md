@@ -1,4 +1,4 @@
-[Home](index.md)
+[К содержанию](index.md)
 
 ---
 
@@ -69,4 +69,4 @@ Aggregator collects measured samples and saves them somewhere.
 
 ---
 
-[Home](index.md)
+[К содержанию](index.md)
