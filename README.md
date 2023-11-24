@@ -3,7 +3,6 @@
 [![Release](https://github.com/yandex/pandora/actions/workflows/release.yml/badge.svg)](https://github.com/yandex/pandora/actions/workflows/release.yml)
 [![Release](https://img.shields.io/github/v/release/yandex/pandora.svg?style=flat-square)](https://github.com/yandex/pandora/releases)
 [![Test](https://github.com/yandex/pandora/actions/workflows/test.yml/badge.svg)](https://github.com/yandex/pandora/actions/workflows/test.yml)
-[![Coverage Status](https://coveralls.io/repos/yandex/pandora/badge.svg?branch=develop&service=github)](https://coveralls.io/github/yandex/pandora?branch=master)
 [![codecov](https://codecov.io/gh/yandex/pandora/badge.svg?precision=2)](https://app.codecov.io/gh/yandex/pandora)
 ![Code lines](https://sloc.xyz/github/yandex/pandora/?category=code)
 
