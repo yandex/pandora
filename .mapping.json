@@ -1,4 +1,5 @@
 {
+  ".github/workflows/release.yml":"load/projects/pandora/.github/workflows/release.yml",
   ".github/workflows/test.yml":"load/projects/pandora/.github/workflows/test.yml",
   ".gitignore":"load/projects/pandora/.gitignore",
   ".goxc.json":"load/projects/pandora/.goxc.json",
@@ -161,7 +162,6 @@
   "core/datasource/file_test.go":"load/projects/pandora/core/datasource/file_test.go",
   "core/datasource/std.go":"load/projects/pandora/core/datasource/std.go",
   "core/engine/engine.go":"load/projects/pandora/core/engine/engine.go",
-  "core/engine/engine_suite_test.go":"load/projects/pandora/core/engine/engine_suite_test.go",
   "core/engine/engine_test.go":"load/projects/pandora/core/engine/engine_test.go",
   "core/engine/instance.go":"load/projects/pandora/core/engine/instance.go",
   "core/engine/instance_test.go":"load/projects/pandora/core/engine/instance_test.go",

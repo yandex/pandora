@@ -373,10 +373,10 @@ func (p *instancePool) startInstances(
 		},
 	}
 
-	waiter := coreutil.NewWaiter(p.StartupSchedule, startCtx)
+	waiter := coreutil.NewWaiter(p.StartupSchedule)
 
 	// If create all instances asynchronously, and creation will fail, too many errors appears in log.
-	ok := waiter.Wait()
+	ok := waiter.Wait(startCtx)
 	if !ok {
 		err = startCtx.Err()
 		return
@@ -393,7 +393,7 @@ func (p *instancePool) startInstances(
 		}()}
 	}()
 
-	for ; waiter.Wait(); started++ {
+	for ; waiter.Wait(startCtx); started++ {
 		id := started
 		go func() {
 			runRes <- instanceRunResult{id, runNewInstance(runCtx, p.log, p.ID, id, deps)}

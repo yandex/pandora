@@ -16,9 +16,9 @@ import (
 func TestWaiter_Unstarted(t *testing.T) {
 	sched := schedule.NewOnce(1)
 	ctx := context.Background()
-	w := NewWaiter(sched, ctx)
+	w := NewWaiter(sched)
 	var i int
-	for ; w.Wait(); i++ {
+	for ; w.Wait(ctx); i++ {
 	}
 	require.Equal(t, 1, i)
 }
@@ -31,11 +31,11 @@ func TestWaiter_WaitAsExpected(t *testing.T) {
 	)
 	sched := schedule.NewConst(ops, duration)
 	ctx := context.Background()
-	w := NewWaiter(sched, ctx)
+	w := NewWaiter(sched)
 	start := time.Now()
 	sched.Start(start)
 	var i int
-	for ; w.Wait(); i++ {
+	for ; w.Wait(ctx); i++ {
 	}
 	finish := time.Now()
 
@@ -48,8 +48,8 @@ func TestWaiter_ContextCanceledBeforeWait(t *testing.T) {
 	sched := schedule.NewOnce(1)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	w := NewWaiter(sched, ctx)
-	require.False(t, w.Wait())
+	w := NewWaiter(sched)
+	require.False(t, w.Wait(ctx))
 }
 
 func TestWaiter_ContextCanceledDuringWait(t *testing.T) {
@@ -58,10 +58,10 @@ func TestWaiter_ContextCanceledDuringWait(t *testing.T) {
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	w := NewWaiter(sched, ctx)
+	w := NewWaiter(sched)
 
-	require.True(t, w.Wait()) // 0
-	require.False(t, w.Wait())
+	require.True(t, w.Wait(ctx)) // 0
+	require.False(t, w.Wait(ctx))
 
 	since := time.Since(start)
 	require.True(t, since > timeout)

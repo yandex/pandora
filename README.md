@@ -1,9 +1,14 @@
 # Pandora
 
+[![Release](https://github.com/yandex/pandora/actions/workflows/release.yml/badge.svg)](https://github.com/yandex/pandora/actions/workflows/release.yml)
+[![Release](https://img.shields.io/github/v/release/yandex/pandora.svg?style=flat-square)](https://github.com/yandex/pandora/releases)
+[![Test](https://github.com/yandex/pandora/actions/workflows/test.yml/badge.svg)](https://github.com/yandex/pandora/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/yandex/pandora/badge.svg?precision=2)](https://app.codecov.io/gh/yandex/pandora)
+![Code lines](https://sloc.xyz/github/yandex/pandora/?category=code)
+
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/yandex/pandora)](https://pkg.go.dev/github.com/yandex/pandora)
+[![Go Report Card](https://goreportcard.com/badge/github.com/yandex/pandora)](https://goreportcard.com/report/github.com/yandex/pandora)
 [![Join the chat at https://gitter.im/yandex/pandora](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/yandex/pandora?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/yandex/pandora.svg)](https://travis-ci.org/yandex/pandora)
-[![Coverage Status](https://coveralls.io/repos/yandex/pandora/badge.svg?branch=develop&service=github)](https://coveralls.io/github/yandex/pandora?branch=develop)
-[![Documentation Status](https://readthedocs.org/projects/yandexpandora/badge/?version=develop)](https://yandexpandora.readthedocs.io/en/develop/?badge=develop)
 
 Pandora is a high-performance load generator in Go language. It has built-in HTTP(S) and HTTP/2 support and you can write your own load scenarios in Go, compiling them just before your test.
 
