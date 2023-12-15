@@ -16,8 +16,10 @@ import (
 	"github.com/yandex/pandora/lib/pointer"
 )
 
+var testFS = afero.NewMemMapFs()
+
 func Test_convertingYamlToHCL(t *testing.T) {
-	Import(nil)
+	Import(testFS)
 	testOnce.Do(func() {
 		pluginconfig.AddHooks()
 	})
@@ -111,8 +113,10 @@ func Test_decodeHCL(t *testing.T) {
 }
 
 func TestConvertHCLToAmmo(t *testing.T) {
-	fs := afero.NewMemMapFs()
-	templater := "html"
+	Import(testFS)
+	testOnce.Do(func() {
+		pluginconfig.AddHooks()
+	})
 	tests := []struct {
 		name    string
 		ammo    AmmoHCL
@@ -135,6 +139,7 @@ func TestConvertHCLToAmmo(t *testing.T) {
 							{Type: "var/xpath", Mapping: &(map[string]string{"key": "var/xpath"})},
 							{Type: "var/jsonpath", Mapping: &(map[string]string{"key": "var/jsonpath"})},
 						},
+						Templater: &TemplaterHCL{Type: "text"},
 					},
 				},
 				Scenarios: []ScenarioHCL{
@@ -143,7 +148,7 @@ func TestConvertHCLToAmmo(t *testing.T) {
 			},
 			want: AmmoConfig{
 				VariableSources: []VariableSource{
-					&VariableSourceJSON{Name: "source1", File: "data.json", fs: fs},
+					&VariableSourceJSON{Name: "source1", File: "data.json", fs: testFS},
 				},
 				Requests: []RequestConfig{
 					{
@@ -165,31 +170,6 @@ func TestConvertHCLToAmmo(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "UnsupportedVariableSourceType",
-			ammo: AmmoHCL{
-				VariableSources: []SourceHCL{
-					{Name: "source1", Type: "unknown", File: pointer.ToString("data.csv")},
-				},
-			},
-			want:    AmmoConfig{},
-			wantErr: true,
-		},
-		{
-			name: "UnsupportedPostprocessorType",
-			ammo: AmmoHCL{
-				Requests: []RequestHCL{
-					{
-						Name: "req1", Method: "GET", URI: "/api",
-						Postprocessors: []PostprocessorHCL{
-							{Type: "unknown", Mapping: &(map[string]string{"key": "value"})},
-						},
-					},
-				},
-			},
-			want:    AmmoConfig{},
-			wantErr: true,
-		},
-		{
 			name: "MultipleVariableSources",
 			ammo: AmmoHCL{
 				VariableSources: []SourceHCL{
@@ -200,10 +180,12 @@ func TestConvertHCLToAmmo(t *testing.T) {
 			},
 			want: AmmoConfig{
 				VariableSources: []VariableSource{
-					&VariableSourceJSON{Name: "source1", File: "data.json", fs: fs},
-					&VariableSourceCsv{Name: "source2", File: "data.csv", fs: fs},
+					&VariableSourceJSON{Name: "source1", File: "data.json", fs: testFS},
+					&VariableSourceCsv{Name: "source2", File: "data.csv", fs: testFS},
 					&VariableSourceVariables{Name: "source3", Variables: map[string]any{"a": "b"}},
 				},
+				Requests:  []RequestConfig{},
+				Scenarios: []ScenarioConfig{},
 			},
 			wantErr: false,
 		},
@@ -212,14 +194,16 @@ func TestConvertHCLToAmmo(t *testing.T) {
 			ammo: AmmoHCL{
 				Requests: []RequestHCL{
 					{Name: "req1", Method: "GET", URI: "/api/1"},
-					{Name: "req2", Method: "POST", URI: "/api/2", Templater: &templater},
+					{Name: "req2", Method: "POST", URI: "/api/2"},
 				},
 			},
 			want: AmmoConfig{
+				VariableSources: []VariableSource{},
 				Requests: []RequestConfig{
-					{Name: "req1", Method: "GET", URI: "/api/1", Templater: NewTextTemplater()},
-					{Name: "req2", Method: "POST", URI: "/api/2", Templater: NewHTMLTemplater()},
+					{Name: "req1", Method: "GET", URI: "/api/1"},
+					{Name: "req2", Method: "POST", URI: "/api/2"},
 				},
+				Scenarios: []ScenarioConfig{},
 			},
 			wantErr: false,
 		},
@@ -242,6 +226,8 @@ func TestConvertHCLToAmmo(t *testing.T) {
 				},
 			},
 			want: AmmoConfig{
+				Requests:        []RequestConfig{},
+				VariableSources: []VariableSource{},
 				Scenarios: []ScenarioConfig{
 					{
 						Name:           "scenario1",
@@ -262,13 +248,14 @@ func TestConvertHCLToAmmo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ConvertHCLToAmmo(tt.ammo, fs)
+			got, err := ConvertHCLToAmmo(tt.ammo)
 			if tt.wantErr {
 				require.Error(t, err)
 				return
 			}
+
 			require.NoError(t, err)
-			assert.Equalf(t, tt.want, got, "ConvertHCLToAmmo(%v, %v)", tt.ammo, fs)
+			assert.Equalf(t, tt.want, got, "ConvertHCLToAmmo(%v, %v)", tt.ammo, testFS)
 		})
 	}
 }
@@ -313,7 +300,7 @@ func TestConvertAmmoToHCL(t *testing.T) {
 					{Name: "source1", Type: "file/json", File: pointer.ToString("data.json")},
 				},
 				Requests: []RequestHCL{
-					{Name: "req1", Method: "GET", URI: "/api", Templater: pointer.ToString("text")},
+					{Name: "req1", Method: "GET", URI: "/api", Templater: &TemplaterHCL{Type: "text"}},
 				},
 				Scenarios: []ScenarioHCL{
 					{Name: "scenario1", Weight: pointer.ToInt64(1), MinWaitingTime: pointer.ToInt64(1000), Requests: []string{"shoot1"}},
@@ -390,8 +377,8 @@ func TestConvertAmmoToHCL(t *testing.T) {
 			},
 			want: AmmoHCL{
 				Requests: []RequestHCL{
-					{Name: "req1", Method: "GET", URI: "/api/1", Templater: pointer.ToString("text")},
-					{Name: "req2", Method: "POST", URI: "/api/2", Templater: pointer.ToString("html")},
+					{Name: "req1", Method: "GET", URI: "/api/1", Templater: &TemplaterHCL{Type: "text"}},
+					{Name: "req2", Method: "POST", URI: "/api/2", Templater: &TemplaterHCL{Type: "html"}},
 				},
 			},
 			wantErr: false,

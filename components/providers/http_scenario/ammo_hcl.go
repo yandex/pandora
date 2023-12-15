@@ -8,10 +8,11 @@ import (
 	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/providers/http_scenario/postprocessor"
 	"github.com/yandex/pandora/lib/str"
+	"gopkg.in/yaml.v2"
 )
 
 type AmmoHCL struct {
-	VariableSources []SourceHCL   `hcl:"variable_source,block"`
+	VariableSources []SourceHCL   `hcl:"variable_source,block" config:"variable_sources" yaml:"variable_sources"`
 	Requests        []RequestHCL  `hcl:"request,block"`
 	Scenarios       []ScenarioHCL `hcl:"scenario,block"`
 }
@@ -19,30 +20,30 @@ type AmmoHCL struct {
 type SourceHCL struct {
 	Name            string             `hcl:"name,label"`
 	Type            string             `hcl:"type,label"`
-	File            *string            `hcl:"file"`
-	Fields          *[]string          `hcl:"fields"`
-	IgnoreFirstLine *bool              `hcl:"ignore_first_line"`
-	Delimiter       *string            `hcl:"delimiter"`
-	Variables       *map[string]string `hcl:"variables"`
+	File            *string            `hcl:"file" yaml:"file,omitempty"`
+	Fields          *[]string          `hcl:"fields" yaml:"fields,omitempty"`
+	IgnoreFirstLine *bool              `hcl:"ignore_first_line" yaml:"ignore_first_line,omitempty"`
+	Delimiter       *string            `hcl:"delimiter" yaml:"delimiter,omitempty"`
+	Variables       *map[string]string `hcl:"variables" yaml:"variables,omitempty"`
 }
 
 type RequestHCL struct {
 	Name           string             `hcl:"name,label"`
 	Method         string             `hcl:"method"`
-	Headers        map[string]string  `hcl:"headers"`
-	Tag            *string            `hcl:"tag"`
-	Body           *string            `hcl:"body"`
 	URI            string             `hcl:"uri"`
-	Preprocessor   *PreprocessorHCL   `hcl:"preprocessor,block"`
-	Postprocessors []PostprocessorHCL `hcl:"postprocessor,block"`
-	Templater      *string            `hcl:"templater"`
+	Headers        map[string]string  `hcl:"headers" yaml:"headers,omitempty"`
+	Tag            *string            `hcl:"tag" yaml:"tag,omitempty"`
+	Body           *string            `hcl:"body" yaml:"body,omitempty"`
+	Preprocessor   *PreprocessorHCL   `hcl:"preprocessor,block" yaml:"preprocessor,omitempty"`
+	Postprocessors []PostprocessorHCL `hcl:"postprocessor,block" yaml:"postprocessors,omitempty"`
+	Templater      *TemplaterHCL      `hcl:"templater,block" yaml:"templater,omitempty"`
 }
 
 type ScenarioHCL struct {
 	Name           string   `hcl:"name,label"`
-	Weight         *int64   `hcl:"weight"`
-	MinWaitingTime *int64   `hcl:"min_waiting_time"`
-	Requests       []string `hcl:"requests"`
+	Weight         *int64   `hcl:"weight" yaml:"weight,omitempty"`
+	MinWaitingTime *int64   `hcl:"min_waiting_time" config:"min_waiting_time" yaml:"min_waiting_time,omitempty"`
+	Requests       []string `hcl:"requests" yaml:"requests"`
 }
 
 type AssertSizeHCL struct {
@@ -52,15 +53,19 @@ type AssertSizeHCL struct {
 
 type PostprocessorHCL struct {
 	Type       string             `hcl:"type,label"`
-	Mapping    *map[string]string `hcl:"mapping"`
-	Headers    *map[string]string `hcl:"headers"`
-	Body       *[]string          `hcl:"body"`
-	StatusCode *int               `hcl:"status_code"`
-	Size       *AssertSizeHCL     `hcl:"size,block"`
+	Mapping    *map[string]string `hcl:"mapping" yaml:"mapping,omitempty"`
+	Headers    *map[string]string `hcl:"headers" yaml:"headers,omitempty"`
+	Body       *[]string          `hcl:"body" yaml:"body,omitempty"`
+	StatusCode *int               `hcl:"status_code" yaml:"status_code,omitempty"`
+	Size       *AssertSizeHCL     `hcl:"size,block" yaml:"size,omitempty"`
 }
 
 type PreprocessorHCL struct {
-	Mapping map[string]string `hcl:"mapping"`
+	Mapping map[string]string `hcl:"mapping" yaml:"mapping,omitempty"`
+}
+
+type TemplaterHCL struct {
+	Type string `hcl:"type" yaml:"type"`
 }
 
 func ParseHCLFile(file afero.File) (AmmoHCL, error) {
@@ -78,164 +83,17 @@ func ParseHCLFile(file afero.File) (AmmoHCL, error) {
 	return config, nil
 }
 
-func ConvertHCLToAmmo(ammo AmmoHCL, fs afero.Fs) (AmmoConfig, error) {
+func ConvertHCLToAmmo(ammo AmmoHCL) (AmmoConfig, error) {
 	const op = "scenario.ConvertHCLToAmmo"
-
-	var sources []VariableSource
-	if len(ammo.VariableSources) > 0 {
-		sources = make([]VariableSource, len(ammo.VariableSources))
-		for i, s := range ammo.VariableSources {
-			file := ""
-			if s.File != nil {
-				file = *s.File
-			}
-			switch s.Type {
-			case "variables":
-				if s.Variables == nil {
-					return AmmoConfig{}, fmt.Errorf("%s, variables cant be nil: %s", op, s.Type)
-				}
-				vars := make(map[string]any, len(*s.Variables))
-				for k, v := range *s.Variables {
-					vars[k] = v
-				}
-				sources[i] = &VariableSourceVariables{
-					Name:      s.Name,
-					Variables: vars,
-				}
-			case "file/json":
-				sources[i] = &VariableSourceJSON{
-					Name: s.Name,
-					File: file,
-					fs:   fs,
-				}
-			case "file/csv":
-				var fields []string
-				if s.Fields != nil {
-					fields = make([]string, len(*s.Fields))
-					copy(fields, *s.Fields)
-				}
-				skipHeader := false
-				if s.IgnoreFirstLine != nil {
-					skipHeader = *s.IgnoreFirstLine
-				}
-				headerAsFields := ""
-				if s.Delimiter != nil {
-					headerAsFields = *s.Delimiter
-				}
-				sources[i] = &VariableSourceCsv{
-					Name:            s.Name,
-					File:            file,
-					Fields:          fields,
-					IgnoreFirstLine: skipHeader,
-					Delimiter:       headerAsFields,
-					fs:              fs,
-				}
-			default:
-				return AmmoConfig{}, fmt.Errorf("%s, unknown variable source type: %s", op, s.Type)
-			}
-		}
+	bytes, err := yaml.Marshal(ammo)
+	if err != nil {
+		return AmmoConfig{}, fmt.Errorf("%s, cant yaml.Marshal: %w", op, err)
 	}
-
-	var requests []RequestConfig
-	if len(ammo.Requests) > 0 {
-		requests = make([]RequestConfig, len(ammo.Requests))
-		for i, r := range ammo.Requests {
-			var postprocessors []postprocessor.Postprocessor
-			if len(r.Postprocessors) > 0 {
-				postprocessors = make([]postprocessor.Postprocessor, len(r.Postprocessors))
-				for j, p := range r.Postprocessors {
-					switch p.Type {
-					case "var/header":
-						postprocessors[j] = &postprocessor.VarHeaderPostprocessor{
-							Mapping: *p.Mapping,
-						}
-					case "var/xpath":
-						postprocessors[j] = &postprocessor.VarXpathPostprocessor{
-							Mapping: *p.Mapping,
-						}
-					case "var/jsonpath":
-						postprocessors[j] = &postprocessor.VarJsonpathPostprocessor{
-							Mapping: *p.Mapping,
-						}
-					case "assert/response":
-						postp := &postprocessor.AssertResponse{}
-						if p.Headers != nil {
-							postp.Headers = *p.Headers
-						}
-						if p.Body != nil {
-							postp.Body = *p.Body
-						}
-						if p.StatusCode != nil {
-							postp.StatusCode = *p.StatusCode
-						}
-						if p.Size != nil {
-							postp.Size = &postprocessor.AssertSize{}
-							if p.Size.Val != nil {
-								postp.Size.Val = *p.Size.Val
-							}
-							if p.Size.Op != nil {
-								postp.Size.Op = *p.Size.Op
-							}
-						}
-						if err := postp.Validate(); err != nil {
-							return AmmoConfig{}, fmt.Errorf("%s, invalid postprocessor.AssertResponse %w", op, err)
-						}
-						postprocessors[j] = postp
-					default:
-						return AmmoConfig{}, fmt.Errorf("%s, unknown postprocessor type: %s", op, p.Type)
-					}
-				}
-			}
-			templater := NewTextTemplater()
-			if r.Templater != nil && *r.Templater == "html" {
-				templater = NewHTMLTemplater()
-			}
-			tag := ""
-			if r.Tag != nil {
-				tag = *r.Tag
-			}
-			var variables map[string]string
-			if r.Preprocessor != nil {
-				variables = r.Preprocessor.Mapping
-			}
-			requests[i] = RequestConfig{
-				Name:           r.Name,
-				Method:         r.Method,
-				Headers:        r.Headers,
-				Tag:            tag,
-				Body:           r.Body,
-				URI:            r.URI,
-				Preprocessor:   Preprocessor{Mapping: variables},
-				Postprocessors: postprocessors,
-				Templater:      templater,
-			}
-		}
+	cfg, err := decodeMap(bytes)
+	if err != nil {
+		return AmmoConfig{}, fmt.Errorf("%s, decodeMap, %w", op, err)
 	}
-
-	var scenarios []ScenarioConfig
-	if len(ammo.Scenarios) > 0 {
-		scenarios = make([]ScenarioConfig, len(ammo.Scenarios))
-		for i, s := range ammo.Scenarios {
-			scenarios[i] = ScenarioConfig{
-				Name:     s.Name,
-				Requests: s.Requests,
-			}
-			if s.Weight != nil {
-				scenarios[i].Weight = *s.Weight
-			}
-			if s.MinWaitingTime != nil {
-				scenarios[i].MinWaitingTime = *s.MinWaitingTime
-			}
-		}
-	}
-
-	result := AmmoConfig{
-		VariableSources: sources,
-		Requests:        requests,
-		Scenarios:       scenarios,
-	}
-
-	return result, nil
+	return cfg, nil
 }
 
 func ConvertAmmoToHCL(ammo AmmoConfig) (AmmoHCL, error) {
@@ -358,7 +216,7 @@ func ConvertAmmoToHCL(ammo AmmoConfig) (AmmoHCL, error) {
 			if ok {
 				templater = "html"
 			}
-			req.Templater = &templater
+			req.Templater = &TemplaterHCL{Type: templater}
 
 			requests[i] = req
 		}

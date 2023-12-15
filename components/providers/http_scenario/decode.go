@@ -17,14 +17,25 @@ import (
 )
 
 func ParseAmmoConfig(file io.Reader) (AmmoConfig, error) {
-	var ammoCfg AmmoConfig
 	const op = "scenario/decoder.ParseAmmoConfig"
-	data := make(map[string]any)
 	bytes, err := io.ReadAll(file)
 	if err != nil {
-		return ammoCfg, fmt.Errorf("%s, io.ReadAll, %w", op, err)
+		return AmmoConfig{}, fmt.Errorf("%s, io.ReadAll, %w", op, err)
 	}
-	err = yaml.Unmarshal(bytes, &data)
+	cfg, err := decodeMap(bytes)
+	if err != nil {
+		return AmmoConfig{}, fmt.Errorf("%s, decodeMap, %w", op, err)
+	}
+	return cfg, nil
+}
+
+func decodeMap(bytes []byte) (AmmoConfig, error) {
+	const op = "scenario/decoder.decodeMap"
+
+	var ammoCfg AmmoConfig
+
+	data := make(map[string]any)
+	err := yaml.Unmarshal(bytes, &data)
 	if err != nil {
 		return ammoCfg, fmt.Errorf("%s, yaml.Unmarshal, %w", op, err)
 	}

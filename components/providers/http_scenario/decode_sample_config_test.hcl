@@ -59,7 +59,9 @@ EOF
     }
   }
 
-  templater = "text"
+  templater {
+    type = "html"
+  }
 }
 request "list_req" {
   method  = "GET"
@@ -78,7 +80,9 @@ request "list_req" {
     }
   }
 
-  templater = "text"
+  templater {
+    type = "html"
+  }
 }
 request "item_req" {
   method  = "POST"
@@ -99,7 +103,9 @@ EOF
     }
   }
 
-  templater = "text"
+  templater {
+    type = "html"
+  }
 }
 
 scenario "scenario1" {

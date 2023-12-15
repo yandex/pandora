@@ -27,13 +27,13 @@ variable_source "variables" "variables" {
 
 request "auth_req" {
   method = "POST"
+  uri    = "/auth"
   headers = {
     Content-Type = "application/json"
     Useragent    = "Tank"
   }
   tag  = "auth"
   body = "{\"user_id\":  {{.preprocessor.user_id}}}"
-  uri  = "/auth"
 
   preprocessor {
     mapping = {
@@ -65,17 +65,19 @@ request "auth_req" {
     }
   }
 
-  templater = "text"
+  templater {
+    type = "text"
+  }
 }
 request "list_req" {
   method = "GET"
+  uri    = "/list"
   headers = {
     Authorization = "Bearer {{.request.auth_req.token}}"
     Content-Type  = "application/json"
     Useragent     = "Tank"
   }
   tag = "list"
-  uri = "/list"
 
   postprocessor "var/jsonpath" {
     mapping = {
@@ -84,10 +86,13 @@ request "list_req" {
     }
   }
 
-  templater = "html"
+  templater {
+    type = "html"
+  }
 }
 request "item_req" {
   method = "POST"
+  uri    = "/item"
   headers = {
     Authorization = "Bearer {{.request.auth_req.token}}"
     Content-Type  = "application/json"
@@ -95,14 +100,16 @@ request "item_req" {
   }
   tag  = "item_req"
   body = "{\"item_id\": {{.preprocessor.item}}}"
-  uri  = "/item"
 
   preprocessor {
     mapping = {
       item = "request.list_req.items[3]"
     }
   }
-  templater = "text"
+
+  templater {
+    type = "text"
+  }
 }
 
 scenario "scenario1" {

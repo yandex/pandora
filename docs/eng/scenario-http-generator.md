@@ -115,7 +115,10 @@ request "request_name" {
   body      = <<EOF
 <body/>
 EOF
-  templater = "text"
+
+  templater {
+    type = "text"
+  }
 
   preprocessor {
     mapping = {
