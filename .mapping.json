@@ -314,5 +314,9 @@
   "lib/zaputil/zaputil_suite_test.go":"load/projects/pandora/lib/zaputil/zaputil_suite_test.go",
   "main.go":"load/projects/pandora/main.go",
   "script/checkfmt.sh":"load/projects/pandora/script/checkfmt.sh",
-  "script/coverage.sh":"load/projects/pandora/script/coverage.sh"
+  "script/coverage.sh":"load/projects/pandora/script/coverage.sh",
+  "tests/http_scenario/main_test.go":"load/projects/pandora/tests/http_scenario/main_test.go",
+  "tests/http_scenario/testdata/filter.json":"load/projects/pandora/tests/http_scenario/testdata/filter.json",
+  "tests/http_scenario/testdata/test_payload.hcl":"load/projects/pandora/tests/http_scenario/testdata/test_payload.hcl",
+  "tests/http_scenario/testdata/users.csv":"load/projects/pandora/tests/http_scenario/testdata/users.csv"
 }
