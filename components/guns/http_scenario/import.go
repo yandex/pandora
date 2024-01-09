@@ -25,7 +25,7 @@ type gunWrapper struct {
 }
 
 func (g *gunWrapper) Shoot(ammo core.Ammo) {
-	g.Gun.Shoot(ammo.(Ammo))
+	g.Gun.Shoot(ammo.(*Scenario))
 }
 
 func (g *gunWrapper) Bind(a core.Aggregator, deps core.GunDeps) error {

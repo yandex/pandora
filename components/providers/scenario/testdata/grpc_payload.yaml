@@ -1,0 +1,71 @@
+variable_sources:
+  - name: users
+    type: file/csv
+    file: testdata/users.csv
+    fields:
+      - user_id
+      - login
+      - pass
+    ignore_first_line: true
+    delimiter: ','
+  - name: filter_src
+    type: file/json
+    file: testdata/filter.json
+  - name: variables
+    type: variables
+    variables:
+      b: s
+      header: yandex
+requests: [ ]
+calls:
+  - name: auth_req
+    tag: auth
+    call: target.TargetService.Auth
+    metadata:
+      metadata: server.proto
+    payload: |
+      {"login": "{{.request.auth_req.preprocessor.user.login}}", "pass": "{{.request.auth_req.preprocessor.user.pass}}"}
+    preprocessors:
+      - type: prepare
+        mapping:
+          user: source.users[next]
+    postprocessors:
+      - type: assert/response
+        payload:
+          - token
+        status_code: 200
+  - name: list_req
+    tag: list
+    call: target.TargetService.List
+    metadata:
+      metadata: server.proto
+    payload: |
+      {"user_id": {{.request.auth_req.postprocessor.userId}}, "token": "{{.request.auth_req.postprocessor.token}}"}
+  - name: order_req
+    tag: order
+    call: target.TargetService.Order
+    metadata:
+      metadata: server.proto
+    payload: |
+      {"user_id": {{.request.auth_req.postprocessor.userId}}, "item_id": {{.request.order_req.preprocessor.item_id}}, "token": "{{.request.auth_req.postprocessor.token}}"}
+    preprocessors:
+      - type: prepare
+        mapping:
+          item_id: request.list_req.postprocessor.result[rand].itemId
+scenarios:
+  - name: scenario_name
+    weight: 50
+    min_waiting_time: 10
+    requests:
+      - auth_req(1)
+      - sleep(100)
+      - list_req(1)
+      - sleep(100)
+      - order_req(3)
+  - name: scenario_2
+    requests:
+      - auth_req(1)
+      - sleep(100)
+      - list_req(1)
+      - sleep(100)
+      - order_req(2)

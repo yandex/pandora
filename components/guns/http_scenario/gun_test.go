@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -37,8 +36,7 @@ func TestBaseGun_shoot(t *testing.T) {
 		name            string
 		templateVars    map[string]any
 		wantTempateVars map[string]any
-		ammoMock        func(t *testing.T, m *MockAmmo)
-		stepMocks       []func(t *testing.T, m *MockStep)
+		ammoMock        *Scenario
 		clientMock      func(t *testing.T, m *MockClient)
 		fields          fields
 		wantErr         assert.ErrorAssertionFunc
@@ -53,30 +51,28 @@ func TestBaseGun_shoot(t *testing.T) {
 				},
 				"source": map[string]any{"users": []map[string]any{{"id": 1, "name": "test1"}, {"id": 2, "name": "test2"}}},
 			},
-			stepMocks: []func(t *testing.T, m *MockStep){
-				func(t *testing.T, step *MockStep) {
-					templater := NewMockTemplater(t)
-					templater.On("Apply", mock.Anything, mock.Anything, "testAmmo", "step 1").Return(nil)
-					step.On("Preprocessor").Return(nil).Times(1)
-
-					commonStepMocks(t, step, "step 1", "tag1", "http://localhost:8080", "GET", nil, map[string]string{"Content-Type": "application/json"}, templater)
-
-					step.On("GetPostProcessors").Return(nil).Times(1)
+			ammoMock: &Scenario{
+				Requests: []Request{
+					{
+						Name:      "step 1",
+						URI:       "http://localhost:8080",
+						Method:    "GET",
+						Headers:   map[string]string{"Content-Type": "application/json"},
+						Tag:       "tag1",
+						Templater: &MockTemplater{err: nil, applyCalls: 1, expectedArgs: [][2]string{{"testAmmo", "step 1"}}},
+					},
+					{
+						Name:      "step 2",
+						URI:       "http://localhost:8080",
+						Method:    "GET",
+						Headers:   map[string]string{"Content-Type": "application/json"},
+						Tag:       "tag2",
+						Templater: &MockTemplater{err: nil, applyCalls: 1, expectedArgs: [][2]string{{"testAmmo", "step 2"}}},
+					},
 				},
-				func(t *testing.T, step *MockStep) {
-					templater := NewMockTemplater(t)
-					templater.On("Apply", mock.Anything, mock.Anything, "testAmmo", "step 2").Return(nil)
-					step.On("Preprocessor").Return(nil).Times(1)
-
-					commonStepMocks(t, step, "step 2", "tag2", "http://localhost:8080", "GET", nil, map[string]string{"Content-Type": "application/json"}, templater)
-
-					step.On("GetPostProcessors").Return(nil).Times(1)
-				},
-			},
-			ammoMock: func(t *testing.T, ammo *MockAmmo) {
-				ammo.On("ID").Return(uint64(0)).Times(2)
-				ammo.On("Name").Return("testAmmo").Times(4)
-				ammo.On("GetMinWaitingTime").Return(time.Duration(0))
+				ID:             2,
+				Name:           "testAmmo",
+				MinWaitingTime: 0,
 			},
 			clientMock: func(t *testing.T, client *MockClient) {
 				body := io.NopCloser(strings.NewReader("test response body"))
@@ -99,24 +95,26 @@ func TestBaseGun_shoot(t *testing.T) {
 				},
 				"source": map[string]any{"users": []map[string]any{{"id": 1, "name": "test1"}, {"id": 2, "name": "test2"}}},
 			},
-			stepMocks: []func(t *testing.T, m *MockStep){
-				func(t *testing.T, step *MockStep) {
-					templater := NewMockTemplater(t)
-					templater.On("Apply", mock.Anything, mock.Anything, "testAmmo", "step 3").Return(nil)
-					preprocessor := NewMockPreprocessor(t)
-					preprocessor.On("Process", mock.Anything).Return(func(templVars map[string]any) map[string]any {
-						return map[string]any{"preprocessor_var": "preprocessor_test"}
-					}, nil).Times(1)
-					step.On("Preprocessor").Return(preprocessor).Times(1)
-					commonStepMocks(t, step, "step 3", "tag3", "http://localhost:8080", "GET", nil, map[string]string{"Content-Type": "application/json"}, templater)
-
-					step.On("GetPostProcessors").Return(nil).Times(1)
-				},
-			},
-			ammoMock: func(t *testing.T, ammo *MockAmmo) {
-				ammo.On("ID").Return(uint64(0)).Times(1)
-				ammo.On("Name").Return("testAmmo").Times(2)
-				ammo.On("GetMinWaitingTime").Return(time.Duration(0))
+			ammoMock: &Scenario{
+				Requests: []Request{
+					{
+						Name:      "step 3",
+						Tag:       "tag3",
+						URI:       "http://localhost:8080",
+						Method:    "GET",
+						Headers:   map[string]string{"Content-Type": "application/json"},
+						Templater: &MockTemplater{err: nil, applyCalls: 1, expectedArgs: [][2]string{{"testAmmo", "step 3"}}},
+						Preprocessor: &mockPreprocessor{
+							t:                  t,
+							processExpectCalls: 1,
+							processArgsReturns: []mockPreprocessorArgsReturns{{
+								templateVars: map[string]any{"request": map[string]any{"step 3": map[string]any{}}, "source": map[string]any{"users": []map[string]any{{"id": 1, "name": "test1"}, {"id": 2, "name": "test2"}}}},
+								returnVars:   map[string]any{"preprocessor_var": "preprocessor_test"},
+								returnErr:    nil,
+							}},
+						},
+					}},
+				Name: "testAmmo",
 			},
 			clientMock: func(t *testing.T, client *MockClient) {
 				body := io.NopCloser(strings.NewReader("test response body"))
@@ -139,29 +137,39 @@ func TestBaseGun_shoot(t *testing.T) {
 				},
 				"source": map[string]any{"users": []map[string]any{{"id": 1, "name": "test1"}, {"id": 2, "name": "test2"}}},
 			},
-			stepMocks: []func(t *testing.T, m *MockStep){
-				func(t *testing.T, step *MockStep) {
-					templater := NewMockTemplater(t)
-					templater.On("Apply", mock.Anything, mock.Anything, "testAmmo", "step 4").Return(nil)
-					step.On("Preprocessor").Return(nil).Times(1)
-					commonStepMocks(t, step, "step 4", "tag3", "http://localhost:8080", "GET", nil, map[string]string{"Content-Type": "application/json"}, templater)
-
-					postprocessor1 := NewMockPostprocessor(t)
-					postprocessor1.On("Process", mock.Anything, mock.Anything).Return(func(resp *http.Response, body io.Reader) map[string]any {
-						return map[string]any{"token": "body_token"}
-					}, nil)
-					postprocessor2 := NewMockPostprocessor(t)
-					postprocessor2.On("Process", mock.Anything, mock.Anything).Return(func(resp *http.Response, body io.Reader) map[string]any {
-						return map[string]any{"Conteant-Type": "application/json"}
-					}, nil)
-					postprocessors := []Postprocessor{postprocessor1, postprocessor2}
-					step.On("GetPostProcessors").Return(postprocessors).Times(1)
-				},
-			},
-			ammoMock: func(t *testing.T, ammo *MockAmmo) {
-				ammo.On("ID").Return(uint64(0)).Times(1)
-				ammo.On("Name").Return("testAmmo").Times(2)
-				ammo.On("GetMinWaitingTime").Return(time.Duration(0))
+			ammoMock: &Scenario{
+				Requests: []Request{
+					{
+						Name:      "step 4",
+						Tag:       "tag4",
+						URI:       "http://localhost:8080",
+						Method:    "GET",
+						Headers:   map[string]string{"Content-Type": "application/json"},
+						Templater: &MockTemplater{err: nil, applyCalls: 1, expectedArgs: [][2]string{{"testAmmo", "step 3"}}},
+						Postprocessors: []Postprocessor{
+							&mockPostprocessor{
+								t:                  t,
+								processExpectCalls: 1,
+								processArgsReturns: []mockPostprocessorArgsReturns{
+									{
+										returnVars: map[string]any{"token": "body_token"},
+										returnErr:  nil,
+									},
+								},
+							},
+							&mockPostprocessor{
+								t:                  t,
+								processExpectCalls: 1,
+								processArgsReturns: []mockPostprocessorArgsReturns{
+									{
+										returnVars: map[string]any{"Conteant-Type": "application/json"},
+										returnErr:  nil,
+									},
+								},
+							},
+						},
+					}},
+				Name: "testAmmo",
 			},
 			clientMock: func(t *testing.T, client *MockClient) {
 				body := io.NopCloser(strings.NewReader("test response body"))
@@ -173,16 +181,6 @@ func TestBaseGun_shoot(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			steps := make([]Step, 0, len(tt.stepMocks))
-			for _, step := range tt.stepMocks {
-				st := NewMockStep(t)
-				step(t, st)
-				steps = append(steps, st)
-			}
-
-			ammo := NewMockAmmo(t)
-			ammo.On("Steps").Return(steps)
-			tt.ammoMock(t, ammo)
 
 			client := NewMockClient(t)
 			tt.clientMock(t, client)
@@ -191,21 +189,123 @@ func TestBaseGun_shoot(t *testing.T) {
 			aggregator.On("Report", mock.Anything)
 
 			g := &BaseGun{Aggregator: aggregator, client: client}
-			tt.wantErr(t, g.shoot(ammo, tt.templateVars), fmt.Sprintf("shoot(%v)", ammo))
+			tt.wantErr(t, g.shoot(tt.ammoMock, tt.templateVars), fmt.Sprintf("shoot(%v)", tt.ammoMock))
 			require.Equal(t, tt.wantTempateVars, tt.templateVars)
+
+			for _, req := range tt.ammoMock.Requests {
+				if req.Preprocessor != nil {
+					req.Preprocessor.(*mockPreprocessor).validateCalls(t, req.Name)
+				}
+				if req.Templater != nil {
+					req.Templater.(*MockTemplater).validateCalls(t, req.Name)
+				}
+				for _, postprocessor := range req.Postprocessors {
+					postprocessor.(*mockPostprocessor).validateCalls(t, req.Name)
+				}
+			}
 		})
 	}
 }
 
-func commonStepMocks(t *testing.T, step *MockStep, name, tag, url, method string, body []byte, headers map[string]string, tmpl Templater) {
-	t.Helper()
+var _ Postprocessor = (*mockPostprocessor)(nil)
 
-	step.On("GetURL").Return(url).Times(1)
-	step.On("GetMethod").Return(method).Times(1)
-	step.On("GetBody").Return(body).Times(1)
-	step.On("GetHeaders").Return(headers).Times(1)
-	step.On("GetTag").Return(tag).Times(1)
-	step.On("GetTemplater").Return(tmpl).Times(1)
-	step.On("GetName").Return(name).Times(2)
-	step.On("GetSleep").Return(time.Duration(0)).Times(1)
+type mockPostprocessorArgsReturns struct {
+	returnVars map[string]any
+	returnErr  error
+}
+
+type mockPostprocessor struct {
+	t                  *testing.T
+	processExpectCalls int
+	processArgsReturns []mockPostprocessorArgsReturns
+	i                  int
+}
+
+func (m *mockPostprocessor) Process(resp *http.Response, body io.Reader) (map[string]any, error) {
+	m.processExpectCalls--
+	require.NotEqual(m.t, 0, len(m.processArgsReturns), "wrong postprocessor.Process calls")
+
+	i := m.i % len(m.processArgsReturns)
+	m.i++
+	return m.processArgsReturns[i].returnVars, m.processArgsReturns[i].returnErr
+}
+
+func (m *mockPostprocessor) validateCalls(t *testing.T, stepName string) {
+	if m == nil {
+		return
+	}
+	assert.Equalf(t, 0, m.processExpectCalls, "wrong preprocessor.Process calls with step name `%s`", stepName)
+}
+
+var _ Preprocessor = (*mockPreprocessor)(nil)
+
+type mockPreprocessorArgsReturns struct {
+	templateVars map[string]any
+	returnVars   map[string]any
+	returnErr    error
+}
+
+type mockPreprocessor struct {
+	t                  *testing.T
+	processExpectCalls int
+	processArgsReturns []mockPreprocessorArgsReturns
+	invalidArgs        []error
+	i                  int
+}
+
+func (m *mockPreprocessor) Process(templateVars map[string]any) (map[string]any, error) {
+	m.processExpectCalls--
+	if len(m.processArgsReturns) == 0 {
+		err := fmt.Errorf("forgot init mockPreprocessor.processArgsReturns; call Process(%+v)", templateVars)
+		m.invalidArgs = append(m.invalidArgs, err)
+		return nil, err
+	}
+
+	i := m.i % len(m.processArgsReturns)
+	m.i++
+	args, returnVars, returnErr := m.processArgsReturns[i].templateVars, m.processArgsReturns[i].returnVars, m.processArgsReturns[i].returnErr
+
+	if !assert.Equalf(m.t, args, templateVars, "unexpected arg templateVars; call#%d Process(%+v)", m.i-1, templateVars) {
+		m.invalidArgs = append(m.invalidArgs, fmt.Errorf("unexpected arg templateVars; call Process(%+v)", templateVars))
+	}
+	return returnVars, returnErr
+}
+
+func (m *mockPreprocessor) validateCalls(t *testing.T, stepName string) {
+	if m == nil {
+		return
+	}
+	assert.Equalf(t, 0, m.processExpectCalls, "wrong preprocessor.Process calls with step name `%s`", stepName)
+}
+
+var _ Templater = (*MockTemplater)(nil)
+
+type MockTemplater struct {
+	err          error
+	applyCalls   int
+	expectedArgs [][2]string
+	invalidArgs  []error
+	i            int
+}
+
+func (m *MockTemplater) Apply(request *RequestParts, variables map[string]any, scenarioName, stepName string) error {
+	if len(m.expectedArgs) == 0 {
+		m.invalidArgs = append(m.invalidArgs, fmt.Errorf("forgot init mockTemplate.expectedArgs; call Apply(%+v, %+v, %s, %s)", request, variables, scenarioName, stepName))
+	} else {
+		i := m.i % len(m.expectedArgs)
+		m.i++
+		args := m.expectedArgs[i]
+		if args[0] != scenarioName {
+			m.invalidArgs = append(m.invalidArgs, fmt.Errorf("unexpected arg scenarioName `%s != %s`; call Apply(%+v, %+v, %s, %s)", args[0], scenarioName, request, variables, scenarioName, stepName))
+		}
+		if args[1] != stepName {
+			m.invalidArgs = append(m.invalidArgs, fmt.Errorf("unexpected arg stepName `%s != %s`; call Apply(%+v, %+v, %s, %s)", args[1], stepName, request, variables, scenarioName, stepName))
+		}
+	}
+	m.applyCalls--
+	return m.err
+}
+
+func (m *MockTemplater) validateCalls(t *testing.T, stepName string) {
+	assert.Equalf(t, 0, m.applyCalls, "wrong template.applyCalls calls with step name `%s`", stepName)
 }

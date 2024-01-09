@@ -1,0 +1,109 @@
+variable_sources:
+  - name: users
+    type: file/csv
+    file: testdata/users.csv
+    fields:
+      - user_id
+      - name
+      - pass
+    ignore_first_line: true
+    delimiter: ','
+  - name: filter_src
+    type: file/json
+    file: testdata/filter.json
+  - name: variables
+    type: variables
+    variables:
+      b: s
+      header: yandex
+requests:
+  - name: auth_req
+    method: POST
+    uri: /auth
+    headers:
+      Content-Type: application/json
+      Useragent: Yandex
+    tag: auth
+    body: |
+      {"user_id":  {{.request.auth_req.preprocessor.user_id}}}
+    preprocessor:
+      mapping:
+        user_id: source.users[next].user_id
+    postprocessors:
+      - type: var/header
+        mapping:
+          Content-Type: Content-Type|upper
+          httpAuthorization: Http-Authorization
+      - type: var/jsonpath
+        mapping:
+          token: $.auth_key
+      - type: assert/response
+        headers:
+          Content-Type: json
+        body:
+          - key
+        size:
+          val: 40
+          op: '>'
+      - type: assert/response
+        body:
+          - auth
+    templater:
+      type: html
+  - name: list_req
+    method: GET
+    uri: /list
+    headers:
+      Authorization: Bearer {{.request.auth_req.postprocessor.token}}
+      Content-Type: application/json
+      Useragent: Yandex
+    tag: list
+    postprocessors:
+      - type: var/jsonpath
+        mapping:
+          item_id: $.items[0]
+          items: $.items
+  - name: order_req
+    method: POST
+    uri: /order
+    headers:
+      Authorization: Bearer {{.request.auth_req.postprocessor.token}}
+      Content-Type: application/json
+      Useragent: Yandex
+    tag: order_req
+    body: |
+      {"item_id": {{.request.order_req.preprocessor.item}}}
+    preprocessor:
+      mapping:
+        item: request.list_req.postprocessor.items[next]
+  - name: order_req2
+    method: POST
+    uri: /order
+    headers:
+      Authorization: Bearer {{.request.auth_req.postprocessor.token}}
+      Content-Type: application/json
+      Useragent: Yandex
+    tag: order_req
+    body: |
+      {"item_id": {{.request.order_req2.preprocessor.item}}  }
+    preprocessor:
+      mapping:
+        item: request.list_req.postprocessor.items[next]
+calls: [ ]
+scenarios:
+  - name: scenario_name
+    weight: 50
+    min_waiting_time: 10
+    requests:
+      - auth_req(1)
+      - sleep(100)
+      - list_req(1)
+      - sleep(100)
+      - order_req(3)
+  - name: scenario_2
+    requests:
+      - auth_req(1)
+      - sleep(100)
+      - list_req(1)
+      - sleep(100)
+      - order_req(2)

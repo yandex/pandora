@@ -20,7 +20,7 @@ import (
 )
 
 type Gun interface {
-	Shoot(ammo Ammo)
+	Shoot(ammo *Scenario)
 	Bind(sample netsample.Aggregator, deps core.GunDeps) error
 }
 
@@ -65,7 +65,7 @@ func (g *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error
 }
 
 // Shoot is thread safe iff Do and Connect hooks are thread safe.
-func (g *BaseGun) Shoot(ammo Ammo) {
+func (g *BaseGun) Shoot(ammo *Scenario) {
 	if g.Aggregator == nil {
 		zap.L().Panic("must bind before shoot")
 	}
@@ -78,12 +78,12 @@ func (g *BaseGun) Shoot(ammo Ammo) {
 	}
 
 	templateVars := map[string]any{
-		"source": ammo.Sources().Variables(),
+		"source": ammo.VariableStorage.Variables(),
 	}
 
 	err := g.shoot(ammo, templateVars)
 	if err != nil {
-		g.Log.Warn("Invalid ammo", zap.Uint64("request", ammo.ID()), zap.Error(err))
+		g.Log.Warn("Invalid ammo", zap.Uint64("request", ammo.ID), zap.Error(err))
 		return
 	}
 }
@@ -99,7 +99,7 @@ func (g *BaseGun) Close() error {
 	return nil
 }
 
-func (g *BaseGun) shoot(ammo Ammo, templateVars map[string]any) error {
+func (g *BaseGun) shoot(ammo *Scenario, templateVars map[string]any) error {
 	if templateVars == nil {
 		templateVars = map[string]any{}
 	}
@@ -110,54 +110,52 @@ func (g *BaseGun) shoot(ammo Ammo, templateVars map[string]any) error {
 	startAt := time.Now()
 	var idBuilder strings.Builder
 	rnd := strconv.Itoa(rand.Int())
-	for _, step := range ammo.Steps() {
-		tag := ammo.Name() + "." + step.GetTag()
-		g.buildLogID(&idBuilder, tag, ammo.ID(), rnd)
+	for _, req := range ammo.Requests {
+		tag := ammo.Name + "." + req.Name
+		g.buildLogID(&idBuilder, tag, ammo.ID, rnd)
 		sample := netsample.Acquire(tag)
 
-		err := g.shootStep(step, sample, ammo.Name(), templateVars, requestVars, idBuilder.String())
+		err := g.shootStep(req, sample, ammo.Name, templateVars, requestVars, idBuilder.String())
 		if err != nil {
 			g.reportErr(sample, err)
 			return err
 		}
 	}
 	spent := time.Since(startAt)
-	if ammo.GetMinWaitingTime() > spent {
-		time.Sleep(ammo.GetMinWaitingTime() - spent)
+	if ammo.MinWaitingTime > spent {
+		time.Sleep(ammo.MinWaitingTime - spent)
 	}
 	return nil
 }
 
-func (g *BaseGun) shootStep(step Step, sample *netsample.Sample, ammoName string, templateVars map[string]any, requestVars map[string]any, stepLogID string) error {
+func (g *BaseGun) shootStep(step Request, sample *netsample.Sample, ammoName string, templateVars map[string]any, requestVars map[string]any, stepLogID string) error {
 	const op = "base_gun.shootStep"
 
 	stepVars := map[string]any{}
-	requestVars[step.GetName()] = stepVars
+	requestVars[step.Name] = stepVars
 
 	// Preprocessor
-	preProcessor := step.Preprocessor()
-	if preProcessor != nil {
-		preProcVars, err := preProcessor.Process(templateVars)
+	if step.Preprocessor != nil {
+		preProcVars, err := step.Preprocessor.Process(templateVars)
 		if err != nil {
 			return fmt.Errorf("%s preProcessor %w", op, err)
 		}
 		stepVars["preprocessor"] = preProcVars
 		if g.DebugLog {
-			g.GunDeps.Log.Debug("Preprocessor variables", zap.Any(fmt.Sprintf(".resuest.%s.preprocessor", step.GetName()), preProcVars))
+			g.GunDeps.Log.Debug("Preprocessor variables", zap.Any(fmt.Sprintf(".request.%s.preprocessor", step.Name), preProcVars))
 		}
 	}
 
 	// Entities
 	reqParts := RequestParts{
-		URL:     step.GetURL(),
-		Method:  step.GetMethod(),
+		URL:     step.URI,
+		Method:  step.Method,
 		Body:    step.GetBody(),
 		Headers: step.GetHeaders(),
 	}
 
 	// Template
-	templater := step.GetTemplater()
-	if err := templater.Apply(&reqParts, templateVars, ammoName, step.GetName()); err != nil {
+	if err := step.Templater.Apply(&reqParts, templateVars, ammoName, step.Name); err != nil {
 		return fmt.Errorf("%s templater.Apply %w", op, err)
 	}
 
@@ -187,7 +185,7 @@ func (g *BaseGun) shootStep(step Step, sample *netsample.Sample, ammoName string
 	}
 
 	// Log
-	processors := step.GetPostProcessors()
+	processors := step.Postprocessors
 	var respBody *bytes.Reader
 	var respBodyBytes []byte
 	if g.Config.AnswLog.Enabled || g.DebugLog || len(processors) > 0 {
@@ -237,11 +235,11 @@ func (g *BaseGun) shootStep(step Step, sample *netsample.Sample, ammoName string
 	g.Aggregator.Report(sample)
 
 	if g.DebugLog {
-		g.GunDeps.Log.Debug("Postprocessor variables", zap.Any(fmt.Sprintf(".resuest.%s.postprocessor", step.GetName()), postprocessorVars))
+		g.GunDeps.Log.Debug("Postprocessor variables", zap.Any(fmt.Sprintf(".request.%s.postprocessor", step.Name), postprocessorVars))
 	}
 
-	if step.GetSleep() > 0 {
-		time.Sleep(step.GetSleep())
+	if step.Sleep > 0 {
+		time.Sleep(step.Sleep)
 	}
 	return nil
 }
