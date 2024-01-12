@@ -119,7 +119,7 @@ func (g *Gun) AcceptWarmUpResult(i interface{}) error {
 }
 
 func NewGun(conf GunConfig) *Gun {
-	answLog := answlog.Init(conf.AnswLog.Path)
+	answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled)
 	return &Gun{conf: conf, answLog: answLog}
 }
 
