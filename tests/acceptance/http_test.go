@@ -182,6 +182,7 @@ func newEngineMetrics() engine.Metrics {
 }
 
 type aggregator struct {
+	mx      sync.Mutex
 	samples []core.Sample
 }
 
@@ -190,5 +191,7 @@ func (a *aggregator) Run(ctx context.Context, deps core.AggregatorDeps) error {
 }
 
 func (a *aggregator) Report(s core.Sample) {
+	a.mx.Lock()
+	defer a.mx.Unlock()
 	a.samples = append(a.samples, s)
 }
