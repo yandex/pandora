@@ -41,11 +41,9 @@ jobs:
         id: tag
         run: |
           stripped_tag="${{ github.event.release.tag_name }}"
-          echo "Stripped tag: ${stripped_tag:1}"
-          echo "::set-output name=stripped_tag::${stripped_tag:1}"
-        shell: bash
+          echo "STRIPPED_TAG=${stripped_tag:1}" >> "$GITHUB_ENV"
       - name: Use short tag
-        run: echo ${{ steps.tag.outputs.stripped_tag }}
+        run: echo ${GOOS}
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v3

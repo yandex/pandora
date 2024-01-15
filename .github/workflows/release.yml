@@ -42,19 +42,17 @@ jobs:
         id: tag
         run: |
           stripped_tag="${{ github.event.release.tag_name }}"
-          echo "Stripped tag: ${stripped_tag:1}"
-          echo "::set-output name=stripped_tag::${stripped_tag:1}"
-        shell: bash
+          echo "STRIPPED_TAG=${stripped_tag:1}" >> "$GITHUB_ENV"
       - name: Use short tag
-        run: echo ${{ steps.tag.outputs.stripped_tag }}
+        run: echo ${STRIPPED_TAG}
 
       - name: Build
         run: |
           export GOARCH=${{ matrix.arch }}
           export CGO_ENABLED=0
-          go build -o pandora_${{ steps.tag.outputs.stripped_tag }}_${GOOS}_${{ matrix.arch }}
+          go build -o pandora_${STRIPPED_TAG}_${GOOS}_${{ matrix.arch }}
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: pandora_${{ steps.tag.outputs.stripped_tag }}_${{ env.GOOS }}_${{ matrix.arch }}
+          files: pandora_${{ env.STRIPPED_TAG }}_${{ env.GOOS }}_${{ matrix.arch }}
