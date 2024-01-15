@@ -40,10 +40,10 @@ jobs:
       - name: Parse tag name
         id: tag
         run: |
-          stripped_tag="${{ github.event.release.tag_name }}"
+          stripped_tag="v0.5.18"
           echo "STRIPPED_TAG=${stripped_tag:1}" >> "$GITHUB_ENV"
       - name: Use short tag
-        run: echo ${GOOS}
+        run: echo ${STRIPPED_TAG}
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v3
