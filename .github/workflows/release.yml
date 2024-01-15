@@ -2,7 +2,7 @@ name: Release
 
 on:
   release:
-    types: [created]
+    types: [ created ]
 
 permissions:
   contents: write
@@ -14,8 +14,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest]
-        arch: [amd64]
+        os: [ ubuntu-latest, macOS-latest ]
+        arch: [ amd64 ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -32,6 +32,8 @@ jobs:
 
       - name: Set GITHUB_ENV
         run: |
+          stripped_tag="${{ github.event.release.tag_name }}"
+          echo "STRIPPED_TAG=${stripped_tag:1}" >> "$GITHUB_ENV"
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
             echo "GOOS=linux" >> $GITHUB_ENV
           else
@@ -42,9 +44,9 @@ jobs:
         run: |
           export GOARCH=${{ matrix.arch }}
           export CGO_ENABLED=0
-          go build -o pandora_${{ github.event.release.tag_name }}_${GOOS}_${{ matrix.arch }}
+          go build -o pandora_${STRIPPED_TAG}_${GOOS}_${{ matrix.arch }}
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: pandora_${{ github.event.release.tag_name }}_${{ env.GOOS }}_${{ matrix.arch }}
+          files: pandora_${{ env.STRIPPED_TAG }}_${{ env.GOOS }}_${{ matrix.arch }}
