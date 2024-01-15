@@ -37,6 +37,16 @@ jobs:
       - name: Test
         run: go test -race -coverprofile unit.txt -covermode atomic ./...
 
+      - name: Parse tag name
+        id: tag
+        run: |
+          stripped_tag="${{ github.event.release.tag_name }}"
+          echo "Stripped tag: ${stripped_tag:1}"
+          echo "::set-output name=stripped_tag::${stripped_tag:1}"
+        shell: bash
+      - name: Use short tag
+        run: echo ${{ steps.tag.outputs.stripped_tag }}
+
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v3
         with:

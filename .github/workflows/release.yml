@@ -38,13 +38,23 @@ jobs:
             echo "GOOS=darwin" >> $GITHUB_ENV
           fi
 
+      - name: Parse tag name
+        id: tag
+        run: |
+          stripped_tag="${{ github.event.release.tag_name }}"
+          echo "Stripped tag: ${stripped_tag:1}"
+          echo "::set-output name=stripped_tag::${stripped_tag:1}"
+        shell: bash
+      - name: Use short tag
+        run: echo ${{ steps.tag.outputs.stripped_tag }}
+
       - name: Build
         run: |
           export GOARCH=${{ matrix.arch }}
           export CGO_ENABLED=0
-          go build -o pandora_${{ github.event.release.tag_name }}_${GOOS}_${{ matrix.arch }}
+          go build -o pandora_${{ steps.tag.outputs.stripped_tag }}_${GOOS}_${{ matrix.arch }}
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: pandora_${{ github.event.release.tag_name }}_${{ env.GOOS }}_${{ matrix.arch }}
+          files: pandora_${{ steps.tag.outputs.stripped_tag }}_${{ env.GOOS }}_${{ matrix.arch }}
