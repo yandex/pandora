@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - master
+      - dev
   pull_request:
     branches:
       - master
+      - dev
 
 jobs:
   run-unit-tests:
@@ -17,7 +19,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.20.x, 1.21.x]
         os: [ubuntu, macOS]
     env:
       OS: ${{ matrix.os }}-latest
@@ -30,7 +31,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: 1.21.x
           cache: true
 
       - name: Test

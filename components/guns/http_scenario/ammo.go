@@ -6,10 +6,49 @@ import (
 	"time"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Preprocessor --filename=mock_preprocessor_test.go
-//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Postprocessor --filename=mock_postprocessor_test.go
-//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Step --filename=mock_step_test.go
-//go:generate go run github.com/vektra/mockery/v2@v2.22.1 --inpackage --name=Ammo --filename=mock_ammo_test.go
+type SourceStorage interface {
+	Variables() map[string]any
+}
+
+type Scenario struct {
+	Requests        []Request
+	ID              uint64
+	Name            string
+	MinWaitingTime  time.Duration
+	VariableStorage SourceStorage
+}
+
+func (a *Scenario) SetID(id uint64) {
+	a.ID = id
+}
+
+type Request struct {
+	Method         string
+	Headers        map[string]string
+	Tag            string
+	Body           *string
+	Name           string
+	URI            string
+	Preprocessor   Preprocessor
+	Postprocessors []Postprocessor
+	Templater      Templater
+	Sleep          time.Duration
+}
+
+func (r *Request) GetBody() []byte {
+	if r.Body == nil {
+		return nil
+	}
+	return []byte(*r.Body)
+}
+
+func (r *Request) GetHeaders() map[string]string {
+	result := make(map[string]string, len(r.Headers))
+	for k, v := range r.Headers {
+		result[k] = v
+	}
+	return result
+}
 
 type Preprocessor interface {
 	// Process is called before request is sent
@@ -22,34 +61,9 @@ type Postprocessor interface {
 	Process(resp *http.Response, body io.Reader) (map[string]any, error)
 }
 
-type VariableStorage interface {
-	Variables() map[string]any
-}
-
-type Step interface {
-	GetName() string
-	GetURL() string
-	GetMethod() string
-	GetBody() []byte
-	GetHeaders() map[string]string
-	GetTag() string
-	GetTemplater() Templater
-	GetPostProcessors() []Postprocessor
-	Preprocessor() Preprocessor
-	GetSleep() time.Duration
-}
-
 type RequestParts struct {
 	URL     string
 	Method  string
 	Body    []byte
 	Headers map[string]string
-}
-
-type Ammo interface {
-	Steps() []Step
-	ID() uint64
-	Sources() VariableStorage
-	Name() string
-	GetMinWaitingTime() time.Duration
 }

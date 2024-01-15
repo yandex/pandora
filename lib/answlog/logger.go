@@ -7,7 +7,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func Init(path string) *zap.Logger {
+func Init(path string, enabled bool) *zap.Logger {
+	if !enabled {
+		return zap.NewNop()
+	}
 	writerSyncer := getAnswWriter(path)
 	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
 	core := zapcore.NewCore(encoder, writerSyncer, zapcore.DebugLevel)

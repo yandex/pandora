@@ -1,0 +1,24 @@
+pools:
+  - id: ""
+    ammo:
+      file: testdata/http/payload.uri
+      type: uri
+    result:
+      type: discard
+    gun:
+      target: {{.target}}
+      type: http2
+      answlog:
+        enabled: false
+    rps-per-instance: false
+    rps:
+      - times: 2
+        type: once
+      - duration: 0.5s
+        ops: 4
+        type: const
+    startup:
+      - times: 2
+        type: once
+log:
+  level: debug

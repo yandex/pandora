@@ -25,13 +25,13 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const Version = "0.5.17"
+const Version = "0.5.18"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 
 var configSearchDirs = []string{"./", "./config", "/etc/pandora"}
 
-type cliConfig struct {
+type CliConfig struct {
 	Engine     engine.Config    `config:",squash"`
 	Log        logConfig        `config:"log"`
 	Monitoring monitoringConfig `config:"monitoring"`
@@ -56,8 +56,8 @@ func newLogger(conf logConfig) *zap.Logger {
 	return log
 }
 
-func defaultConfig() *cliConfig {
-	return &cliConfig{
+func DefaultConfig() *CliConfig {
+	return &CliConfig{
 		Log: logConfig{
 			Level: zap.InfoLevel,
 			File:  "stdout",
@@ -191,7 +191,7 @@ func runEngine(ctx context.Context, engine *engine.Engine, errs chan error) {
 	errs <- engine.Run(ctx)
 }
 
-func readConfig(args []string) *cliConfig {
+func readConfig(args []string) *CliConfig {
 	log, err := zap.NewDevelopment(zap.AddCaller())
 	if err != nil {
 		panic(err)
@@ -236,7 +236,7 @@ func readConfig(args []string) *cliConfig {
 		}
 	}
 
-	conf := defaultConfig()
+	conf := DefaultConfig()
 	err = config.DecodeAndValidate(v.AllSettings(), conf)
 	if err != nil {
 		log.Fatal("Config decode failed", zap.Error(err))

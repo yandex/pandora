@@ -1,8 +1,3 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 package phttp
 
 import (
@@ -12,7 +7,7 @@ import (
 	phttp "github.com/yandex/pandora/components/guns/http"
 	scenarioGun "github.com/yandex/pandora/components/guns/http_scenario"
 	httpProvider "github.com/yandex/pandora/components/providers/http"
-	scenarioProvider "github.com/yandex/pandora/components/providers/http_scenario"
+	scenarioProvider "github.com/yandex/pandora/components/providers/scenario/import"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/register"
 	"github.com/yandex/pandora/lib/answlog"
@@ -27,13 +22,13 @@ func Import(fs afero.Fs) {
 
 	register.Gun("http", func(conf phttp.HTTPGunConfig) func() core.Gun {
 		targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Gun.Target)
-		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path)
+		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path, conf.Gun.Base.AnswLog.Enabled)
 		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTPGun(conf, answLog, targetResolved)) }
 	}, phttp.DefaultHTTPGunConfig)
 
 	register.Gun("http2", func(conf phttp.HTTP2GunConfig) func() (core.Gun, error) {
 		targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Gun.Target)
-		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path)
+		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path, conf.Gun.Base.AnswLog.Enabled)
 		return func() (core.Gun, error) {
 			gun, err := phttp.NewHTTP2Gun(conf, answLog, targetResolved)
 			return phttp.WrapGun(gun), err
@@ -42,7 +37,7 @@ func Import(fs afero.Fs) {
 
 	register.Gun("connect", func(conf phttp.ConnectGunConfig) func() core.Gun {
 		conf.Target, _ = PreResolveTargetAddr(&conf.Client, conf.Target)
-		answLog := answlog.Init(conf.BaseGunConfig.AnswLog.Path)
+		answLog := answlog.Init(conf.BaseGunConfig.AnswLog.Path, conf.BaseGunConfig.AnswLog.Enabled)
 		return func() core.Gun {
 			return phttp.WrapGun(phttp.NewConnectGun(conf, answLog))
 		}
