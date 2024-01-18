@@ -4,8 +4,12 @@ import (
 	"sync"
 
 	"github.com/spf13/afero"
+	grpcgun "github.com/yandex/pandora/components/guns/grpc/scenario"
 	gun "github.com/yandex/pandora/components/guns/http_scenario"
 	"github.com/yandex/pandora/components/providers/scenario"
+	"github.com/yandex/pandora/components/providers/scenario/grpc"
+	grpcpostprocessor "github.com/yandex/pandora/components/providers/scenario/grpc/postprocessor"
+	grpcpreprocessor "github.com/yandex/pandora/components/providers/scenario/grpc/preprocessor"
 	"github.com/yandex/pandora/components/providers/scenario/http"
 	"github.com/yandex/pandora/components/providers/scenario/http/postprocessor"
 	"github.com/yandex/pandora/components/providers/scenario/http/templater"
@@ -20,6 +24,9 @@ func Import(fs afero.Fs) {
 	once.Do(func() {
 		register.Provider("http/scenario", func(cfg scenario.ProviderConfig) (core.Provider, error) {
 			return http.NewProvider(fs, cfg)
+		})
+		register.Provider("grpc/scenario", func(cfg scenario.ProviderConfig) (core.Provider, error) {
+			return grpc.NewProvider(fs, cfg)
 		})
 
 		RegisterVariableSource("file/csv", func(cfg vs.VariableSourceCsv) (vs.VariableSource, error) {
@@ -45,7 +52,24 @@ func Import(fs afero.Fs) {
 		RegisterTemplater("html", func() gun.Templater {
 			return templater.NewHTMLTemplater()
 		})
+
+		RegisterGRPCPostprocessor("assert/response", func(cfg grpcpostprocessor.AssertResponse) grpcgun.Postprocessor {
+			return &cfg
+		})
+		RegisterGRPCPreprocessor("prepare", func(cfg grpcpreprocessor.PreprocessorConfig) grpcgun.Preprocessor {
+			return &grpcpreprocessor.PreparePreprocessor{Mapping: cfg.Mapping}
+		})
 	})
+}
+
+func RegisterGRPCPreprocessor(name string, mwConstructor interface{}, defaultConfigOptional ...interface{}) {
+	var ptr *grpcgun.Preprocessor
+	register.RegisterPtr(ptr, name, mwConstructor, defaultConfigOptional...)
+}
+
+func RegisterGRPCPostprocessor(name string, mwConstructor interface{}, defaultConfigOptional ...interface{}) {
+	var ptr *grpcgun.Postprocessor
+	register.RegisterPtr(ptr, name, mwConstructor, defaultConfigOptional...)
 }
 
 func RegisterTemplater(name string, mwConstructor interface{}, defaultConfigOptional ...interface{}) {
