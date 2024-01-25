@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/spf13/afero"
+	grpcgun "github.com/yandex/pandora/components/guns/grpc/scenario"
 	httpscenario "github.com/yandex/pandora/components/guns/http_scenario"
 	"github.com/yandex/pandora/components/providers/scenario/http/preprocessor"
 	"github.com/yandex/pandora/components/providers/scenario/vs"
@@ -40,11 +41,13 @@ type RequestConfig struct {
 }
 
 type CallConfig struct {
-	Name     string
-	Tag      string
-	Call     string
-	Payload  string
-	Metadata map[string]string
+	Name           string
+	Tag            string
+	Call           string
+	Payload        string
+	Metadata       map[string]string
+	Preprocessors  []grpcgun.Preprocessor
+	Postprocessors []grpcgun.Postprocessor
 }
 
 func ReadAmmoConfig(fs afero.Fs, fileName string) (ammoCfg *AmmoConfig, err error) {
