@@ -12,6 +12,7 @@ write your own load scenarios in Go, compiling them just before your test.
 - [HTTP providers](eng/providers.md)
 - [HTTP generators](eng/http-generator.md)
 - [Scenario generator / HTTP](eng/scenario-http-generator.md)
+- [Scenario generator / gRPC](eng/scenario-grpc-generator.md)
 - [Custom guns](eng/custom.md)
 - [Pandora’s performance](eng/performance.md)
 - [Architectural overview](eng/architecture.md)
