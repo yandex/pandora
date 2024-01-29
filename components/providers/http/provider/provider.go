@@ -56,6 +56,7 @@ func (p *Provider) Release(a core.Ammo) {
 func (p *Provider) Run(ctx context.Context, deps core.ProviderDeps) (err error) {
 	p.Deps = deps
 	defer func() {
+		close(p.Sink)
 		// TODO: wrap in go 1.20
 		// err = errors.Join(err, p.Close())
 		if p.Close == nil {

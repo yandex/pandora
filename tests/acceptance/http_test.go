@@ -11,6 +11,7 @@ import (
 	"text/template"
 
 	"github.com/spf13/afero"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/yandex/pandora/cli"
 	grpc "github.com/yandex/pandora/components/grpc/import"
@@ -22,6 +23,7 @@ import (
 	"github.com/yandex/pandora/lib/monitoring"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 	"golang.org/x/net/http2"
 	"gopkg.in/yaml.v2"
@@ -46,130 +48,146 @@ func (s *PandoraSuite) SetupSuite() {
 	phttpimport.Import(s.fs)
 	grpc.Import(s.fs)
 
-	s.log = setupLogsCapture()
+	s.log = newNullLogger()
+	// s.log = newLogger()
 	s.metrics = newEngineMetrics()
 }
 
-func (s *PandoraSuite) Test_Http() {
-	var requetsCount atomic.Int64 // Request served by test server.
-	requetsCount.Store(0)
-	srv := httptest.NewUnstartedServer(http.HandlerFunc(
-		func(rw http.ResponseWriter, req *http.Request) {
-			requetsCount.Inc()
-			rw.WriteHeader(http.StatusOK)
-		}))
-	defer srv.Close()
+func (s *PandoraSuite) Test_Http_Check_Passes() {
+	tests := []struct {
+		name           string
+		filecfg        string
+		isTLS          bool
+		preStartSrv    func(srv *httptest.Server)
+		wantErrContain string
+		wantCnt        int
+	}{
+		{
+			name:    "http",
+			filecfg: "testdata/http/http.yaml",
+			isTLS:   false,
+			wantCnt: 4,
+		},
+		{
+			name:    "https",
+			filecfg: "testdata/http/https.yaml",
+			isTLS:   true,
+			wantCnt: 4,
+		},
+		{
+			name:    "http2",
+			filecfg: "testdata/http/http2.yaml",
+			isTLS:   true,
+			preStartSrv: func(srv *httptest.Server) {
+				_ = http2.ConfigureServer(srv.Config, nil)
+				srv.TLS = srv.Config.TLSConfig
+			},
+			wantCnt: 4,
+		},
+		{
+			name:    "http2 unsapported",
+			filecfg: "testdata/http/http2.yaml",
+			isTLS:   true,
+			preStartSrv: func(srv *httptest.Server) {
+				//_ = http2.ConfigureServer(srv.Config, nil)
+				//srv.TLS = srv.Config.TLSConfig
+			},
+			wantErrContain: "shoot panic: Non HTTP/2 connection established. Seems that target doesn't support HTTP/2.",
+		},
+		{
+			name:    "http-check-limits",
+			filecfg: "testdata/http/http-check-limit.yaml",
+			isTLS:   false,
+			wantCnt: 8,
+		},
+		{
+			name:    "http-check-passes",
+			filecfg: "testdata/http/http-check-passes.yaml",
+			isTLS:   false,
+			wantCnt: 15,
+		},
+	}
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			var requetsCount atomic.Int64 // Request served by test server.
+			requetsCount.Store(0)
+			var reqs []string
+			srv := httptest.NewUnstartedServer(http.HandlerFunc(
+				func(rw http.ResponseWriter, req *http.Request) {
+					requetsCount.Inc()
+					reqs = append(reqs, req.URL.String())
+					rw.WriteHeader(http.StatusOK)
+				}))
+			defer srv.Close()
 
-	conf := s.parseConfigFile("testdata/http/http.yaml", srv.Listener.Addr().String())
-	s.Require().Equal(1, len(conf.Engine.Pools))
-	aggr := &aggregator{}
-	conf.Engine.Pools[0].Aggregator = aggr
-	pandora := engine.New(s.log, s.metrics, conf.Engine)
+			conf := parseConfigFile(s.T(), tt.filecfg, srv.Listener.Addr().String())
+			s.Require().Equal(1, len(conf.Engine.Pools))
+			aggr := &aggregator{}
+			conf.Engine.Pools[0].Aggregator = aggr
+			pandora := engine.New(s.log, s.metrics, conf.Engine)
 
-	srv.Start()
-	err := pandora.Run(context.Background())
-	s.Assert().Equal(int64(4), requetsCount.Load())
-	s.Require().NoError(err)
-	s.Require().Equal(4, len(aggr.samples))
+			if tt.preStartSrv != nil {
+				tt.preStartSrv(srv)
+			}
+			if tt.isTLS {
+				srv.StartTLS()
+			} else {
+				srv.Start()
+			}
+			err := pandora.Run(context.Background())
+			if tt.wantErrContain != "" {
+				s.Assert().Equal(int64(0), requetsCount.Load())
+				s.Require().Error(err)
+				s.Require().Contains(err.Error(), tt.wantErrContain)
+				return
+			}
+			s.Require().NoError(err)
+			s.Assert().Equal(int64(tt.wantCnt), requetsCount.Load())
+			s.Require().Equal(tt.wantCnt, len(aggr.samples))
+		})
+	}
 }
 
-func (s *PandoraSuite) Test_Https() {
-	var requetsCount atomic.Int64 // Request served by test server.
-	requetsCount.Store(0)
-	srv := httptest.NewUnstartedServer(http.HandlerFunc(
-		func(rw http.ResponseWriter, req *http.Request) {
-			requetsCount.Inc()
-			rw.WriteHeader(http.StatusOK)
-		}))
-	defer srv.Close()
-
-	conf := s.parseConfigFile("testdata/http/https.yaml", srv.Listener.Addr().String())
-	s.Require().Equal(1, len(conf.Engine.Pools))
-	aggr := &aggregator{}
-	conf.Engine.Pools[0].Aggregator = aggr
-	pandora := engine.New(s.log, s.metrics, conf.Engine)
-
-	srv.StartTLS()
-	err := pandora.Run(context.Background())
-	s.Assert().Equal(int64(4), requetsCount.Load())
-	s.Require().NoError(err)
-	s.Require().Equal(4, len(aggr.samples))
-}
-
-func (s *PandoraSuite) Test_Http2() {
-	var requetsCount atomic.Int64 // Request served by test server.
-	requetsCount.Store(0)
-	srv := httptest.NewUnstartedServer(http.HandlerFunc(
-		func(rw http.ResponseWriter, req *http.Request) {
-			requetsCount.Inc()
-			rw.WriteHeader(http.StatusOK)
-		}))
-	defer srv.Close()
-
-	conf := s.parseConfigFile("testdata/http/http2.yaml", srv.Listener.Addr().String())
-	s.Require().Equal(1, len(conf.Engine.Pools))
-	aggr := &aggregator{}
-	conf.Engine.Pools[0].Aggregator = aggr
-	pandora := engine.New(s.log, s.metrics, conf.Engine)
-
-	_ = http2.ConfigureServer(srv.Config, nil)
-	srv.TLS = srv.Config.TLSConfig
-	srv.StartTLS()
-
-	err := pandora.Run(context.Background())
-	s.Assert().Equal(int64(4), requetsCount.Load())
-	s.Require().NoError(err)
-	s.Require().Equal(4, len(aggr.samples))
-}
-
-func (s *PandoraSuite) Test_Http2_UnsupportTarget() {
-	var requetsCount atomic.Int64 // Request served by test server.
-	requetsCount.Store(0)
-	srv := httptest.NewUnstartedServer(http.HandlerFunc(
-		func(rw http.ResponseWriter, req *http.Request) {
-			requetsCount.Inc()
-			rw.WriteHeader(http.StatusOK)
-		}))
-	defer srv.Close()
-
-	conf := s.parseConfigFile("testdata/http/http2.yaml", srv.Listener.Addr().String())
-	s.Require().Equal(1, len(conf.Engine.Pools))
-	aggr := &aggregator{}
-	conf.Engine.Pools[0].Aggregator = aggr
-	pandora := engine.New(s.log, s.metrics, conf.Engine)
-
-	//_ = http2.ConfigureServer(srv.Config, nil)
-	//srv.TLS = srv.Config.TLSConfig
-	srv.StartTLS()
-
-	err := pandora.Run(context.Background())
-	s.Assert().Equal(int64(0), requetsCount.Load())
-	s.Require().Error(err)
-	s.Require().Contains(err.Error(), "shoot panic: Non HTTP/2 connection established. Seems that target doesn't support HTTP/2.")
-}
-
-func (s *PandoraSuite) parseConfigFile(filename string, serverAddr string) *cli.CliConfig {
-	f, err := os.ReadFile(filename)
-	s.Require().NoError(err)
-	tmpl, err := template.New("x").Parse(string(f))
-	s.Require().NoError(err)
-	b := &bytes.Buffer{}
-	err = tmpl.Execute(b, map[string]string{"target": serverAddr})
-	s.Require().NoError(err)
-	mapCfg := map[string]any{}
-	err = yaml.Unmarshal(b.Bytes(), &mapCfg)
-	s.Require().NoError(err)
-
-	conf := cli.DefaultConfig()
-	err = config.DecodeAndValidate(mapCfg, conf)
-	s.Require().NoError(err)
-
+func parseConfigFile(t *testing.T, filename string, serverAddr string) *cli.CliConfig {
+	mapCfg := unmarshalConfigFile(t, filename, serverAddr)
+	conf := decodeConfig(t, mapCfg)
 	return conf
 }
 
-func setupLogsCapture() *zap.Logger {
+func decodeConfig(t *testing.T, mapCfg map[string]any) *cli.CliConfig {
+	conf := cli.DefaultConfig()
+	err := config.DecodeAndValidate(mapCfg, conf)
+	require.NoError(t, err)
+	return conf
+}
+
+func unmarshalConfigFile(t *testing.T, filename string, serverAddr string) map[string]any {
+	f, err := os.ReadFile(filename)
+	require.NoError(t, err)
+	tmpl, err := template.New("x").Parse(string(f))
+	require.NoError(t, err)
+	b := &bytes.Buffer{}
+	err = tmpl.Execute(b, map[string]string{"target": serverAddr})
+	require.NoError(t, err)
+	mapCfg := map[string]any{}
+	err = yaml.Unmarshal(b.Bytes(), &mapCfg)
+	require.NoError(t, err)
+	return mapCfg
+}
+
+func newNullLogger() *zap.Logger {
 	c, _ := observer.New(zap.InfoLevel)
 	return zap.New(c)
+}
+
+func newLogger() *zap.Logger {
+	zapConf := zap.NewDevelopmentConfig()
+	zapConf.Level.SetLevel(zapcore.DebugLevel)
+	log, err := zapConf.Build(zap.AddCaller())
+	if err != nil {
+		zap.L().Fatal("Logger build failed", zap.Error(err))
+	}
+	return log
 }
 
 func newEngineMetrics() engine.Metrics {
