@@ -111,11 +111,9 @@ func (s *PandoraSuite) Test_Http_Check_Passes() {
 		s.Run(tt.name, func() {
 			var requetsCount atomic.Int64 // Request served by test server.
 			requetsCount.Store(0)
-			var reqs []string
 			srv := httptest.NewUnstartedServer(http.HandlerFunc(
 				func(rw http.ResponseWriter, req *http.Request) {
 					requetsCount.Inc()
-					reqs = append(reqs, req.URL.String())
 					rw.WriteHeader(http.StatusOK)
 				}))
 			defer srv.Close()

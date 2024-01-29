@@ -14,7 +14,7 @@ prepare: fmt test vet
 
 test:
 	@echo "$(OK_COLOR)Test packages$(NO_COLOR)"
-	@go test -v ./...
+	go test -race -v ./...
 
 coverage:
 	@echo "$(OK_COLOR)Make coverage report$(NO_COLOR)"
