@@ -11,6 +11,7 @@ Pandora - это высокопроизводительный генератор
 - [HTTP providers](providers.md)
 - [HTTP генератор](http-generator.md)
 - [Сценарный генератор / HTTP](scenario-http-generator.md)
+- [Сценарный генератор / gRPC](scenario-grpc-generator.md)
 - [Custom](custom.md)
 - [Производительность Pandora](performance.md)
 - [Архитектура](architecture.md)

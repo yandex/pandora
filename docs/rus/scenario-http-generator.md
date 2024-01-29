@@ -12,7 +12,7 @@
     - [HCL пример](#hcl-пример)
     - [YAML пример](#yaml-пример)
 - [Возможности](#возможности)
-    - [Requests](#requests)
+    - [Запросы](#запросы)
         - [Шаблонизатор](#шаблонизатор)
             - [Имена переменных в шаблонрах](#имена-переменных-в-шаблонах)
         - [Preprocessors](#preprocessors)
@@ -23,9 +23,6 @@
             - [assert/response](#assertresponse)
     - [Scenarios](#scenarios)
     - [Sources](#sources)
-        - [csv file](#csv-file)
-        - [json file](#json-file)
-        - [variables](#variables)
 
 ## Конфигурация
 
@@ -142,6 +139,9 @@ scenario "scenario_name" {
 }
 ```
 
+Так же пример можно посмотреть в тестах https://github.com/yandex/pandora/blob/dev/tests/grpc_scenario/testdata/grpc_payload.hcl
+
+
 ### YAML пример
 
 ```yaml
@@ -182,7 +182,7 @@ scenarios:
 
 ## Возможности
 
-### Requests
+### Запросы
 
 Поля
 
@@ -210,9 +210,9 @@ scenarios:
 
 Переменная `users` из источника `user_file` - `{% raw %}{{.source.user_file.users}}{% endraw %}`
 
-Переменная `token` из постпроцессора запроса `list_req` - `{% raw %}{{.request.list_req.postprocessor.token}}{% endraw %}`
-
 Переменная `item` из препроцессора запроса `list_req` - `{% raw %}{{.request.list_req.preprocessor.item}}{% endraw %}`
+
+Переменная `token` из постпроцессора запроса `list_req` - `{% raw %}{{.request.list_req.postprocessor.token}}{% endraw %}`
 
 #### Preprocessors
 
@@ -404,116 +404,7 @@ scenario "scenario_second" {
 
 ### Sources
 
-Источники переменных
-
-#### csv file
-
-Пример
-
-```terraform
-variable_source "users" "file/csv" {
-  file              = "users.csv"                   # required
-  fields            = ["user_id", "name", "pass"]   # optional
-  ignore_first_line = true                          # optional
-  delimiter         = ","                           # optional
-}
-```
-
-Создание источника из csv. Добавление ему имени `users`.
-
-Использование переменных из данного источника
-
-```gotempate
-{% raw %}{{.source.users[0].user_id}}{% endraw %}
-```
-
-Параметр `fields` является необязательным.
-
-Если этого параметра нет, то в качестве имен полей будет использоваться имена в первой строке csv файла,
-если `ignore_first_line = false`.
-
-Если `ignore_first_line = true` и отсутствуют поля, то в качестве имен будут использоваться порядковые номер
-
-```gotempate
-{% raw %}{{.source.users[0].0}}{% endraw %}
-```
-
-#### json file
-
-Пример
-
-```terraform
-variable_source "users" "file/json" {
-  file = "users.json"     # required
-}
-```
-
-Создание источника из json файла. Добавление ему имени `users`.
-
-Файл должен содержать любой валидный json. Например:
-
-```json
-{
-    "data": [
-        {
-            "id": 1,
-            "name": "user1"
-        },
-        {
-            "id": 2,
-            "name": "user2"
-        }
-    ]
-}
-```
-
-Использование переменных из данного источника
-
-```gotempate
-{% raw %}{{.source.users.data[next].id}}{% endraw %}
-```
-
-Или пример с массивом
-
-```json
- [
-    {
-        "id": 1,
-        "name": "user1"
-    },
-    {
-        "id": 2,
-        "name": "user2"
-    }
-]
-```
-
-Использование переменных из данного источника
-
-```gotempate
-{% raw %}{{.source.users[next].id}}{% endraw %}
-```
-
-#### variables
-
-Пример
-
-```terraform
-variable_source "variables" "variables" {
-  variables = {
-    host = localhost
-    port = 8090
-  }
-}
-```
-
-Создание источника с переменными. Добавление ему имени `variables`.
-
-Использование переменных из данного источника
-
-```gotempate
-{% raw %}{{.source.variables.host}}:{{.source.variables.port}}{% endraw %}
-```
+См документ - [Источники переменных](scenario/variable_source.md)
 
 ---
 
