@@ -8,7 +8,6 @@ package server
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -23,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TargetServiceClient interface {
+	Hello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloResponse, error)
 	Auth(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	Order(ctx context.Context, in *OrderRequest, opts ...grpc.CallOption) (*OrderResponse, error)
@@ -36,6 +36,15 @@ type targetServiceClient struct {
 
 func NewTargetServiceClient(cc grpc.ClientConnInterface) TargetServiceClient {
 	return &targetServiceClient{cc}
+}
+
+func (c *targetServiceClient) Hello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloResponse, error) {
+	out := new(HelloResponse)
+	err := c.cc.Invoke(ctx, "/target.TargetService/Hello", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *targetServiceClient) Auth(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error) {
@@ -87,6 +96,7 @@ func (c *targetServiceClient) Reset(ctx context.Context, in *ResetRequest, opts 
 // All implementations must embed UnimplementedTargetServiceServer
 // for forward compatibility
 type TargetServiceServer interface {
+	Hello(context.Context, *HelloRequest) (*HelloResponse, error)
 	Auth(context.Context, *AuthRequest) (*AuthResponse, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
 	Order(context.Context, *OrderRequest) (*OrderResponse, error)
@@ -99,6 +109,9 @@ type TargetServiceServer interface {
 type UnimplementedTargetServiceServer struct {
 }
 
+func (UnimplementedTargetServiceServer) Hello(context.Context, *HelloRequest) (*HelloResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Hello not implemented")
+}
 func (UnimplementedTargetServiceServer) Auth(context.Context, *AuthRequest) (*AuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Auth not implemented")
 }
@@ -125,6 +138,24 @@ type UnsafeTargetServiceServer interface {
 
 func RegisterTargetServiceServer(s grpc.ServiceRegistrar, srv TargetServiceServer) {
 	s.RegisterService(&TargetService_ServiceDesc, srv)
+}
+
+func _TargetService_Hello_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HelloRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TargetServiceServer).Hello(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/target.TargetService/Hello",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TargetServiceServer).Hello(ctx, req.(*HelloRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _TargetService_Auth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -224,6 +255,10 @@ var TargetService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "target.TargetService",
 	HandlerType: (*TargetServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Hello",
+			Handler:    _TargetService_Hello_Handler,
+		},
 		{
 			MethodName: "Auth",
 			Handler:    _TargetService_Auth_Handler,

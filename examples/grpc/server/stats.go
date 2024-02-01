@@ -24,6 +24,7 @@ func newStats(capacity int) *Stats {
 }
 
 type Stats struct {
+	hello         atomic.Uint64
 	auth200       map[int64]uint64
 	auth200Mutex  sync.Mutex
 	auth400       atomic.Uint64
@@ -36,6 +37,10 @@ type Stats struct {
 	order200Mutex sync.Mutex
 	order400      atomic.Uint64
 	order500      atomic.Uint64
+}
+
+func (s *Stats) IncHello() {
+	s.hello.Add(1)
 }
 
 func (s *Stats) IncAuth400() {

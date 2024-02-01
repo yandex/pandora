@@ -1,0 +1,24 @@
+pools:
+  - id: GRPC
+    gun:
+      type: grpc
+      target: localhost:18888
+      tls: false
+    ammo:
+      type: grpc/json
+      file: testdata/grpc/grpc.payload
+    result:
+      type: discard
+    rps:
+      - duration: 2s
+        ops: 4
+        type: const
+    startup:
+      type: once
+      times: 2
+log:
+  level: error
+monitoring:
+  expvar:
+    enabled: true
+    port: 1234

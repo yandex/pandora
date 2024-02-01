@@ -22,6 +22,7 @@ const defaultTimeout = time.Second * 15
 
 type GunConfig struct {
 	Target      string          `validate:"required"`
+	ReflectPort int64           `config:"reflect_port"`
 	Timeout     time.Duration   `config:"timeout"` // grpc request timeout
 	TLS         bool            `config:"tls"`
 	DialOptions GrpcDialOptions `config:"dial_options"`
@@ -56,9 +57,10 @@ func NewGun(conf GunConfig) *Gun {
 	return &Gun{
 		templ: NewTextTemplater(),
 		gun: &grpcgun.Gun{Conf: grpcgun.GunConfig{
-			Target:  conf.Target,
-			Timeout: conf.Timeout,
-			TLS:     conf.TLS,
+			Target:      conf.Target,
+			ReflectPort: conf.ReflectPort,
+			Timeout:     conf.Timeout,
+			TLS:         conf.TLS,
 			DialOptions: grpcgun.GrpcDialOptions{
 				Authority: conf.DialOptions.Authority,
 				Timeout:   conf.DialOptions.Timeout,

@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -40,6 +42,7 @@ type GrpcDialOptions struct {
 
 type GunConfig struct {
 	Target      string          `validate:"required"`
+	ReflectPort int64           `config:"reflect_port"`
 	Timeout     time.Duration   `config:"timeout"` // grpc request timeout
 	TLS         bool            `config:"tls"`
 	DialOptions GrpcDialOptions `config:"dial_options"`
@@ -77,7 +80,8 @@ func DefaultGunConfig() GunConfig {
 }
 
 func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
-	conn, err := MakeGRPCConnect(g.Conf.Target, g.Conf.TLS, g.Conf.DialOptions)
+	target := replacePort(g.Conf.Target, g.Conf.ReflectPort)
+	conn, err := MakeGRPCConnect(target, g.Conf.TLS, g.Conf.DialOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to target: %w", err)
 	}
@@ -270,6 +274,19 @@ func ConvertGrpcStatus(err error) int {
 	default:
 		return 500
 	}
+}
+
+func replacePort(host string, port int64) string {
+	if port == 0 {
+		return host
+	}
+	split := strings.Split(host, ":")
+	if len(split) == 1 {
+		return host + ":" + strconv.FormatInt(port, 10)
+	}
+
+	split[len(split)-1] = strconv.FormatInt(port, 10)
+	return strings.Join(split, ":")
 }
 
 var _ warmup.WarmedUp = (*Gun)(nil)
