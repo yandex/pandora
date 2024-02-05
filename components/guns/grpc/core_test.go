@@ -26,6 +26,12 @@ func Test_replacePort(t *testing.T) {
 			want: "[2a02:6b8:c02:901:0:fc5f:9a6c:4]:9999",
 		},
 		{
+			name: "add port to ipv6",
+			host: "[2a02:6b8:c02:901:0:fc5f:9a6c:4]",
+			port: 9999,
+			want: "[2a02:6b8:c02:901:0:fc5f:9a6c:4]:9999",
+		},
+		{
 			name: "replace ipv4",
 			host: "127.0.0.1:8888",
 			port: 9999,

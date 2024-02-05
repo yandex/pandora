@@ -50,8 +50,30 @@ pandora myconfig.yaml
 Or use Pandora with [Yandex.Tank](https://yandextank.readthedocs.io/en/latest/core_and_modules.html#pandora) and
 [Overload](https://overload.yandex.net).
 
-### Documentation
+## Changelog
+
+Install https://github.com/miniscruff/changie
+
+You can add changie completion to you favorite shell https://changie.dev/cli/changie_completion/
+
+### Using
+
+See https://changie.dev/guide/quick-start/
+
+Show current version `changie latest`
+
+Show next minor version `changie next minor`
+
+Add new comments - `changie new` - and follow interface
+
+Create changelog release file - `changie batch v0.5.21`
+
+Same for next version - `changie batch $(changie next patch)`
+
+Merge to main CHANGELOG.md file - `changie merge`
+
+## Documentation
 [Documentation](https://yandex.github.io/pandora/)
 
-### Old Documentation
+## Old Documentation
 [ReadTheDocs](https://yandexpandora.readthedocs.io/)

@@ -285,6 +285,11 @@ func replacePort(host string, port int64) string {
 		return host + ":" + strconv.FormatInt(port, 10)
 	}
 
+	oldPort := split[len(split)-1]
+	if _, err := strconv.ParseInt(oldPort, 10, 64); err != nil {
+		return host + ":" + strconv.FormatInt(port, 10)
+	}
+
 	split[len(split)-1] = strconv.FormatInt(port, 10)
 	return strings.Join(split, ":")
 }
