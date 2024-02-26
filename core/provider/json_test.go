@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/datasource"
+	"github.com/yandex/pandora/lib/testutil"
 )
 
 type testJSONAmmo struct {
@@ -165,4 +166,8 @@ func TestDecoderReset(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "first", val.Data)
 	assert.Zero(t, val.ID)
+}
+
+func testDeps() core.ProviderDeps {
+	return core.ProviderDeps{Log: testutil.NewLogger()}
 }

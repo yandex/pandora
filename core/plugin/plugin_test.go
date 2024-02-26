@@ -6,43 +6,49 @@
 package plugin
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var _ = Describe("Default registry", func() {
-	BeforeEach(func() {
-		Register(ptestType(), ptestPluginName, ptestNewImpl)
-	})
-	AfterEach(func() {
-		defaultRegistry = NewRegistry()
-	})
-	It("lookup", func() {
-		Expect(Lookup(ptestType())).To(BeTrue())
-	})
-	It("lookup factory", func() {
-		Expect(LookupFactory(ptestNewErrType())).To(BeTrue())
-	})
-	It("new", func() {
-		plugin, err := New(ptestType(), ptestPluginName)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(plugin).NotTo(BeNil())
-	})
-	It("new factory", func() {
-		pluginFactory, err := NewFactory(ptestNewErrType(), ptestPluginName)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(pluginFactory).NotTo(BeNil())
-	})
-})
+func TestDefaultRegistry(t *testing.T) {
+	beforeEach := func() { Register(ptestType(), ptestPluginName, ptestNewImpl) }
+	afterEach := func() { defaultRegistry = NewRegistry() }
 
-var _ = Describe("type helpers", func() {
-	It("ptr type", func() {
+	t.Run("lookup", func(t *testing.T) {
+		defer afterEach()
+		beforeEach()
+		assert.True(t, Lookup(ptestType()))
+	})
+	t.Run("lookup factory", func(t *testing.T) {
+		defer afterEach()
+		beforeEach()
+		assert.True(t, LookupFactory(ptestNewErrType()))
+	})
+	t.Run("new", func(t *testing.T) {
+		defer afterEach()
+		beforeEach()
+		plugin, err := New(ptestType(), ptestPluginName)
+		assert.NoError(t, err)
+		assert.NotNil(t, plugin)
+	})
+	t.Run("new factory", func(t *testing.T) {
+		defer afterEach()
+		beforeEach()
+		pluginFactory, err := NewFactory(ptestNewErrType(), ptestPluginName)
+		assert.NoError(t, err)
+		assert.NotNil(t, pluginFactory)
+	})
+}
+
+func TestTypeHelpers(t *testing.T) {
+	t.Run("ptr type", func(t *testing.T) {
 		var plugin ptestPlugin
-		Expect(PtrType(&plugin)).To(Equal(ptestType()))
+		assert.Equal(t, ptestType(), PtrType(&plugin))
 	})
-	It("factory plugin type ok", func() {
+	t.Run("factory plugin type ok", func(t *testing.T) {
 		factoryPlugin, ok := FactoryPluginType(ptestNewErrType())
-		Expect(ok).To(BeTrue())
-		Expect(factoryPlugin).To(Equal(ptestType()))
+		assert.True(t, ok)
+		assert.Equal(t, ptestType(), factoryPlugin)
 	})
-})
+}

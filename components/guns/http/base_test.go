@@ -13,202 +13,304 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 	ammomock "github.com/yandex/pandora/components/guns/http/mocks"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coretest"
-	"github.com/yandex/pandora/lib/ginkgoutil"
+	"github.com/yandex/pandora/core/engine"
+	"github.com/yandex/pandora/lib/monitoring"
+	"github.com/yandex/pandora/lib/testutil"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-func testDeps() core.GunDeps {
-	return core.GunDeps{
-		Log: ginkgoutil.NewLogger(),
-		Ctx: context.Background(),
+func newLogger() *zap.Logger {
+	zapConf := zap.NewDevelopmentConfig()
+	zapConf.Level.SetLevel(zapcore.DebugLevel)
+	log, err := zapConf.Build(zap.AddCaller())
+	if err != nil {
+		zap.L().Fatal("Logger build failed", zap.Error(err))
+	}
+	return log
+}
+
+func newEngineMetrics(prefix string) engine.Metrics {
+	return engine.Metrics{
+		Request:        monitoring.NewCounter(prefix + "_Requests"),
+		Response:       monitoring.NewCounter(prefix + "_Responses"),
+		InstanceStart:  monitoring.NewCounter(prefix + "_UsersStarted"),
+		InstanceFinish: monitoring.NewCounter(prefix + "_UsersFinished"),
 	}
 }
 
-var _ = Describe("BaseGun", func() {
+func TestGunSuite(t *testing.T) {
+	suite.Run(t, new(BaseGunSuite))
+}
 
+type BaseGunSuite struct {
+	suite.Suite
+	fs      afero.Fs
+	log     *zap.Logger
+	metrics engine.Metrics
+	base    BaseGun
+	gunDeps core.GunDeps
+}
+
+func (s *BaseGunSuite) SetupSuite() {
+	s.log = testutil.NewLogger()
+	s.metrics = newEngineMetrics("http_suite")
+}
+
+func (s *BaseGunSuite) SetupTest() {
+	s.base = BaseGun{Config: DefaultBaseGunConfig()}
+}
+
+func (s *BaseGunSuite) Test_BindResultTo_Panics() {
+	s.Run("nil panic", func() {
+		s.Panics(func() {
+			_ = s.base.Bind(nil, testDeps())
+		})
+	})
+	s.Run("nil panic", func() {
+		res := &netsample.TestAggregator{}
+		_ = s.base.Bind(res, testDeps())
+		s.Require().Equal(res, s.base.Aggregator)
+		s.Panics(func() {
+			_ = s.base.Bind(&netsample.TestAggregator{}, testDeps())
+		})
+	})
+}
+
+type ammoMock struct {
+	requestCallCnt   int
+	idCallCnt        int
+	isInvalidCallCnt int
+}
+
+func (a *ammoMock) Request() (*http.Request, *netsample.Sample) {
+	a.requestCallCnt++
+	return nil, nil
+}
+
+func (a *ammoMock) ID() uint64 {
+	a.idCallCnt++
+	return 0
+}
+
+func (a *ammoMock) IsInvalid() bool {
+	a.isInvalidCallCnt++
+	return false
+}
+
+func (s *BaseGunSuite) Test_Shoot_BeforeBindPanics() {
+	s.base.Do = func(*http.Request) (_ *http.Response, _ error) {
+		panic("should not be called")
+	}
+	am := &ammoMock{}
+
+	s.Panics(func() {
+		s.base.Shoot(am)
+	})
+}
+
+func (s *BaseGunSuite) Test_Shoot() {
 	var (
-		base BaseGun
+		body io.ReadCloser
+
+		am       *ammomock.Ammo
+		req      *http.Request
+		tag      string
+		res      *http.Response
+		sample   *netsample.Sample
+		results  *netsample.TestAggregator
+		shootErr error
 	)
-	BeforeEach(func() {
-		base = BaseGun{Config: DefaultBaseGunConfig()}
-	})
+	beforeEach := func() {
+		am = ammomock.NewAmmo(s.T())
+		am.On("IsInvalid").Return(false).Maybe()
+		req = httptest.NewRequest("GET", "/1/2/3/4", nil)
+		tag = ""
+		results = &netsample.TestAggregator{}
+		_ = s.base.Bind(results, testDeps())
+	}
 
-	Context("BindResultTo", func() {
-		It("nil panics", func() {
-			Expect(func() {
-				_ = base.Bind(nil, testDeps())
-			}).To(Panic())
-		})
-		It("second time panics", func() {
-			res := &netsample.TestAggregator{}
-			_ = base.Bind(res, testDeps())
-			Expect(base.Aggregator).To(Equal(res))
-			Expect(func() {
-				_ = base.Bind(&netsample.TestAggregator{}, testDeps())
-			}).To(Panic())
-		})
-	})
-
-	It("Shoot before bind panics", func() {
-		base.Do = func(*http.Request) (_ *http.Response, _ error) {
-			Fail("should not be called")
-			return
+	justBeforeEach := func() {
+		sample = netsample.Acquire(tag)
+		am.On("Request").Return(req, sample).Maybe()
+		res = &http.Response{
+			StatusCode: http.StatusNotFound,
+			Body:       ioutil.NopCloser(body),
+			Request:    req,
 		}
-		am := ammomock.NewAmmo(GinkgoT())
-		am.On("Request").Return(nil, nil).Run(
-			func(mock.Arguments) {
-				Fail("should not be called")
-			})
-		am.On("IsInvalid").Return(false)
-		Expect(func() {
-			base.Shoot(am)
-		}).To(Panic())
-	}, 1)
+		s.base.Shoot(am)
+		s.Require().Len(results.Samples, 1)
+		shootErr = results.Samples[0].Err()
+	}
 
-	Context("Shoot", func() {
-		var (
-			body io.ReadCloser
-
-			am       *ammomock.Ammo
-			req      *http.Request
-			tag      string
-			res      *http.Response
-			sample   *netsample.Sample
-			results  *netsample.TestAggregator
-			shootErr error
-		)
-		BeforeEach(func() {
-			am = ammomock.NewAmmo(GinkgoT())
-			am.On("IsInvalid").Return(false)
-			req = httptest.NewRequest("GET", "/1/2/3/4", nil)
-			tag = ""
-			results = &netsample.TestAggregator{}
-			_ = base.Bind(results, testDeps())
-		})
-
-		JustBeforeEach(func() {
-			sample = netsample.Acquire(tag)
-			am.On("Request").Return(req, sample)
-			res = &http.Response{
-				StatusCode: http.StatusNotFound,
-				Body:       ioutil.NopCloser(body),
-				Request:    req,
+	s.Run("Do ok", func() {
+		beforeEachDoOk := func() {
+			body = ioutil.NopCloser(strings.NewReader("aaaaaaa"))
+			s.base.AnswLog = zap.NewNop()
+			s.base.Do = func(doReq *http.Request) (*http.Response, error) {
+				s.Require().Equal(req, doReq)
+				return res, nil
 			}
-			base.Shoot(am)
-			Expect(results.Samples).To(HaveLen(1))
-			shootErr = results.Samples[0].Err()
+		}
+		s.Run("ammo sample sent to results", func() {
+			s.SetupTest()
+			beforeEach()
+			beforeEachDoOk()
+			justBeforeEach()
+
+			s.Assert().Len(results.Samples, 1)
+			s.Assert().Equal(sample, results.Samples[0])
+			s.Assert().Equal("__EMPTY__", sample.Tags())
+			s.Assert().Equal(res.StatusCode, sample.ProtoCode())
+			_ = shootErr
 		})
 
-		Context("Do ok", func() {
-			BeforeEach(func() {
-				body = ioutil.NopCloser(strings.NewReader("aaaaaaa"))
-				base.AnswLog = zap.NewNop()
-				base.Do = func(doReq *http.Request) (*http.Response, error) {
-					Expect(doReq).To(Equal(req))
-					return res, nil
+		s.Run("body read well", func() {
+			s.SetupTest()
+			beforeEach()
+			beforeEachDoOk()
+			justBeforeEach()
+
+			s.Assert().NoError(shootErr)
+			_, err := body.Read([]byte{0})
+			s.Assert().ErrorIs(err, io.EOF, "body should be read fully")
+		})
+
+		s.Run("autotag options is set", func() {
+			beforeEacAautotag := (func() { s.base.Config.AutoTag.Enabled = true })
+
+			s.Run("autotagged", func() {
+				s.SetupTest()
+				beforeEach()
+				beforeEachDoOk()
+				beforeEacAautotag()
+				justBeforeEach()
+
+				s.Assert().Equal("/1/2", sample.Tags())
+			})
+
+			s.Run("tag is already set", func() {
+				const presetTag = "TAG"
+				beforeEachTagIsAlreadySet := func() { tag = presetTag }
+				s.Run("no tag added", func() {
+					s.SetupTest()
+					beforeEach()
+					beforeEachDoOk()
+					beforeEacAautotag()
+					beforeEachTagIsAlreadySet()
+					justBeforeEach()
+
+					s.Assert().Equal(presetTag, sample.Tags())
+				})
+
+				s.Run("no-tag-only set to false", func() {
+					beforeEachNoTagOnly := func() { s.base.Config.AutoTag.NoTagOnly = false }
+					s.Run("autotag added", func() {
+						s.SetupTest()
+						beforeEach()
+						beforeEachDoOk()
+						beforeEacAautotag()
+						beforeEachTagIsAlreadySet()
+						beforeEachNoTagOnly()
+						justBeforeEach()
+
+						s.Assert().Equal(presetTag+"|/1/2", sample.Tags())
+					})
+				})
+			})
+		})
+
+		s.Run("Connect set", func() {
+			var connectCalled, doCalled bool
+			beforeEachConnectSet := func() {
+				s.base.Connect = func(ctx context.Context) error {
+					connectCalled = true
+					return nil
 				}
-			})
+				oldDo := s.base.Do
+				s.base.Do = func(r *http.Request) (*http.Response, error) {
+					doCalled = true
+					return oldDo(r)
+				}
+			}
+			s.Run("Connect called", func() {
+				s.SetupTest()
+				beforeEach()
+				beforeEachDoOk()
+				beforeEachConnectSet()
+				justBeforeEach()
 
-			It("ammo sample sent to results", func() {
-				Expect(results.Samples).To(HaveLen(1))
-				Expect(results.Samples[0]).To(Equal(sample))
-				Expect(sample.Tags()).To(Equal("__EMPTY__"))
-				Expect(sample.ProtoCode()).To(Equal(res.StatusCode))
+				s.Assert().NoError(shootErr)
+				s.Assert().True(connectCalled)
+				s.Assert().True(doCalled)
 			})
-			It("body read well", func() {
-				Expect(shootErr).To(BeNil())
-				_, err := body.Read([]byte{0})
-				Expect(err).To(Equal(io.EOF), "body should be read fully")
-			})
+		})
+		s.Run("Connect failed", func() {
+			connectErr := errors.New("connect error")
+			beforeEachConnectFailed := func() {
+				s.base.Connect = func(ctx context.Context) error {
+					// Connect should report fail in sample itself.
+					s := netsample.Acquire("")
+					s.SetErr(connectErr)
+					results.Report(s)
+					return connectErr
+				}
+			}
+			s.Run("Shoot failed", func() {
+				s.SetupTest()
+				beforeEach()
+				beforeEachDoOk()
+				beforeEachConnectFailed()
+				justBeforeEach()
 
-			Context("autotag options is set", func() {
-				BeforeEach(func() { base.Config.AutoTag.Enabled = true })
-				It("autotagged", func() {
-					Expect(sample.Tags()).To(Equal("/1/2"))
-				})
-
-				Context("tag is already set", func() {
-					const presetTag = "TAG"
-					BeforeEach(func() { tag = presetTag })
-					It("no tag added", func() {
-						Expect(sample.Tags()).To(Equal(presetTag))
-					})
-
-					Context("no-tag-only set to false", func() {
-						BeforeEach(func() { base.Config.AutoTag.NoTagOnly = false })
-						It("autotag added", func() {
-							Expect(sample.Tags()).To(Equal(presetTag + "|/1/2"))
-						})
-					})
-				})
-			})
-
-			Context("Connect set", func() {
-				var connectCalled, doCalled bool
-				BeforeEach(func() {
-					base.Connect = func(ctx context.Context) error {
-						connectCalled = true
-						return nil
-					}
-					oldDo := base.Do
-					base.Do = func(r *http.Request) (*http.Response, error) {
-						doCalled = true
-						return oldDo(r)
-					}
-				})
-				It("Connect called", func() {
-					Expect(shootErr).To(BeNil())
-					Expect(connectCalled).To(BeTrue())
-					Expect(doCalled).To(BeTrue())
-				})
-			})
-			Context("Connect failed", func() {
-				connectErr := errors.New("connect error")
-				BeforeEach(func() {
-					base.Connect = func(ctx context.Context) error {
-						// Connect should report fail in sample itself.
-						s := netsample.Acquire("")
-						s.SetErr(connectErr)
-						results.Report(s)
-						return connectErr
-					}
-				})
-				It("Shoot failed", func() {
-					Expect(shootErr).NotTo(BeNil())
-					Expect(shootErr).To(Equal(connectErr))
-				})
+				s.Assert().Error(shootErr)
+				s.Assert().ErrorIs(shootErr, connectErr)
 			})
 		})
 	})
+}
 
-	DescribeTable("autotag",
-		func(path string, depth int, tag string) {
-			URL := &url.URL{Path: path}
-			Expect(autotag(depth, URL)).To(Equal(tag))
-		},
-		Entry("empty", "", 2, ""),
-		Entry("root", "/", 2, "/"),
-		Entry("exact depth", "/1/2", 2, "/1/2"),
-		Entry("more depth", "/1/2", 3, "/1/2"),
-		Entry("less depth", "/1/2", 1, "/1"),
-	)
+func Test_Autotag(t *testing.T) {
+	tests := []struct {
+		name  string
+		path  string
+		depth int
+		tag   string
+	}{
+		{"empty", "", 2, ""},
+		{"root", "/", 2, "/"},
+		{"exact depth", "/1/2", 2, "/1/2"},
+		{"more depth", "/1/2", 3, "/1/2"},
+		{"less depth", "/1/2", 1, "/1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			URL := &url.URL{Path: tt.path}
+			got := autotag(tt.depth, URL)
+			assert.Equal(t, got, tt.tag)
+		})
+	}
+}
 
-	It("config decode", func() {
-		var conf BaseGunConfig
-		coretest.DecodeAndValidate(`
+func Test_ConfigDecode(t *testing.T) {
+	var conf BaseGunConfig
+	coretest.DecodeAndValidateT(t, `
 auto-tag:
   enabled: true
   uri-elements: 3
   no-tag-only: false
 `, &conf)
-	})
-})
+}
+
+func testDeps() core.GunDeps {
+	return core.GunDeps{Log: testutil.NewLogger(), Ctx: context.Background()}
+}

@@ -91,7 +91,6 @@ func TestDo(t *testing.T) {
 }
 
 func TestNewConnectGun(t *testing.T) {
-
 	origin := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusOK)
 	}))

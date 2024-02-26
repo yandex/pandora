@@ -2,13 +2,13 @@ package provider
 
 import (
 	"context"
+	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 	"github.com/yandex/pandora/core"
 )
 
-var _ = Describe("Num", func() {
+func Test_Num(t *testing.T) {
 	var (
 		limit int
 
@@ -17,47 +17,52 @@ var _ = Describe("Num", func() {
 		cancel context.CancelFunc
 		runRes chan error
 	)
-	BeforeEach(func() {
+	beforeEach := func() {
 		limit = 0
 		runRes = make(chan error)
-	})
-	JustBeforeEach(func() {
+	}
+	justBeforeEach := func() {
 		ctx, cancel = context.WithCancel(context.Background())
 		p = NewNumConf(NumConfig{limit})
 		go func() {
 			runRes <- p.Run(ctx, core.ProviderDeps{})
 		}()
-	})
+	}
 
-	It("unlimited", func() {
+	t.Run("unlimited", func(t *testing.T) {
+		beforeEach()
+		justBeforeEach()
+
 		for i := 0; i < 100; i++ {
 			a, ok := p.Acquire()
-			Expect(ok).To(BeTrue())
-			Expect(a).To(Equal(i))
+			assert.True(t, ok)
+			assert.Equal(t, i, a)
 		}
 		cancel()
-		Expect(<-runRes).To(BeNil())
+
+		res := <-runRes
+		assert.NoError(t, res)
+
 		a, ok := p.Acquire()
-		Expect(ok).To(BeFalse())
-		Expect(a).To(BeNil())
-	}, 1)
-
-	Context("unlimited", func() {
-		BeforeEach(func() {
-			limit = 50
-		})
-		It("", func() {
-			for i := 0; i < limit; i++ {
-				a, ok := p.Acquire()
-				Expect(ok).To(BeTrue())
-				Expect(a).To(Equal(i))
-			}
-			a, ok := p.Acquire()
-			Expect(ok).To(BeFalse())
-			Expect(a).To(BeNil())
-			Expect(<-runRes).To(BeNil())
-		}, 1)
-
+		assert.False(t, ok)
+		assert.Nil(t, a)
 	})
 
-})
+	t.Run("unlimited", func(t *testing.T) {
+		beforeEach()
+		limit = 50
+		justBeforeEach()
+
+		for i := 0; i < limit; i++ {
+			a, ok := p.Acquire()
+			assert.True(t, ok)
+			assert.Equal(t, i, a)
+		}
+		res := <-runRes
+		assert.NoError(t, res)
+
+		a, ok := p.Acquire()
+		assert.False(t, ok)
+		assert.Nil(t, a)
+	})
+}

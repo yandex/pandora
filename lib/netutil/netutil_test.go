@@ -7,31 +7,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
 	"github.com/pkg/errors"
-	"github.com/yandex/pandora/lib/ginkgoutil"
+	"github.com/stretchr/testify/assert"
 	netmock "github.com/yandex/pandora/lib/netutil/mocks"
 )
 
-func TestNetutil(t *testing.T) {
-	ginkgoutil.RunSuite(t, "Netutil Suite")
-}
-
-var _ = ginkgo.Describe("DNS", func() {
-
-	ginkgo.It("lookup reachable", func() {
+func Test_DNS(t *testing.T) {
+	t.Run("lookup reachable", func(t *testing.T) {
 		listener, err := net.ListenTCP("tcp4", nil)
 		defer func() { _ = listener.Close() }()
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		assert.NoError(t, err)
 
 		port := strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 		addr := "localhost:" + port
 		expectedResolved := "127.0.0.1:" + port
 
 		resolved, err := LookupReachable(addr, time.Second)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		gomega.Expect(resolved).To(gomega.Equal(expectedResolved))
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResolved, resolved)
 	})
 
 	const (
@@ -39,19 +32,19 @@ var _ = ginkgo.Describe("DNS", func() {
 		resolved = "[::1]:8888"
 	)
 
-	ginkgo.It("cache", func() {
+	t.Run("cache", func(t *testing.T) {
 		cache := &SimpleDNSCache{}
 		got, ok := cache.Get(addr)
-		gomega.Expect(ok).To(gomega.BeFalse())
-		gomega.Expect(got).To(gomega.BeEmpty())
+		assert.False(t, ok)
+		assert.Equal(t, "", got)
 
 		cache.Add(addr, resolved)
 		got, ok = cache.Get(addr)
-		gomega.Expect(ok).To(gomega.BeTrue())
-		gomega.Expect(got).To(gomega.Equal(resolved))
+		assert.True(t, ok)
+		assert.Equal(t, resolved, got)
 	})
 
-	ginkgo.It("Dialer cache miss", func() {
+	t.Run("Dialer cache miss", func(t *testing.T) {
 		ctx := context.Background()
 		mockConn := &netmock.Conn{}
 		mockConn.On("RemoteAddr").Return(&net.TCPAddr{
@@ -66,13 +59,15 @@ var _ = ginkgo.Describe("DNS", func() {
 
 		testee := NewDNSCachingDialer(dialer, cache)
 		conn, err := testee.DialContext(ctx, "tcp", addr)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		gomega.Expect(conn).To(gomega.Equal(mockConn))
+		assert.NoError(t, err)
+		assert.Equal(t, mockConn, conn)
 
-		ginkgoutil.AssertExpectations(mockConn, cache, dialer)
+		mockConn.AssertExpectations(t)
+		cache.AssertExpectations(t)
+		dialer.AssertExpectations(t)
 	})
 
-	ginkgo.It("Dialer cache hit", func() {
+	t.Run("Dialer cache hit", func(t *testing.T) {
 		ctx := context.Background()
 		mockConn := &netmock.Conn{}
 		cache := &netmock.DNSCache{}
@@ -82,13 +77,15 @@ var _ = ginkgo.Describe("DNS", func() {
 
 		testee := NewDNSCachingDialer(dialer, cache)
 		conn, err := testee.DialContext(ctx, "tcp", addr)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		gomega.Expect(conn).To(gomega.Equal(mockConn))
+		assert.NoError(t, err)
+		assert.Equal(t, mockConn, conn)
 
-		ginkgoutil.AssertExpectations(mockConn, cache, dialer)
+		mockConn.AssertExpectations(t)
+		cache.AssertExpectations(t)
+		dialer.AssertExpectations(t)
 	})
 
-	ginkgo.It("Dialer cache miss err", func() {
+	t.Run("Dialer cache miss err", func(t *testing.T) {
 		ctx := context.Background()
 		expectedErr := errors.New("dial failed")
 		cache := &netmock.DNSCache{}
@@ -98,10 +95,11 @@ var _ = ginkgo.Describe("DNS", func() {
 
 		testee := NewDNSCachingDialer(dialer, cache)
 		conn, err := testee.DialContext(ctx, "tcp", addr)
-		gomega.Expect(err).To(gomega.Equal(expectedErr))
-		gomega.Expect(conn).To(gomega.BeNil())
+		assert.ErrorIs(t, err, expectedErr)
+		assert.Nil(t, conn)
 
-		ginkgoutil.AssertExpectations(cache, dialer)
+		cache.AssertExpectations(t)
+		dialer.AssertExpectations(t)
 	})
 
-})
+}

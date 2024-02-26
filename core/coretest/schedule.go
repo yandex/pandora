@@ -6,31 +6,45 @@
 package coretest
 
 import (
+	"testing"
 	"time"
 
-	"github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/core"
 )
 
-func ExpectScheduleNextsStartAt(sched core.Schedule, startAt time.Time, nexts ...time.Duration) {
+func ExpectScheduleNextsStartAt(t *testing.T, sched core.Schedule, startAt time.Time, nexts ...time.Duration) {
 	beforeStartLeft := sched.Left()
 	tokensExpected := len(nexts) - 1 // Last next is finish time.
-	gomega.Expect(beforeStartLeft).To(gomega.Equal(tokensExpected))
+	require.Equal(t, tokensExpected, beforeStartLeft)
 	sched.Start(startAt)
-	actualNexts := DrainScheduleDuration(sched, startAt)
-	gomega.Expect(actualNexts).To(gomega.Equal(nexts))
+	actualNexts := DrainScheduleDuration(t, sched, startAt)
+	require.Equal(t, nexts, actualNexts)
 }
 
-func ExpectScheduleNexts(sched core.Schedule, nexts ...time.Duration) {
-	ExpectScheduleNextsStartAt(sched, time.Now(), nexts...)
+func ExpectScheduleNexts(t *testing.T, sched core.Schedule, nexts ...time.Duration) {
+	ExpectScheduleNextsStartAt(t, sched, time.Now(), nexts...)
+}
+
+func ExpectScheduleNextsStartAtT(t *testing.T, sched core.Schedule, startAt time.Time, nexts ...time.Duration) {
+	beforeStartLeft := sched.Left()
+	tokensExpected := len(nexts) - 1 // Last next is finish time.
+	require.Equal(t, tokensExpected, beforeStartLeft)
+	sched.Start(startAt)
+	actualNexts := DrainScheduleDuration(t, sched, startAt)
+	require.Equal(t, nexts, actualNexts)
+}
+
+func ExpectScheduleNextsT(t *testing.T, sched core.Schedule, nexts ...time.Duration) {
+	ExpectScheduleNextsStartAtT(t, sched, time.Now(), nexts...)
 }
 
 const drainLimit = 1000000
 
 // DrainSchedule starts schedule and takes all tokens from it.
 // Returns all tokens and finish time relative to start
-func DrainScheduleDuration(sched core.Schedule, startAt time.Time) []time.Duration {
-	nexts := DrainSchedule(sched)
+func DrainScheduleDuration(t *testing.T, sched core.Schedule, startAt time.Time) []time.Duration {
+	nexts := DrainSchedule(t, sched)
 	durations := make([]time.Duration, len(nexts))
 	for i, next := range nexts {
 		durations[i] = next.Sub(startAt)
@@ -40,18 +54,18 @@ func DrainScheduleDuration(sched core.Schedule, startAt time.Time) []time.Durati
 
 // DrainSchedule takes all tokens from passed schedule.
 // Returns all tokens and finish time.
-func DrainSchedule(sched core.Schedule) []time.Time {
+func DrainSchedule(t *testing.T, sched core.Schedule) []time.Time {
 	expectedLeft := sched.Left()
 	var nexts []time.Time
 	for len(nexts) < drainLimit {
 		next, ok := sched.Next()
 		nexts = append(nexts, next)
 		if !ok {
-			gomega.Expect(sched.Left()).To(gomega.Equal(0))
+			require.Equal(t, 0, sched.Left())
 			return nexts
 		}
 		expectedLeft--
-		gomega.Expect(sched.Left()).To(gomega.Equal(expectedLeft))
+		require.Equal(t, expectedLeft, sched.Left())
 	}
 	panic("drain limit reached")
 }

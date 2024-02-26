@@ -6,27 +6,22 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/coretest"
 	"github.com/yandex/pandora/core/plugin"
-	"github.com/yandex/pandora/lib/ginkgoutil"
 	"github.com/yandex/pandora/lib/testutil"
 	"go.uber.org/zap"
 )
 
-func TestImport(t *testing.T) {
+func Test_PluginConfig(t *testing.T) {
 	defer resetGlobals()
 	Import(afero.NewOsFs())
-	ginkgoutil.RunSuite(t, "Import Suite")
-}
 
-var _ = Describe("plugin decode", func() {
-	Context("composite schedule", func() {
+	t.Run("composite schedule", func(t *testing.T) {
 		input := func() map[string]interface{} {
 			return map[string]interface{}{
 				"schedule": []map[string]interface{}{
@@ -36,27 +31,27 @@ var _ = Describe("plugin decode", func() {
 			}
 		}
 
-		It("plugin", func() {
+		t.Run("plugin", func(t *testing.T) {
 			var conf struct {
 				Schedule core.Schedule
 			}
 			err := config.Decode(input(), &conf)
-			Expect(err).NotTo(HaveOccurred())
-			coretest.ExpectScheduleNexts(conf.Schedule, 0, 0, time.Second)
+			assert.NoError(t, err)
+			coretest.ExpectScheduleNextsT(t, conf.Schedule, 0, 0, time.Second)
 		})
 
-		It("plugin factory", func() {
+		t.Run("plugin factory", func(t *testing.T) {
 			var conf struct {
 				Schedule func() (core.Schedule, error)
 			}
 			err := config.Decode(input(), &conf)
-			Expect(err).NotTo(HaveOccurred())
+			assert.NoError(t, err)
 			sched, err := conf.Schedule()
-			Expect(err).NotTo(HaveOccurred())
-			coretest.ExpectScheduleNexts(sched, 0, 0, time.Second)
+			assert.NoError(t, err)
+			coretest.ExpectScheduleNextsT(t, sched, 0, 0, time.Second)
 		})
 	})
-})
+}
 
 func TestSink(t *testing.T) {
 	defer resetGlobals()

@@ -9,330 +9,326 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var _ = Describe("plugin constructor", func() {
-	DescribeTable("expectations failed",
-		func(newPlugin interface{}) {
-			defer recoverExpectationFail()
-			newPluginConstructor(ptestType(), newPlugin)
-		},
-		Entry("not func",
-			errors.New("that is not constructor")),
-		Entry("not implements",
-			func() struct{} { panic("") }),
-		Entry("too many args",
-			func(_, _ ptestConfig) ptestPlugin { panic("") }),
-		Entry("too many return valued",
-			func() (_ ptestPlugin, _, _ error) { panic("") }),
-		Entry("second return value is not error",
-			func() (_, _ ptestPlugin) { panic("") }),
-	)
-
-	Context("new plugin", func() {
-		newPlugin := func(newPlugin interface{}, maybeConf []reflect.Value) (interface{}, error) {
-			testee := newPluginConstructor(ptestType(), newPlugin)
-			return testee.NewPlugin(maybeConf)
-		}
-
-		It("", func() {
-			plugin, err := newPlugin(ptestNew, nil)
-			Expect(err).NotTo(HaveOccurred())
-			ptestExpectConfigValue(plugin, ptestInitValue)
+func Test_PluginConstructor_ExpectationsFailed(t *testing.T) {
+	tests := []struct {
+		name      string
+		newPlugin any
+	}{
+		{"not func", errors.New("that is not constructor")},
+		{"not implements", func() struct{} { panic("") }},
+		{"too many args", func(_, _ ptestConfig) ptestPlugin { panic("") }},
+		{"too many return valued", func() (_ ptestPlugin, _, _ error) { panic("") }},
+		{"second return value is not error", func() (_, _ ptestPlugin) { panic("") }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer recoverExpectationFail(t)
+			newPluginConstructor(ptestType(), tt.newPlugin)
 		})
+	}
+}
 
-		It("more that plugin", func() {
-			plugin, err := newPlugin(ptestNewMoreThan, nil)
-			Expect(err).NotTo(HaveOccurred())
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
+func Test_PluginConstructor_NewPlugin(t *testing.T) {
+	newPlugin := func(newPlugin interface{}, maybeConf []reflect.Value) (interface{}, error) {
+		testee := newPluginConstructor(ptestType(), newPlugin)
+		return testee.NewPlugin(maybeConf)
+	}
 
-		It("config", func() {
-			plugin, err := newPlugin(ptestNewConf, confToMaybe(ptestDefaultConf()))
-			Expect(err).NotTo(HaveOccurred())
-			ptestExpectConfigValue(plugin, ptestDefaultValue)
-		})
-
-		It("failed", func() {
-			plugin, err := newPlugin(ptestNewErrFailing, nil)
-			Expect(err).To(Equal(ptestCreateFailedErr))
-			Expect(plugin).To(BeNil())
-		})
+	t.Run("", func(t *testing.T) {
+		plugin, err := newPlugin(ptestNew, nil)
+		assert.NoError(t, err)
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
 	})
 
-	Context("new factory", func() {
-		newFactoryOK := func(newPlugin interface{}, factoryType reflect.Type, getMaybeConf func() ([]reflect.Value, error)) interface{} {
-			testee := newPluginConstructor(ptestType(), newPlugin)
-			factory, err := testee.NewFactory(factoryType, getMaybeConf)
-			Expect(err).NotTo(HaveOccurred())
-			return factory
-		}
+	t.Run("more that plugin", func(t *testing.T) {
+		plugin, err := newPlugin(ptestNewMoreThan, nil)
+		assert.NoError(t, err)
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
 
-		It("same type - no wrap", func() {
-			factory := newFactoryOK(ptestNew, ptestNewType(), nil)
-			expectSameFunc(factory, ptestNew)
-		})
+	t.Run("config", func(t *testing.T) {
+		plugin, err := newPlugin(ptestNewConf, confToMaybe(ptestDefaultConf()))
+		assert.NoError(t, err)
+		ptestExpectConfigValue(t, plugin, ptestDefaultValue)
+	})
 
-		It(" new impl", func() {
-			factory := newFactoryOK(ptestNewImpl, ptestNewType(), nil)
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			plugin := f()
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
+	t.Run("failed", func(t *testing.T) {
+		plugin, err := newPlugin(ptestNewErrFailing, nil)
+		assert.ErrorIs(t, err, ptestCreateFailedErr)
+		assert.Nil(t, plugin)
+	})
 
-		It("more than", func() {
-			factory := newFactoryOK(ptestNewMoreThan, ptestNewType(), nil)
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			plugin := f()
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
+}
 
-		It("add err", func() {
-			factory := newFactoryOK(ptestNew, ptestNewErrType(), nil)
-			f, ok := factory.(func() (ptestPlugin, error))
-			Expect(ok).To(BeTrue())
-			plugin, err := f()
-			Expect(err).NotTo(HaveOccurred())
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
+func Test_PluginConstructor_NewFactory(t *testing.T) {
+	newFactoryOK := func(newPlugin interface{}, factoryType reflect.Type, getMaybeConf func() ([]reflect.Value, error)) interface{} {
+		testee := newPluginConstructor(ptestType(), newPlugin)
+		factory, err := testee.NewFactory(factoryType, getMaybeConf)
+		require.NoError(t, err)
+		return factory
+	}
 
-		It("trim nil err", func() {
-			factory := newFactoryOK(ptestNewErr, ptestNewType(), nil)
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			plugin := f()
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
+	t.Run("same type - no wrap", func(t *testing.T) {
+		factory := newFactoryOK(ptestNew, ptestNewType(), nil)
+		expectSameFunc(t, factory, ptestNew)
+	})
 
-		It("config", func() {
-			factory := newFactoryOK(ptestNewConf, ptestNewType(), confToGetMaybe(ptestDefaultConf()))
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			plugin := f()
-			ptestExpectConfigValue(plugin, ptestDefaultValue)
-		})
+	t.Run(" new impl", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewImpl, ptestNewType(), nil)
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		plugin := f()
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
 
-		It("new factory, get config failed", func() {
-			factory := newFactoryOK(ptestNewConf, ptestNewErrType(), errToGetMaybe(ptestConfigurationFailedErr))
-			f, ok := factory.(func() (ptestPlugin, error))
-			Expect(ok).To(BeTrue())
-			plugin, err := f()
-			Expect(err).To(Equal(ptestConfigurationFailedErr))
-			Expect(plugin).To(BeNil())
-		})
+	t.Run("more than", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewMoreThan, ptestNewType(), nil)
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		plugin := f()
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
 
-		It("no err, get config failed, throw panic", func() {
-			factory := newFactoryOK(ptestNewConf, ptestNewType(), errToGetMaybe(ptestConfigurationFailedErr))
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			func() {
-				defer func() {
-					r := recover()
-					Expect(r).To(Equal(ptestConfigurationFailedErr))
-				}()
-				f()
+	t.Run("add err", func(t *testing.T) {
+		factory := newFactoryOK(ptestNew, ptestNewErrType(), nil)
+		f, ok := factory.(func() (ptestPlugin, error))
+		assert.True(t, ok)
+		plugin, err := f()
+		assert.NoError(t, err)
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
+
+	t.Run("trim nil err", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewErr, ptestNewType(), nil)
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		plugin := f()
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
+
+	t.Run("config", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewConf, ptestNewType(), confToGetMaybe(ptestDefaultConf()))
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		plugin := f()
+		ptestExpectConfigValue(t, plugin, ptestDefaultValue)
+	})
+
+	t.Run("new factory, get config failed", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewConf, ptestNewErrType(), errToGetMaybe(ptestConfigurationFailedErr))
+		f, ok := factory.(func() (ptestPlugin, error))
+		assert.True(t, ok)
+		plugin, err := f()
+		assert.ErrorIs(t, err, ptestConfigurationFailedErr)
+		assert.Nil(t, plugin)
+	})
+
+	t.Run("no err, get config failed, throw panic", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewConf, ptestNewType(), errToGetMaybe(ptestConfigurationFailedErr))
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		func() {
+			defer func() {
+				r := recover()
+				assert.Equal(t, ptestConfigurationFailedErr, r)
 			}()
-		})
+			f()
+		}()
+	})
 
-		It("panic on trim non nil err", func() {
-			factory := newFactoryOK(ptestNewErrFailing, ptestNewType(), nil)
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			func() {
-				defer func() {
-					r := recover()
-					Expect(r).To(Equal(ptestCreateFailedErr))
-				}()
-				f()
+	t.Run("panic on trim non nil err", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewErrFailing, ptestNewType(), nil)
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		func() {
+			defer func() {
+				r := recover()
+				assert.Equal(t, ptestCreateFailedErr, r)
 			}()
-		})
-
-	})
-})
-
-var _ = Describe("factory constructor", func() {
-	DescribeTable("expectations failed",
-		func(newPlugin interface{}) {
-			defer recoverExpectationFail()
-			newFactoryConstructor(ptestType(), newPlugin)
-		},
-		Entry("not func",
-			errors.New("that is not constructor")),
-		Entry("returned not func",
-			func() error { panic("") }),
-		Entry("too many args",
-			func(_, _ ptestConfig) func() ptestPlugin { panic("") }),
-		Entry("too many return valued",
-			func() (func() ptestPlugin, error, error) { panic("") }),
-		Entry("second return value is not error",
-			func() (func() ptestPlugin, ptestPlugin) { panic("") }),
-		Entry("factory accepts conf",
-			func() func(config ptestConfig) ptestPlugin { panic("") }),
-		Entry("not implements",
-			func() func() struct{} { panic("") }),
-		Entry("factory too many args",
-			func() func(_, _ ptestConfig) ptestPlugin { panic("") }),
-		Entry("factory too many return valued",
-			func() func() (_ ptestPlugin, _, _ error) { panic("") }),
-		Entry("factory second return value is not error",
-			func() func() (_, _ ptestPlugin) { panic("") }),
-	)
-
-	Context("new plugin", func() {
-		newPlugin := func(newFactory interface{}, maybeConf []reflect.Value) (interface{}, error) {
-			testee := newFactoryConstructor(ptestType(), newFactory)
-			return testee.NewPlugin(maybeConf)
-		}
-
-		It("", func() {
-			plugin, err := newPlugin(ptestNewFactory, nil)
-			Expect(err).NotTo(HaveOccurred())
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
-
-		It("impl", func() {
-			plugin, err := newPlugin(ptestNewFactoryImpl, nil)
-			Expect(err).NotTo(HaveOccurred())
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
-
-		It("impl more than", func() {
-			plugin, err := newPlugin(ptestNewFactoryMoreThan, nil)
-			Expect(err).NotTo(HaveOccurred())
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
-
-		It("config", func() {
-			plugin, err := newPlugin(ptestNewFactoryConf, confToMaybe(ptestDefaultConf()))
-			Expect(err).NotTo(HaveOccurred())
-			ptestExpectConfigValue(plugin, ptestDefaultValue)
-		})
-
-		It("failed", func() {
-			plugin, err := newPlugin(ptestNewFactoryErrFailing, nil)
-			Expect(err).To(Equal(ptestCreateFailedErr))
-			Expect(plugin).To(BeNil())
-		})
-
-		It("factory failed", func() {
-			plugin, err := newPlugin(ptestNewFactoryFactoryErrFailing, nil)
-			Expect(err).To(Equal(ptestCreateFailedErr))
-			Expect(plugin).To(BeNil())
-		})
+			f()
+		}()
 	})
 
-	Context("new factory", func() {
-		newFactory := func(newFactory interface{}, factoryType reflect.Type, getMaybeConf func() ([]reflect.Value, error)) (interface{}, error) {
-			testee := newFactoryConstructor(ptestType(), newFactory)
-			return testee.NewFactory(factoryType, getMaybeConf)
-		}
-		newFactoryOK := func(newF interface{}, factoryType reflect.Type, getMaybeConf func() ([]reflect.Value, error)) interface{} {
-			factory, err := newFactory(newF, factoryType, getMaybeConf)
-			Expect(err).NotTo(HaveOccurred())
-			return factory
-		}
+}
 
-		It("no err, same type - no wrap", func() {
-			factory := newFactoryOK(ptestNewFactory, ptestNewType(), nil)
-			expectSameFunc(factory, ptestNew)
+func TestFactoryConstructorExpectationsFailed(t *testing.T) {
+	tests := []struct {
+		name      string
+		newPlugin any
+	}{
+		{"not func", errors.New("that is not constructor")},
+		{"returned not func", func() error { panic("") }},
+		{"too many args", func(_, _ ptestConfig) func() ptestPlugin { panic("") }},
+		{"too many return valued", func() (func() ptestPlugin, error, error) { panic("") }},
+		{"second return value is not error", func() (func() ptestPlugin, ptestPlugin) { panic("") }},
+		{"factory accepts conf", func() func(config ptestConfig) ptestPlugin { panic("") }},
+		{"not implements", func() func() struct{} { panic("") }},
+		{"factory too many args", func() func(_, _ ptestConfig) ptestPlugin { panic("") }},
+		{"factory too many return valued", func() func() (_ ptestPlugin, _, _ error) { panic("") }},
+		{"factory second return value is not error", func() func() (_, _ ptestPlugin) { panic("") }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer recoverExpectationFail(t)
+			newFactoryConstructor(ptestType(), tt.newPlugin)
 		})
+	}
+}
 
-		It("has err, same type - no wrap", func() {
-			factory := newFactoryOK(ptestNewFactoryFactoryErr, ptestNewErrType(), nil)
-			expectSameFunc(factory, ptestNewErr)
-		})
+func TestFactoryConstructorNewPlugin(t *testing.T) {
+	newPlugin := func(newFactory interface{}, maybeConf []reflect.Value) (interface{}, error) {
+		testee := newFactoryConstructor(ptestType(), newFactory)
+		return testee.NewPlugin(maybeConf)
+	}
 
-		It("from new impl", func() {
-			factory := newFactoryOK(ptestNewFactoryImpl, ptestNewType(), nil)
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			plugin := f()
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
+	t.Run("", func(t *testing.T) {
+		plugin, err := newPlugin(ptestNewFactory, nil)
+		assert.NoError(t, err)
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
 
-		It("from new impl", func() {
-			factory := newFactoryOK(ptestNewFactoryMoreThan, ptestNewType(), nil)
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			plugin := f()
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
+	t.Run("impl", func(t *testing.T) {
+		plugin, err := newPlugin(ptestNewFactoryImpl, nil)
+		assert.NoError(t, err)
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
 
-		It("add err", func() {
-			factory := newFactoryOK(ptestNewFactory, ptestNewErrType(), nil)
-			f, ok := factory.(func() (ptestPlugin, error))
-			Expect(ok).To(BeTrue())
-			plugin, err := f()
-			Expect(err).NotTo(HaveOccurred())
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
+	t.Run("impl more than", func(t *testing.T) {
+		plugin, err := newPlugin(ptestNewFactoryMoreThan, nil)
+		assert.NoError(t, err)
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
 
-		It("factory construction not failed", func() {
-			factory := newFactoryOK(ptestNewFactoryErr, ptestNewType(), nil)
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			plugin := f()
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
+	t.Run("config", func(t *testing.T) {
+		plugin, err := newPlugin(ptestNewFactoryConf, confToMaybe(ptestDefaultConf()))
+		assert.NoError(t, err)
+		ptestExpectConfigValue(t, plugin, ptestDefaultValue)
+	})
 
-		It("trim nil err", func() {
-			factory := newFactoryOK(ptestNewFactoryFactoryErr, ptestNewType(), nil)
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			plugin := f()
-			ptestExpectConfigValue(plugin, ptestInitValue)
-		})
+	t.Run("failed", func(t *testing.T) {
+		plugin, err := newPlugin(ptestNewFactoryErrFailing, nil)
+		assert.ErrorIs(t, err, ptestCreateFailedErr)
+		assert.Nil(t, plugin)
+	})
 
-		It("config", func() {
-			factory := newFactoryOK(ptestNewFactoryConf, ptestNewType(), confToGetMaybe(ptestDefaultConf()))
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			plugin := f()
-			ptestExpectConfigValue(plugin, ptestDefaultValue)
-		})
+	t.Run("factory failed", func(t *testing.T) {
+		plugin, err := newPlugin(ptestNewFactoryFactoryErrFailing, nil)
+		assert.ErrorIs(t, err, ptestCreateFailedErr)
+		assert.Nil(t, plugin)
+	})
+}
 
-		It("get config failed", func() {
-			factory, err := newFactory(ptestNewFactoryConf, ptestNewErrType(), errToGetMaybe(ptestConfigurationFailedErr))
-			Expect(err).To(Equal(ptestConfigurationFailedErr))
-			Expect(factory).To(BeNil())
-		})
+func TestFactoryConstructorNewFactory(t *testing.T) {
+	newFactory := func(newFactory interface{}, factoryType reflect.Type, getMaybeConf func() ([]reflect.Value, error)) (interface{}, error) {
+		testee := newFactoryConstructor(ptestType(), newFactory)
+		return testee.NewFactory(factoryType, getMaybeConf)
+	}
+	newFactoryOK := func(newF interface{}, factoryType reflect.Type, getMaybeConf func() ([]reflect.Value, error)) interface{} {
+		factory, err := newFactory(newF, factoryType, getMaybeConf)
+		require.NoError(t, err)
+		return factory
+	}
 
-		It("factory create failed", func() {
-			factory, err := newFactory(ptestNewFactoryErrFailing, ptestNewErrType(), nil)
-			Expect(err).To(Equal(ptestCreateFailedErr))
-			Expect(factory).To(BeNil())
-		})
+	t.Run("no err, same type - no wrap", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewFactory, ptestNewType(), nil)
+		expectSameFunc(t, factory, ptestNew)
+	})
 
-		It("plugin create failed", func() {
-			factory := newFactoryOK(ptestNewFactoryFactoryErrFailing, ptestNewErrType(), nil)
-			f, ok := factory.(func() (ptestPlugin, error))
-			Expect(ok).To(BeTrue())
-			plugin, err := f()
-			Expect(err).To(Equal(ptestCreateFailedErr))
-			Expect(plugin).To(BeNil())
-		})
+	t.Run("has err, same type - no wrap", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewFactoryFactoryErr, ptestNewErrType(), nil)
+		expectSameFunc(t, factory, ptestNewErr)
+	})
 
-		It("panic on trim non nil err", func() {
-			factory := newFactoryOK(ptestNewFactoryFactoryErrFailing, ptestNewType(), nil)
-			f, ok := factory.(func() ptestPlugin)
-			Expect(ok).To(BeTrue())
-			func() {
-				defer func() {
-					r := recover()
-					Expect(r).To(Equal(ptestCreateFailedErr))
-				}()
-				f()
+	t.Run("from new impl", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewFactoryImpl, ptestNewType(), nil)
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		plugin := f()
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
+
+	t.Run("from new impl", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewFactoryMoreThan, ptestNewType(), nil)
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		plugin := f()
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
+
+	t.Run("add err", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewFactory, ptestNewErrType(), nil)
+		f, ok := factory.(func() (ptestPlugin, error))
+		assert.True(t, ok)
+		plugin, err := f()
+		assert.NoError(t, err)
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
+
+	t.Run("factory construction not failed", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewFactoryErr, ptestNewType(), nil)
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		plugin := f()
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
+
+	t.Run("trim nil err", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewFactoryFactoryErr, ptestNewType(), nil)
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		plugin := f()
+		ptestExpectConfigValue(t, plugin, ptestInitValue)
+	})
+
+	t.Run("config", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewFactoryConf, ptestNewType(), confToGetMaybe(ptestDefaultConf()))
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		plugin := f()
+		ptestExpectConfigValue(t, plugin, ptestDefaultValue)
+	})
+
+	t.Run("get config failed", func(t *testing.T) {
+		factory, err := newFactory(ptestNewFactoryConf, ptestNewErrType(), errToGetMaybe(ptestConfigurationFailedErr))
+		assert.Error(t, err, ptestConfigurationFailedErr)
+		assert.Nil(t, factory)
+	})
+
+	t.Run("factory create failed", func(t *testing.T) {
+		factory, err := newFactory(ptestNewFactoryErrFailing, ptestNewErrType(), nil)
+		assert.ErrorIs(t, err, ptestCreateFailedErr)
+		assert.Nil(t, factory)
+	})
+
+	t.Run("plugin create failed", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewFactoryFactoryErrFailing, ptestNewErrType(), nil)
+		f, ok := factory.(func() (ptestPlugin, error))
+		assert.True(t, ok)
+		plugin, err := f()
+		assert.ErrorIs(t, err, ptestCreateFailedErr)
+		assert.Nil(t, plugin)
+	})
+
+	t.Run("panic on trim non nil err", func(t *testing.T) {
+		factory := newFactoryOK(ptestNewFactoryFactoryErrFailing, ptestNewType(), nil)
+		f, ok := factory.(func() ptestPlugin)
+		assert.True(t, ok)
+		func() {
+			defer func() {
+				r := recover()
+				assert.Equal(t, ptestCreateFailedErr, r)
 			}()
-		})
-
+			f()
+		}()
 	})
-})
+
+}
 
 func confToMaybe(conf interface{}) []reflect.Value {
 	if conf != nil {
@@ -353,8 +349,8 @@ func errToGetMaybe(err error) func() ([]reflect.Value, error) {
 	}
 }
 
-func expectSameFunc(f1, f2 interface{}) {
+func expectSameFunc(t *testing.T, f1, f2 interface{}) {
 	s1 := fmt.Sprint(f1)
 	s2 := fmt.Sprint(f2)
-	Expect(s1).To(Equal(s2))
+	assert.Equal(t, s1, s2)
 }
