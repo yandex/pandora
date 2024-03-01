@@ -1,8 +1,3 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 // package core defines pandora engine extension points.
 // Core interfaces implementations MAY be used for custom engine creation and using as a library,
 // or MAY be registered in pandora plugin system (look at core/plugin package), for creating engine

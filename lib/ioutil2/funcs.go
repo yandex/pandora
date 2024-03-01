@@ -1,6 +1,3 @@
-// Copyright (c) 2016 Yandex LLC. All rights reserved.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 package ioutil2
 
 type ReaderFunc func(p []byte) (n int, err error)
