@@ -10,6 +10,7 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
+	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/lib/netutil"
 	"go.uber.org/zap"
 )
@@ -52,6 +53,10 @@ type ConnectGun struct {
 }
 
 var _ Gun = (*ConnectGun)(nil)
+
+func (g *ConnectGun) WarmUp(opts *warmup.Options) (any, error) {
+	return nil, nil
+}
 
 func (g *ConnectGun) Do(req *http.Request) (*http.Response, error) {
 	req.URL.Scheme = g.scheme

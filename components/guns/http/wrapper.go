@@ -1,6 +1,7 @@
 package phttp
 
 import (
+	"github.com/yandex/pandora/core/warmup"
 	"net/http"
 
 	"github.com/yandex/pandora/core"
@@ -24,6 +25,7 @@ type Ammo interface {
 type Gun interface {
 	Shoot(ammo Ammo)
 	Bind(sample netsample.Aggregator, deps core.GunDeps) error
+	WarmUp(opts *warmup.Options) (any, error)
 }
 
 func WrapGun(g Gun) core.Gun {
@@ -41,4 +43,8 @@ func (g *gunWrapper) Shoot(ammo core.Ammo) {
 
 func (g *gunWrapper) Bind(a core.Aggregator, deps core.GunDeps) error {
 	return g.Gun.Bind(netsample.UnwrapAggregator(a), deps)
+}
+
+func (g *gunWrapper) WarmUp(opts *warmup.Options) (any, error) {
+	return g.Gun.WarmUp(opts)
 }

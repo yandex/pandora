@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
+	"github.com/yandex/pandora/core/warmup"
 	"go.uber.org/zap"
 )
 
@@ -75,6 +76,10 @@ type HTTPGun struct {
 }
 
 var _ Gun = (*HTTPGun)(nil)
+
+func (g *HTTPGun) WarmUp(opts *warmup.Options) (any, error) {
+	return nil, nil
+}
 
 func (g *HTTPGun) Do(req *http.Request) (*http.Response, error) {
 	if req.Host == "" {

@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
+	"github.com/yandex/pandora/core/warmup"
 	"go.uber.org/zap"
 )
 
@@ -78,6 +79,10 @@ type BaseGun struct {
 
 var _ Gun = (*BaseGun)(nil)
 var _ io.Closer = (*BaseGun)(nil)
+
+func (b *BaseGun) WarmUp(opts *warmup.Options) (any, error) {
+	return nil, nil
+}
 
 func (b *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error {
 	log := deps.Log
