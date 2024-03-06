@@ -49,17 +49,17 @@ type HTTPTraceConfig struct {
 
 func DefaultBaseGunConfig() BaseGunConfig {
 	return BaseGunConfig{
-		AutoTagConfig{
+		AutoTag: AutoTagConfig{
 			Enabled:     false,
 			URIElements: 2,
 			NoTagOnly:   true,
 		},
-		AnswLogConfig{
+		AnswLog: AnswLogConfig{
 			Enabled: false,
 			Path:    "answ.log",
 			Filter:  "error",
 		},
-		HTTPTraceConfig{
+		HTTPTrace: HTTPTraceConfig{
 			DumpEnabled:  false,
 			TraceEnabled: false,
 		},
