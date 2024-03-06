@@ -7,20 +7,20 @@ import (
 	"go.uber.org/zap"
 )
 
-type ClientGunConfig struct {
+type GunConfig struct {
 	Target string `validate:"endpoint,required"`
 	SSL    bool
 	Base   BaseGunConfig `config:",squash"`
 }
 
 type HTTPGunConfig struct {
-	Gun    ClientGunConfig `config:",squash"`
-	Client ClientConfig    `config:",squash"`
+	Gun    GunConfig    `config:",squash"`
+	Client ClientConfig `config:",squash"`
 }
 
 type HTTP2GunConfig struct {
-	Gun    ClientGunConfig `config:",squash"`
-	Client ClientConfig    `config:",squash"`
+	Gun    GunConfig    `config:",squash"`
+	Client ClientConfig `config:",squash"`
 }
 
 func NewHTTPGun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string) *HTTPGun {
@@ -42,7 +42,7 @@ func NewHTTP2Gun(conf HTTP2GunConfig, answLog *zap.Logger, targetResolved string
 	return NewClientGun(client, conf.Gun, answLog, targetResolved), nil
 }
 
-func NewClientGun(client Client, conf ClientGunConfig, answLog *zap.Logger, targetResolved string) *HTTPGun {
+func NewClientGun(client Client, conf GunConfig, answLog *zap.Logger, targetResolved string) *HTTPGun {
 	scheme := "http"
 	if conf.SSL {
 		scheme = "https"
@@ -102,8 +102,8 @@ func DefaultHTTP2GunConfig() HTTP2GunConfig {
 	return conf
 }
 
-func DefaultClientGunConfig() ClientGunConfig {
-	return ClientGunConfig{
+func DefaultClientGunConfig() GunConfig {
+	return GunConfig{
 		SSL:  false,
 		Base: DefaultBaseGunConfig(),
 	}

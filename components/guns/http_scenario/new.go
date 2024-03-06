@@ -27,7 +27,7 @@ func NewHTTP2Gun(conf phttp.HTTP2GunConfig, answLog *zap.Logger, targetResolved 
 	return NewClientGun(client, conf.Gun, answLog, targetResolved), nil
 }
 
-func NewClientGun(client Client, conf phttp.ClientGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
+func NewClientGun(client Client, conf phttp.GunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
 	scheme := "http"
 	if conf.SSL {
 		scheme = "https"
