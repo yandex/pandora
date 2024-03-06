@@ -39,7 +39,7 @@ func TestBaseGun_integration(t *testing.T) {
 	defer server.Close()
 	log := zap.NewNop()
 	conf := DefaultHTTPGunConfig()
-	conf.Gun.Target = host + ":80"
+	conf.Target = host + ":80"
 	targetResolved := strings.TrimPrefix(server.URL, "http://")
 	results := &netsample.TestAggregator{}
 	httpGun := NewHTTPGun(conf, log, targetResolved)
@@ -88,9 +88,9 @@ func TestHTTP(t *testing.T) {
 			defer server.Close()
 			log := zap.NewNop()
 			conf := DefaultHTTPGunConfig()
-			conf.Gun.Target = server.Listener.Addr().String()
-			conf.Gun.SSL = tt.https
-			gun := NewHTTPGun(conf, log, conf.Gun.Target)
+			conf.Target = server.Listener.Addr().String()
+			conf.SSL = tt.https
+			gun := NewHTTPGun(conf, log, conf.Target)
 			var aggr netsample.TestAggregator
 			_ = gun.Bind(&aggr, testDeps())
 			gun.Shoot(newAmmoURL(t, "/"))
@@ -129,9 +129,9 @@ func TestHTTP_Redirect(t *testing.T) {
 			defer server.Close()
 			log := zap.NewNop()
 			conf := DefaultHTTPGunConfig()
-			conf.Gun.Target = server.Listener.Addr().String()
+			conf.Target = server.Listener.Addr().String()
 			conf.Client.Redirect = tt.redirect
-			gun := NewHTTPGun(conf, log, conf.Gun.Target)
+			gun := NewHTTPGun(conf, log, conf.Target)
 			var aggr netsample.TestAggregator
 			_ = gun.Bind(&aggr, testDeps())
 			gun.Shoot(newAmmoURL(t, "/redirect"))
@@ -167,9 +167,9 @@ func TestHTTP_notSupportHTTP2(t *testing.T) {
 
 	log := zap.NewNop()
 	conf := DefaultHTTPGunConfig()
-	conf.Gun.Target = server.Listener.Addr().String()
-	conf.Gun.SSL = true
-	gun := NewHTTPGun(conf, log, conf.Gun.Target)
+	conf.Target = server.Listener.Addr().String()
+	conf.SSL = true
+	gun := NewHTTPGun(conf, log, conf.Target)
 	var results netsample.TestAggregator
 	_ = gun.Bind(&results, testDeps())
 	gun.Shoot(newAmmoURL(t, "/"))
@@ -190,8 +190,8 @@ func TestHTTP2(t *testing.T) {
 		defer server.Close()
 		log := zap.NewNop()
 		conf := DefaultHTTP2GunConfig()
-		conf.Gun.Target = server.Listener.Addr().String()
-		gun, _ := NewHTTP2Gun(conf, log, conf.Gun.Target)
+		conf.Target = server.Listener.Addr().String()
+		gun, _ := NewHTTP2Gun(conf, log, conf.Target)
 		var results netsample.TestAggregator
 		_ = gun.Bind(&results, testDeps())
 		gun.Shoot(newAmmoURL(t, "/"))
@@ -205,8 +205,8 @@ func TestHTTP2(t *testing.T) {
 		defer server.Close()
 		log := zap.NewNop()
 		conf := DefaultHTTP2GunConfig()
-		conf.Gun.Target = server.Listener.Addr().String()
-		gun, _ := NewHTTP2Gun(conf, log, conf.Gun.Target)
+		conf.Target = server.Listener.Addr().String()
+		gun, _ := NewHTTP2Gun(conf, log, conf.Target)
 		var results netsample.TestAggregator
 		_ = gun.Bind(&results, testDeps())
 		var r interface{}
@@ -227,9 +227,9 @@ func TestHTTP2(t *testing.T) {
 		defer server.Close()
 		log := zap.NewNop()
 		conf := DefaultHTTP2GunConfig()
-		conf.Gun.Target = server.Listener.Addr().String()
-		conf.Gun.SSL = false
-		_, err := NewHTTP2Gun(conf, log, conf.Gun.Target)
+		conf.Target = server.Listener.Addr().String()
+		conf.SSL = false
+		_, err := NewHTTP2Gun(conf, log, conf.Target)
 		require.Error(t, err)
 	})
 }

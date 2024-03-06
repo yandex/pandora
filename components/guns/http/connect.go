@@ -16,10 +16,10 @@ import (
 )
 
 type ConnectGunConfig struct {
-	Target        string       `validate:"endpoint,required"`
-	SSL           bool         // As in HTTP gun, defines scheme for http requests.
-	Client        ClientConfig `config:",squash"`
-	BaseGunConfig `config:",squash"`
+	Base   BaseGunConfig `config:",squash"`
+	Client ClientConfig  `config:",squash"`
+	Target string        `validate:"endpoint,required"`
+	SSL    bool          // As in HTTP gun, defines scheme for http requests.
 }
 
 func NewConnectGun(conf ConnectGunConfig, answLog *zap.Logger) *ConnectGun {
@@ -31,7 +31,7 @@ func NewConnectGun(conf ConnectGunConfig, answLog *zap.Logger) *ConnectGun {
 	var g ConnectGun
 	g = ConnectGun{
 		BaseGun: BaseGun{
-			Config: conf.BaseGunConfig,
+			Config: conf.Base,
 			Do:     g.Do,
 			OnClose: func() error {
 				client.CloseIdleConnections()
@@ -68,7 +68,7 @@ func DefaultConnectGunConfig() ConnectGunConfig {
 	}
 }
 
-func newConnectClient(conf ClientConfig, target string) Client {
+var newConnectClient clientConstructor = func(conf ClientConfig, target string) Client {
 	transport := NewTransport(
 		conf.Transport,
 		newConnectDialFunc(

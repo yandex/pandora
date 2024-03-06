@@ -8,58 +8,49 @@ import (
 	"go.uber.org/zap"
 )
 
-type GunConfig struct {
-	Target string `validate:"endpoint,required"`
-	SSL    bool
-	Base   BaseGunConfig `config:",squash"`
-}
-
 type HTTPGunConfig struct {
-	Gun    GunConfig    `config:",squash"`
-	Client ClientConfig `config:",squash"`
-}
-
-type HTTP2GunConfig struct {
-	Gun    GunConfig    `config:",squash"`
-	Client ClientConfig `config:",squash"`
+	Base   BaseGunConfig `config:",squash"`
+	Client ClientConfig  `config:",squash"`
+	Target string        `validate:"endpoint,required"`
+	SSL    bool
 }
 
 func NewHTTPGun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string) *HTTPGun {
-	return NewClientGun(HTTP1ClientConstructor, conf.Client, conf.Gun, answLog, targetResolved)
+	return NewClientGun(HTTP1ClientConstructor, conf, answLog, targetResolved)
 }
 
-func HTTP1ClientConstructor(clientConfig ClientConfig, target string) Client {
+var HTTP1ClientConstructor clientConstructor = func(clientConfig ClientConfig, target string) Client {
 	transport := NewTransport(clientConfig.Transport, NewDialer(clientConfig.Dialer).DialContext, target)
 	client := newClient(transport, clientConfig.Redirect)
 	return client
 }
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
-func NewHTTP2Gun(conf HTTP2GunConfig, answLog *zap.Logger, targetResolved string) (*HTTPGun, error) {
-	if !conf.Gun.SSL {
+func NewHTTP2Gun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string) (*HTTPGun, error) {
+	if !conf.SSL {
 		// Open issue on github if you really need this feature.
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
 	}
-	return NewClientGun(HTTP2ClientConstructor, conf.Client, conf.Gun, answLog, targetResolved), nil
+	return NewClientGun(HTTP2ClientConstructor, conf, answLog, targetResolved), nil
 }
 
-func HTTP2ClientConstructor(clientConfig ClientConfig, target string) Client {
+var HTTP2ClientConstructor clientConstructor = func(clientConfig ClientConfig, target string) Client {
 	transport := NewHTTP2Transport(clientConfig.Transport, NewDialer(clientConfig.Dialer).DialContext, target)
 	client := newClient(transport, clientConfig.Redirect)
 	// Will panic and cancel shooting whet target doesn't support HTTP/2.
 	return &panicOnHTTP1Client{Client: client}
 }
 
-func NewClientGun(clientConstructor clientConstructor, clientCfg ClientConfig, gunCfg GunConfig, answLog *zap.Logger, targetResolved string) *HTTPGun {
-	client := clientConstructor(clientCfg, gunCfg.Target)
+func NewClientGun(clientConstructor clientConstructor, cfg HTTPGunConfig, answLog *zap.Logger, targetResolved string) *HTTPGun {
+	client := clientConstructor(cfg.Client, cfg.Target)
 	scheme := "http"
-	if gunCfg.SSL {
+	if cfg.SSL {
 		scheme = "https"
 	}
 	var g HTTPGun
 	g = HTTPGun{
 		BaseGun: BaseGun{
-			Config: gunCfg.Base,
+			Config: cfg.Base,
 			Do:     g.Do,
 			OnClose: func() error {
 				client.CloseIdleConnections()
@@ -68,7 +59,7 @@ func NewClientGun(clientConstructor clientConstructor, clientCfg ClientConfig, g
 			AnswLog: answLog,
 
 			scheme:         scheme,
-			hostname:       getHostWithoutPort(gunCfg.Target),
+			hostname:       getHostWithoutPort(cfg.Target),
 			targetResolved: targetResolved,
 			client:         client,
 		},
@@ -98,23 +89,18 @@ func (g *HTTPGun) Do(req *http.Request) (*http.Response, error) {
 
 func DefaultHTTPGunConfig() HTTPGunConfig {
 	return HTTPGunConfig{
-		Gun:    DefaultClientGunConfig(),
+
+		SSL: false,
+
+		Base:   DefaultBaseGunConfig(),
 		Client: DefaultClientConfig(),
 	}
 }
 
-func DefaultHTTP2GunConfig() HTTP2GunConfig {
-	conf := HTTP2GunConfig{
+func DefaultHTTP2GunConfig() HTTPGunConfig {
+	return HTTPGunConfig{
 		Client: DefaultClientConfig(),
-		Gun:    DefaultClientGunConfig(),
-	}
-	conf.Gun.SSL = true
-	return conf
-}
-
-func DefaultClientGunConfig() GunConfig {
-	return GunConfig{
-		SSL:  false,
-		Base: DefaultBaseGunConfig(),
+		Base:   DefaultBaseGunConfig(),
+		SSL:    true,
 	}
 }
