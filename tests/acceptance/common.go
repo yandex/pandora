@@ -14,9 +14,6 @@ import (
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/engine"
 	"github.com/yandex/pandora/lib/monitoring"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest/observer"
 	"gopkg.in/yaml.v2"
 )
 
@@ -48,21 +45,6 @@ func unmarshalConfigFile(t *testing.T, filename string, serverAddr string) map[s
 	err = yaml.Unmarshal(b.Bytes(), &mapCfg)
 	require.NoError(t, err)
 	return mapCfg
-}
-
-func newNullLogger() *zap.Logger {
-	c, _ := observer.New(zap.InfoLevel)
-	return zap.New(c)
-}
-
-func newLogger() *zap.Logger {
-	zapConf := zap.NewDevelopmentConfig()
-	zapConf.Level.SetLevel(zapcore.DebugLevel)
-	log, err := zapConf.Build(zap.AddCaller())
-	if err != nil {
-		zap.L().Fatal("Logger build failed", zap.Error(err))
-	}
-	return log
 }
 
 func newEngineMetrics(prefix string) engine.Metrics {

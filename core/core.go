@@ -103,6 +103,8 @@ type GunDeps struct {
 	InstanceID int
 	PoolID     string
 
+	Shared any
+
 	// TODO(skipor): https://github.com/yandex/pandora/issues/71
 	// Pass parallelism value. InstanceId MUST be -1 if parallelism > 1.
 }

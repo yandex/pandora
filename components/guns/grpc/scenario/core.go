@@ -86,10 +86,6 @@ func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
 	return g.gun.WarmUp(opts)
 }
 
-func (g *Gun) AcceptWarmUpResult(i interface{}) error {
-	return g.gun.AcceptWarmUpResult(i)
-}
-
 func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
 	return g.gun.Bind(aggr, deps)
 }

@@ -13,6 +13,7 @@ import (
 	phttpimport "github.com/yandex/pandora/components/phttp/import"
 	"github.com/yandex/pandora/core/engine"
 	coreimport "github.com/yandex/pandora/core/import"
+	"github.com/yandex/pandora/lib/testutil"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
@@ -39,8 +40,7 @@ func (s *PandoraSuite) SetupSuite() {
 		grpc.Import(s.fs)
 	})
 
-	s.log = newNullLogger()
-	// s.log = newLogger()
+	s.log = testutil.NewNullLogger()
 	s.metrics = newEngineMetrics("http_suite")
 }
 

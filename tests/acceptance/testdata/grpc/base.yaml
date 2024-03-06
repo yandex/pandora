@@ -4,6 +4,7 @@ pools:
       type: grpc
       target: localhost:18888
       tls: false
+      pool-size: 0
     ammo:
       type: grpc/json
       file: testdata/grpc/grpc.payload

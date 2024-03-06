@@ -47,15 +47,13 @@ func Test_Instance(t *testing.T) {
 
 	var justBeforeEach = func() {
 		deps := instanceDeps{
-
-			newSchedule,
-			newGun,
-			instanceSharedDeps{
-				provider,
-				metrics,
-				nil,
-				aggregator,
-				false,
+			newSchedule: newSchedule,
+			newGun:      newGun,
+			instanceSharedDeps: instanceSharedDeps{
+				provider:        provider,
+				metrics:         metrics,
+				aggregator:      aggregator,
+				discardOverflow: false,
 			},
 		}
 		ins, insCreateErr = newInstance(ctx, newNopLogger(), "pool_0", 0, deps)

@@ -15,6 +15,7 @@ type PandoraConfigGRPCGun struct {
 	Target      string `yaml:"target"`
 	TLS         bool   `yaml:"tls"`
 	ReflectPort *int64 `yaml:"reflect_port,omitempty"`
+	PoolSize    int    `yaml:"pool-size,omitempty"`
 }
 type PandoraConfigAmmo struct {
 	Type string `yaml:"type"`
