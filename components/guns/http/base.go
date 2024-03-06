@@ -74,6 +74,12 @@ type BaseGun struct {
 	OnClose    func() error                                  // Optional. Called on Close().
 	Aggregator netsample.Aggregator                          // Lazy set via BindResultTo.
 	AnswLog    *zap.Logger
+
+	scheme         string
+	hostname       string
+	targetResolved string
+	client         Client
+
 	core.GunDeps
 }
 

@@ -70,14 +70,14 @@ func TestDo(t *testing.T) {
 			require.NoError(t, err)
 
 			conf := DefaultConnectGunConfig()
-			conf.ConnectSSL = tunnelSSL
+			conf.Client.ConnectSSL = tunnelSSL
 			scheme := "http://"
 			if tunnelSSL {
 				scheme = "https://"
 			}
 			conf.Target = strings.TrimPrefix(proxy.URL, scheme)
 
-			client := newConnectClient(conf)
+			client := newConnectClient(conf.Client, conf.Target)
 
 			res, err := client.Do(req)
 			require.NoError(t, err)

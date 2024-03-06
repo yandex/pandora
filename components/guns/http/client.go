@@ -21,10 +21,13 @@ type Client interface {
 }
 
 type ClientConfig struct {
-	Redirect  bool            // When true, follow HTTP redirects.
-	Dialer    DialerConfig    `config:"dial"`
-	Transport TransportConfig `config:",squash"`
+	Redirect   bool            // When true, follow HTTP redirects.
+	Dialer     DialerConfig    `config:"dial"`
+	Transport  TransportConfig `config:",squash"`
+	ConnectSSL bool            `config:"connect-ssl"` // Defines if tunnel encrypted.
 }
+
+type clientConstructor func(clientConfig ClientConfig, target string) Client
 
 func DefaultClientConfig() ClientConfig {
 	return ClientConfig{
