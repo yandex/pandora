@@ -58,6 +58,10 @@ func (g *ConnectGun) WarmUp(opts *warmup.Options) (any, error) {
 
 func (g *ConnectGun) Do(req *http.Request) (*http.Response, error) {
 	req.URL.Scheme = g.scheme
+	if req.URL.Host == "" {
+		req.URL.Host = "127.0.0.1"
+	}
+
 	return g.client.Do(req)
 }
 
@@ -65,6 +69,7 @@ func DefaultConnectGunConfig() ConnectGunConfig {
 	return ConnectGunConfig{
 		SSL:    false,
 		Client: DefaultClientConfig(),
+		Base:   DefaultBaseGunConfig(),
 	}
 }
 
