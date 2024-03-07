@@ -10,19 +10,11 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
-	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/lib/netutil"
 	"go.uber.org/zap"
 )
 
-type ConnectGunConfig struct {
-	Base   BaseGunConfig `config:",squash"`
-	Client ClientConfig  `config:",squash"`
-	Target string        `validate:"endpoint,required"`
-	SSL    bool          // As in HTTP gun, defines scheme for http requests.
-}
-
-func NewConnectGun(cfg ConnectGunConfig, answLog *zap.Logger) *ConnectGun {
+func NewConnectGun(cfg HTTPGunConfig, answLog *zap.Logger) *BaseGun {
 	scheme := "http"
 	if cfg.SSL {
 		scheme = "https"
@@ -34,33 +26,19 @@ func NewConnectGun(cfg ConnectGunConfig, answLog *zap.Logger) *ConnectGun {
 		hostname:       "",
 		targetResolved: cfg.Target,
 	}
-	var g ConnectGun
-	g = ConnectGun{
-		BaseGun: BaseGun{
-			Config: cfg.Base,
-			OnClose: func() error {
-				client.CloseIdleConnections()
-				return nil
-			},
-			AnswLog: answLog,
-			client:  wrappedClient,
+	return &BaseGun{
+		Config: cfg.Base,
+		OnClose: func() error {
+			client.CloseIdleConnections()
+			return nil
 		},
+		AnswLog: answLog,
+		client:  wrappedClient,
 	}
-	return &g
 }
 
-type ConnectGun struct {
-	BaseGun
-}
-
-var _ Gun = (*ConnectGun)(nil)
-
-func (g *ConnectGun) WarmUp(opts *warmup.Options) (any, error) {
-	return nil, nil
-}
-
-func DefaultConnectGunConfig() ConnectGunConfig {
-	return ConnectGunConfig{
+func DefaultConnectGunConfig() HTTPGunConfig {
+	return HTTPGunConfig{
 		SSL:    false,
 		Client: DefaultClientConfig(),
 		Base:   DefaultBaseGunConfig(),

@@ -2,7 +2,6 @@ package phttp
 
 import (
 	"github.com/pkg/errors"
-	"github.com/yandex/pandora/core/warmup"
 	"go.uber.org/zap"
 )
 
@@ -13,8 +12,8 @@ type HTTPGunConfig struct {
 	SSL    bool
 }
 
-func NewHTTPGun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
-	return NewClientGun(HTTP1ClientConstructor, conf, answLog, targetResolved)
+func NewHTTP1Gun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
+	return newHTTPGun(HTTP1ClientConstructor, conf, answLog, targetResolved)
 }
 
 var HTTP1ClientConstructor clientConstructor = func(clientConfig ClientConfig, target string) Client {
@@ -29,7 +28,7 @@ func NewHTTP2Gun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string)
 		// Open issue on github if you really need this feature.
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
 	}
-	return NewClientGun(HTTP2ClientConstructor, conf, answLog, targetResolved), nil
+	return newHTTPGun(HTTP2ClientConstructor, conf, answLog, targetResolved), nil
 }
 
 var HTTP2ClientConstructor clientConstructor = func(clientConfig ClientConfig, target string) Client {
@@ -39,7 +38,7 @@ var HTTP2ClientConstructor clientConstructor = func(clientConfig ClientConfig, t
 	return &panicOnHTTP1Client{Client: client}
 }
 
-func NewClientGun(clientConstructor clientConstructor, cfg HTTPGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
+func newHTTPGun(clientConstructor clientConstructor, cfg HTTPGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
 	scheme := "http"
 	if cfg.SSL {
 		scheme = "https"
@@ -51,7 +50,7 @@ func NewClientGun(clientConstructor clientConstructor, cfg HTTPGunConfig, answLo
 		targetResolved: targetResolved,
 		scheme:         scheme,
 	}
-	g := BaseGun{
+	return &BaseGun{
 		Config: cfg.Base,
 		OnClose: func() error {
 			client.CloseIdleConnections()
@@ -63,24 +62,11 @@ func NewClientGun(clientConstructor clientConstructor, cfg HTTPGunConfig, answLo
 		targetResolved: targetResolved,
 		client:         wrappedClient,
 	}
-	return &g
-}
-
-type HTTPGun struct {
-	BaseGun
-}
-
-var _ Gun = (*HTTPGun)(nil)
-
-func (g *HTTPGun) WarmUp(opts *warmup.Options) (any, error) {
-	return nil, nil
 }
 
 func DefaultHTTPGunConfig() HTTPGunConfig {
 	return HTTPGunConfig{
-
-		SSL: false,
-
+		SSL:    false,
 		Base:   DefaultBaseGunConfig(),
 		Client: DefaultClientConfig(),
 	}

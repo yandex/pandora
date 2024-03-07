@@ -42,7 +42,7 @@ func TestBaseGun_integration(t *testing.T) {
 	conf.Target = host + ":80"
 	targetResolved := strings.TrimPrefix(server.URL, "http://")
 	results := &netsample.TestAggregator{}
-	httpGun := NewHTTPGun(conf, log, targetResolved)
+	httpGun := NewHTTP1Gun(conf, log, targetResolved)
 	_ = httpGun.Bind(results, testDeps())
 
 	am := newAmmoReq(t, expectedReq)
@@ -90,7 +90,7 @@ func TestHTTP(t *testing.T) {
 			conf := DefaultHTTPGunConfig()
 			conf.Target = server.Listener.Addr().String()
 			conf.SSL = tt.https
-			gun := NewHTTPGun(conf, log, conf.Target)
+			gun := NewHTTP1Gun(conf, log, conf.Target)
 			var aggr netsample.TestAggregator
 			_ = gun.Bind(&aggr, testDeps())
 			gun.Shoot(newAmmoURL(t, "/"))
@@ -131,7 +131,7 @@ func TestHTTP_Redirect(t *testing.T) {
 			conf := DefaultHTTPGunConfig()
 			conf.Target = server.Listener.Addr().String()
 			conf.Client.Redirect = tt.redirect
-			gun := NewHTTPGun(conf, log, conf.Target)
+			gun := NewHTTP1Gun(conf, log, conf.Target)
 			var aggr netsample.TestAggregator
 			_ = gun.Bind(&aggr, testDeps())
 			gun.Shoot(newAmmoURL(t, "/redirect"))
@@ -169,7 +169,7 @@ func TestHTTP_notSupportHTTP2(t *testing.T) {
 	conf := DefaultHTTPGunConfig()
 	conf.Target = server.Listener.Addr().String()
 	conf.SSL = true
-	gun := NewHTTPGun(conf, log, conf.Target)
+	gun := NewHTTP1Gun(conf, log, conf.Target)
 	var results netsample.TestAggregator
 	_ = gun.Bind(&results, testDeps())
 	gun.Shoot(newAmmoURL(t, "/"))

@@ -85,7 +85,7 @@ type BaseGun struct {
 var _ Gun = (*BaseGun)(nil)
 var _ io.Closer = (*BaseGun)(nil)
 
-func (b *BaseGun) WarmUp(opts *warmup.Options) (any, error) {
+func (b *BaseGun) WarmUp(_ *warmup.Options) (any, error) {
 	return nil, nil
 }
 
