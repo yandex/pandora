@@ -173,6 +173,29 @@ func (c *panicOnHTTP1Client) Do(req *http.Request) (*http.Response, error) {
 	return res, nil
 }
 
+type httpDecoratedClient struct {
+	client         Client
+	scheme         string
+	hostname       string
+	targetResolved string
+}
+
+func (c *httpDecoratedClient) Do(req *http.Request) (*http.Response, error) {
+	if req.Host == "" {
+		req.Host = c.hostname
+	}
+
+	if c.targetResolved != "" {
+		req.URL.Host = c.targetResolved
+	}
+	req.URL.Scheme = c.scheme
+	return c.client.Do(req)
+}
+
+func (c *httpDecoratedClient) CloseIdleConnections() {
+	c.client.CloseIdleConnections()
+}
+
 func checkHTTP2(state *tls.ConnectionState) error {
 	if state == nil {
 		return errors.New("http2: non TLS connection")

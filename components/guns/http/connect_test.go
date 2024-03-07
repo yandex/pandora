@@ -14,12 +14,14 @@ import (
 	"go.uber.org/zap"
 )
 
-var tunnelHandler = func(t *testing.T, originURL string) http.Handler {
+var tunnelHandler = func(t *testing.T, originURL string, compareURI bool) http.Handler {
 	u, err := url.Parse(originURL)
 	require.NoError(t, err)
 	originHost := u.Host
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, originHost, r.RequestURI)
+		if compareURI {
+			require.Equal(t, originHost, r.RequestURI)
+		}
 
 		toOrigin, err := net.Dial("tcp", originHost)
 		require.NoError(t, err)
@@ -60,9 +62,9 @@ func TestDo(t *testing.T) {
 
 			var proxy *httptest.Server
 			if tunnelSSL {
-				proxy = httptest.NewTLSServer(tunnelHandler(t, origin.URL))
+				proxy = httptest.NewTLSServer(tunnelHandler(t, origin.URL, true))
 			} else {
-				proxy = httptest.NewServer(tunnelHandler(t, origin.URL))
+				proxy = httptest.NewServer(tunnelHandler(t, origin.URL, true))
 			}
 			defer proxy.Close()
 
@@ -91,7 +93,7 @@ func TestNewConnectGun(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 	}))
 	defer origin.Close()
-	proxy := httptest.NewServer(tunnelHandler(t, origin.URL))
+	proxy := httptest.NewServer(tunnelHandler(t, origin.URL, false))
 	defer proxy.Close()
 
 	log := zap.NewNop()

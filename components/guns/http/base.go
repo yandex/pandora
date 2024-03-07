@@ -69,10 +69,9 @@ func DefaultBaseGunConfig() BaseGunConfig {
 type BaseGun struct {
 	DebugLog   bool // Automaticaly set in Bind if Log accepts debug messages.
 	Config     BaseGunConfig
-	Do         func(r *http.Request) (*http.Response, error) // Required.
-	Connect    func(ctx context.Context) error               // Optional hook.
-	OnClose    func() error                                  // Optional. Called on Close().
-	Aggregator netsample.Aggregator                          // Lazy set via BindResultTo.
+	Connect    func(ctx context.Context) error // Optional hook.
+	OnClose    func() error                    // Optional. Called on Close().
+	Aggregator netsample.Aggregator            // Lazy set via BindResultTo.
 	AnswLog    *zap.Logger
 
 	scheme         string
@@ -168,7 +167,7 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 		}
 	}
 	var res *http.Response
-	res, err = b.Do(req)
+	res, err = b.client.Do(req)
 	if b.Config.HTTPTrace.TraceEnabled && timings != nil {
 		sample.SetReceiveTime(timings.GetReceiveTime())
 	}

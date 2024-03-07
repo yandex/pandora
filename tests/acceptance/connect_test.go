@@ -68,12 +68,12 @@ func (s *ConnectGunSuite) Test_Connect() {
 			wantCnt: 15,
 		},
 		// TODO: first record does not look like a TLS handshake. Check https://go.dev/src/crypto/tls/conn.go
-		//{
-		//	name:    "connect-ssl",
-		//	filecfg: "testdata/connect/connect-ssl.yaml",
-		//	isTLS:   true,
-		//	wantCnt: 4,
-		//},
+		{
+			name:    "connect-ssl",
+			filecfg: "testdata/connect/connect-ssl.yaml",
+			isTLS:   true,
+			wantCnt: 4,
+		},
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {

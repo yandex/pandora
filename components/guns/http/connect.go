@@ -22,25 +22,28 @@ type ConnectGunConfig struct {
 	SSL    bool          // As in HTTP gun, defines scheme for http requests.
 }
 
-func NewConnectGun(conf ConnectGunConfig, answLog *zap.Logger) *ConnectGun {
+func NewConnectGun(cfg ConnectGunConfig, answLog *zap.Logger) *ConnectGun {
 	scheme := "http"
-	if conf.SSL {
+	if cfg.SSL {
 		scheme = "https"
 	}
-	client := newConnectClient(conf.Client, conf.Target)
+	client := newConnectClient(cfg.Client, cfg.Target)
+	wrappedClient := &httpDecoratedClient{
+		client:         client,
+		scheme:         scheme,
+		hostname:       "",
+		targetResolved: cfg.Target,
+	}
 	var g ConnectGun
 	g = ConnectGun{
 		BaseGun: BaseGun{
-			Config: conf.Base,
-			Do:     g.Do,
+			Config: cfg.Base,
 			OnClose: func() error {
 				client.CloseIdleConnections()
 				return nil
 			},
 			AnswLog: answLog,
-
-			scheme: scheme,
-			client: client,
+			client:  wrappedClient,
 		},
 	}
 	return &g
@@ -54,15 +57,6 @@ var _ Gun = (*ConnectGun)(nil)
 
 func (g *ConnectGun) WarmUp(opts *warmup.Options) (any, error) {
 	return nil, nil
-}
-
-func (g *ConnectGun) Do(req *http.Request) (*http.Response, error) {
-	req.URL.Scheme = g.scheme
-	if req.URL.Host == "" {
-		req.URL.Host = "127.0.0.1"
-	}
-
-	return g.client.Do(req)
 }
 
 func DefaultConnectGunConfig() ConnectGunConfig {

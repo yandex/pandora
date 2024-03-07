@@ -9,6 +9,7 @@ pools:
       target: {{.target}}
       type: connect
       ssl: true
+      connect-ssl: true
       answlog:
         enabled: false
     rps-per-instance: false
