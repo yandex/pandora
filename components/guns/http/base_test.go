@@ -151,7 +151,6 @@ func (s *BaseGunSuite) Test_Shoot() {
 		am       *ammomock.Ammo
 		req      *http.Request
 		tag      string
-		res      *http.Response
 		sample   *netsample.Sample
 		results  *netsample.TestAggregator
 		shootErr error
@@ -168,11 +167,7 @@ func (s *BaseGunSuite) Test_Shoot() {
 	justBeforeEach := func() {
 		sample = netsample.Acquire(tag)
 		am.On("Request").Return(req, sample).Maybe()
-		res = &http.Response{
-			StatusCode: http.StatusNotFound,
-			Body:       ioutil.NopCloser(body),
-			Request:    req,
-		}
+
 		s.base.Shoot(am)
 		s.Require().Len(results.Samples, 1)
 		shootErr = results.Samples[0].Err()
@@ -202,7 +197,7 @@ func (s *BaseGunSuite) Test_Shoot() {
 			s.Assert().Len(results.Samples, 1)
 			s.Assert().Equal(sample, results.Samples[0])
 			s.Assert().Equal("__EMPTY__", sample.Tags())
-			s.Assert().Equal(res.StatusCode, sample.ProtoCode())
+			s.Assert().Equal(http.StatusNotFound, sample.ProtoCode())
 			_ = shootErr
 		})
 
