@@ -8,12 +8,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	ammomock "github.com/yandex/pandora/components/guns/http/mocks"
-	"github.com/yandex/pandora/core/aggregator/netsample"
-	"github.com/yandex/pandora/core/config"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
+
+	ammomock "github.com/yandex/pandora/components/guns/http/mocks"
+	"github.com/yandex/pandora/core/aggregator/netsample"
+	"github.com/yandex/pandora/core/config"
 )
 
 func TestBaseGun_GunClientConfig_decode(t *testing.T) {

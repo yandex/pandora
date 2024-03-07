@@ -10,8 +10,9 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
-	"github.com/yandex/pandora/lib/netutil"
 	"go.uber.org/zap"
+
+	"github.com/yandex/pandora/lib/netutil"
 )
 
 func NewConnectGun(cfg HTTPGunConfig, answLog *zap.Logger) *BaseGun {

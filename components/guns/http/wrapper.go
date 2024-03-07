@@ -1,11 +1,11 @@
 package phttp
 
 import (
-	"github.com/yandex/pandora/core/warmup"
 	"net/http"
 
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
+	"github.com/yandex/pandora/core/warmup"
 )
 
 //go:generate mockery --name=Ammo --case=underscore --outpkg=ammomock

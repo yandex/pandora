@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
+
 	phttp "github.com/yandex/pandora/components/guns/http"
 	httpscenario "github.com/yandex/pandora/components/guns/http_scenario"
 	ammo "github.com/yandex/pandora/components/providers/scenario"
@@ -20,7 +22,6 @@ import (
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/plugin/pluginconfig"
 	"github.com/yandex/pandora/examples/http/server"
-	"go.uber.org/zap"
 )
 
 var testOnce = &sync.Once{}

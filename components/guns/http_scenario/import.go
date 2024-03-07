@@ -4,13 +4,14 @@ import (
 	"net"
 
 	"github.com/spf13/afero"
+	"go.uber.org/zap"
+
 	phttp "github.com/yandex/pandora/components/guns/http"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/register"
 	"github.com/yandex/pandora/lib/answlog"
 	"github.com/yandex/pandora/lib/netutil"
-	"go.uber.org/zap"
 )
 
 func WrapGun(g Gun) core.Gun {

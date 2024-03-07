@@ -4,8 +4,9 @@ import (
 	"errors"
 	"net"
 
-	phttp "github.com/yandex/pandora/components/guns/http"
 	"go.uber.org/zap"
+
+	phttp "github.com/yandex/pandora/components/guns/http"
 )
 
 func NewHTTPGun(conf phttp.HTTPGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {

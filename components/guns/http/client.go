@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/yandex/pandora/lib/netutil"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
+
+	"github.com/yandex/pandora/lib/netutil"
 )
 
 //go:generate mockery --name=Client --case=underscore --inpackage --testonly

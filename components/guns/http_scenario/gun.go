@@ -13,10 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	phttp "github.com/yandex/pandora/components/guns/http"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
-	"go.uber.org/zap"
 )
 
 type Gun interface {
