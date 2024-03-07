@@ -13,10 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	phttp "github.com/yandex/pandora/components/guns/http"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
-	"go.uber.org/zap"
 )
 
 type Gun interface {
@@ -64,7 +65,7 @@ func (g *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error
 	return nil
 }
 
-// Shoot is thread safe iff Do and Connect hooks are thread safe.
+// Shoot is thread safe if Do and Connect hooks are thread safe.
 func (g *BaseGun) Shoot(ammo *Scenario) {
 	if g.Aggregator == nil {
 		zap.L().Panic("must bind before shoot")
@@ -176,7 +177,7 @@ func (g *BaseGun) shootStep(step Request, sample *netsample.Sample, ammoName str
 
 	timings, req := g.initTracing(req, sample)
 
-	resp, err := g.Do(req)
+	resp, err := g.client.Do(req)
 
 	g.saveTrace(timings, sample, resp)
 

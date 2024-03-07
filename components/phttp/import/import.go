@@ -4,6 +4,8 @@ import (
 	"net"
 
 	"github.com/spf13/afero"
+	"go.uber.org/zap"
+
 	phttp "github.com/yandex/pandora/components/guns/http"
 	scenarioGun "github.com/yandex/pandora/components/guns/http_scenario"
 	httpProvider "github.com/yandex/pandora/components/providers/http"
@@ -12,7 +14,6 @@ import (
 	"github.com/yandex/pandora/core/register"
 	"github.com/yandex/pandora/lib/answlog"
 	"github.com/yandex/pandora/lib/netutil"
-	"go.uber.org/zap"
 )
 
 func Import(fs afero.Fs) {
@@ -21,23 +22,23 @@ func Import(fs afero.Fs) {
 	scenarioProvider.Import(fs)
 
 	register.Gun("http", func(conf phttp.HTTPGunConfig) func() core.Gun {
-		targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Gun.Target)
-		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path, conf.Gun.Base.AnswLog.Enabled)
-		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTPGun(conf, answLog, targetResolved)) }
+		targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Target)
+		answLog := answlog.Init(conf.Base.AnswLog.Path, conf.Base.AnswLog.Enabled)
+		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTP1Gun(conf, answLog, targetResolved)) }
 	}, phttp.DefaultHTTPGunConfig)
 
-	register.Gun("http2", func(conf phttp.HTTP2GunConfig) func() (core.Gun, error) {
-		targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Gun.Target)
-		answLog := answlog.Init(conf.Gun.Base.AnswLog.Path, conf.Gun.Base.AnswLog.Enabled)
+	register.Gun("http2", func(conf phttp.HTTPGunConfig) func() (core.Gun, error) {
+		targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Target)
+		answLog := answlog.Init(conf.Base.AnswLog.Path, conf.Base.AnswLog.Enabled)
 		return func() (core.Gun, error) {
 			gun, err := phttp.NewHTTP2Gun(conf, answLog, targetResolved)
 			return phttp.WrapGun(gun), err
 		}
 	}, phttp.DefaultHTTP2GunConfig)
 
-	register.Gun("connect", func(conf phttp.ConnectGunConfig) func() core.Gun {
+	register.Gun("connect", func(conf phttp.HTTPGunConfig) func() core.Gun {
 		conf.Target, _ = PreResolveTargetAddr(&conf.Client, conf.Target)
-		answLog := answlog.Init(conf.BaseGunConfig.AnswLog.Path, conf.BaseGunConfig.AnswLog.Enabled)
+		answLog := answlog.Init(conf.Base.AnswLog.Path, conf.Base.AnswLog.Enabled)
 		return func() core.Gun {
 			return phttp.WrapGun(phttp.NewConnectGun(conf, answLog))
 		}
