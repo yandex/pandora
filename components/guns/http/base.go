@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
+	"github.com/yandex/pandora/core/warmup"
 	"go.uber.org/zap"
 )
 
@@ -48,17 +49,17 @@ type HTTPTraceConfig struct {
 
 func DefaultBaseGunConfig() BaseGunConfig {
 	return BaseGunConfig{
-		AutoTagConfig{
+		AutoTag: AutoTagConfig{
 			Enabled:     false,
 			URIElements: 2,
 			NoTagOnly:   true,
 		},
-		AnswLogConfig{
+		AnswLog: AnswLogConfig{
 			Enabled: false,
 			Path:    "answ.log",
 			Filter:  "error",
 		},
-		HTTPTraceConfig{
+		HTTPTrace: HTTPTraceConfig{
 			DumpEnabled:  false,
 			TraceEnabled: false,
 		},
@@ -68,16 +69,25 @@ func DefaultBaseGunConfig() BaseGunConfig {
 type BaseGun struct {
 	DebugLog   bool // Automaticaly set in Bind if Log accepts debug messages.
 	Config     BaseGunConfig
-	Do         func(r *http.Request) (*http.Response, error) // Required.
-	Connect    func(ctx context.Context) error               // Optional hook.
-	OnClose    func() error                                  // Optional. Called on Close().
-	Aggregator netsample.Aggregator                          // Lazy set via BindResultTo.
+	Connect    func(ctx context.Context) error // Optional hook.
+	OnClose    func() error                    // Optional. Called on Close().
+	Aggregator netsample.Aggregator            // Lazy set via BindResultTo.
 	AnswLog    *zap.Logger
+
+	scheme         string
+	hostname       string
+	targetResolved string
+	client         Client
+
 	core.GunDeps
 }
 
 var _ Gun = (*BaseGun)(nil)
 var _ io.Closer = (*BaseGun)(nil)
+
+func (b *BaseGun) WarmUp(_ *warmup.Options) (any, error) {
+	return nil, nil
+}
 
 func (b *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error {
 	log := deps.Log
@@ -157,7 +167,7 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 		}
 	}
 	var res *http.Response
-	res, err = b.Do(req)
+	res, err = b.client.Do(req)
 	if b.Config.HTTPTrace.TraceEnabled && timings != nil {
 		sample.SetReceiveTime(timings.GetReceiveTime())
 	}

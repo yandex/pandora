@@ -14,67 +14,50 @@ import (
 	"go.uber.org/zap"
 )
 
-type ConnectGunConfig struct {
-	Target        string       `validate:"endpoint,required"`
-	ConnectSSL    bool         `config:"connect-ssl"` // Defines if tunnel encrypted.
-	SSL           bool         // As in HTTP gun, defines scheme for http requests.
-	Client        ClientConfig `config:",squash"`
-	BaseGunConfig `config:",squash"`
-}
-
-func NewConnectGun(conf ConnectGunConfig, answLog *zap.Logger) *ConnectGun {
+func NewConnectGun(cfg HTTPGunConfig, answLog *zap.Logger) *BaseGun {
 	scheme := "http"
-	if conf.SSL {
+	if cfg.SSL {
 		scheme = "https"
 	}
-	client := newConnectClient(conf)
-	var g ConnectGun
-	g = ConnectGun{
-		BaseGun: BaseGun{
-			Config: conf.BaseGunConfig,
-			Do:     g.Do,
-			OnClose: func() error {
-				client.CloseIdleConnections()
-				return nil
-			},
-			AnswLog: answLog,
+	client := newConnectClient(cfg.Client, cfg.Target)
+	wrappedClient := &httpDecoratedClient{
+		client:         client,
+		scheme:         scheme,
+		hostname:       "",
+		targetResolved: cfg.Target,
+	}
+	return &BaseGun{
+		Config: cfg.Base,
+		OnClose: func() error {
+			client.CloseIdleConnections()
+			return nil
 		},
-		scheme: scheme,
-		client: client,
-	}
-	return &g
-}
-
-type ConnectGun struct {
-	BaseGun
-	scheme string
-	client Client
-}
-
-var _ Gun = (*ConnectGun)(nil)
-
-func (g *ConnectGun) Do(req *http.Request) (*http.Response, error) {
-	req.URL.Scheme = g.scheme
-	return g.client.Do(req)
-}
-
-func DefaultConnectGunConfig() ConnectGunConfig {
-	return ConnectGunConfig{
-		SSL:        false,
-		ConnectSSL: false,
-		Client:     DefaultClientConfig(),
+		AnswLog: answLog,
+		client:  wrappedClient,
 	}
 }
 
-func newConnectClient(conf ConnectGunConfig) Client {
-	transport := NewTransport(conf.Client.Transport,
+func DefaultConnectGunConfig() HTTPGunConfig {
+	return HTTPGunConfig{
+		SSL:    false,
+		Client: DefaultClientConfig(),
+		Base:   DefaultBaseGunConfig(),
+	}
+}
+
+func newConnectClient(conf ClientConfig, target string) Client {
+	transport := NewTransport(
+		conf.Transport,
 		newConnectDialFunc(
-			conf.Target,
+			target,
 			conf.ConnectSSL,
-			NewDialer(conf.Client.Dialer),
-		), conf.Target)
-	return newClient(transport, conf.Client.Redirect)
+			NewDialer(conf.Dialer),
+		),
+		target)
+	return newClient(transport, conf.Redirect)
 }
+
+var _ clientConstructor = newConnectClient
 
 func newConnectDialFunc(target string, connectSSL bool, dialer netutil.Dialer) netutil.DialerFunc {
 	return func(ctx context.Context, network, address string) (conn net.Conn, err error) {

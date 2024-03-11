@@ -103,9 +103,38 @@ func (a *ammoMock) IsInvalid() bool {
 	return false
 }
 
+type testDecoratedClient struct {
+	client    Client
+	t         *testing.T
+	before    func(req *http.Request)
+	after     func(req *http.Request, res *http.Response, err error)
+	returnRes *http.Response
+	returnErr error
+}
+
+func (c *testDecoratedClient) Do(req *http.Request) (*http.Response, error) {
+	if c.before != nil {
+		c.before(req)
+	}
+	if c.client == nil {
+		return c.returnRes, c.returnErr
+	}
+	res, err := c.client.Do(req)
+	if c.after != nil {
+		c.after(req, res, err)
+	}
+	return res, err
+}
+
+func (c *testDecoratedClient) CloseIdleConnections() {
+	c.client.CloseIdleConnections()
+}
+
 func (s *BaseGunSuite) Test_Shoot_BeforeBindPanics() {
-	s.base.Do = func(*http.Request) (_ *http.Response, _ error) {
-		panic("should not be called")
+	s.base.client = &testDecoratedClient{
+		client: s.base.client,
+		before: func(req *http.Request) { panic("should not be called\"") },
+		after:  nil,
 	}
 	am := &ammoMock{}
 
@@ -152,9 +181,15 @@ func (s *BaseGunSuite) Test_Shoot() {
 		beforeEachDoOk := func() {
 			body = ioutil.NopCloser(strings.NewReader("aaaaaaa"))
 			s.base.AnswLog = zap.NewNop()
-			s.base.Do = func(doReq *http.Request) (*http.Response, error) {
-				s.Require().Equal(req, doReq)
-				return res, nil
+			s.base.client = &testDecoratedClient{
+				before: func(doReq *http.Request) {
+					s.Require().Equal(req, doReq)
+				},
+				returnRes: &http.Response{
+					StatusCode: http.StatusNotFound,
+					Body:       ioutil.NopCloser(body),
+					Request:    req,
+				},
 			}
 		}
 		s.Run("ammo sample sent to results", func() {
@@ -232,10 +267,12 @@ func (s *BaseGunSuite) Test_Shoot() {
 					connectCalled = true
 					return nil
 				}
-				oldDo := s.base.Do
-				s.base.Do = func(r *http.Request) (*http.Response, error) {
-					doCalled = true
-					return oldDo(r)
+
+				s.base.client = &testDecoratedClient{
+					client: s.base.client,
+					before: func(doReq *http.Request) {
+						doCalled = true
+					},
 				}
 			}
 			s.Run("Connect called", func() {

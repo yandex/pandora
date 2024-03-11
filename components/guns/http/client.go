@@ -21,10 +21,13 @@ type Client interface {
 }
 
 type ClientConfig struct {
-	Redirect  bool            // When true, follow HTTP redirects.
-	Dialer    DialerConfig    `config:"dial"`
-	Transport TransportConfig `config:",squash"`
+	Redirect   bool            // When true, follow HTTP redirects.
+	Dialer     DialerConfig    `config:"dial"`
+	Transport  TransportConfig `config:",squash"`
+	ConnectSSL bool            `config:"connect-ssl"` // Defines if tunnel encrypted.
 }
+
+type clientConstructor func(clientConfig ClientConfig, target string) Client
 
 func DefaultClientConfig() ClientConfig {
 	return ClientConfig{
@@ -168,6 +171,29 @@ func (c *panicOnHTTP1Client) Do(req *http.Request) (*http.Response, error) {
 		zap.L().Panic(notHTTP2PanicMsg, zap.Error(err))
 	}
 	return res, nil
+}
+
+type httpDecoratedClient struct {
+	client         Client
+	scheme         string
+	hostname       string
+	targetResolved string
+}
+
+func (c *httpDecoratedClient) Do(req *http.Request) (*http.Response, error) {
+	if req.Host == "" {
+		req.Host = c.hostname
+	}
+
+	if c.targetResolved != "" {
+		req.URL.Host = c.targetResolved
+	}
+	req.URL.Scheme = c.scheme
+	return c.client.Do(req)
+}
+
+func (c *httpDecoratedClient) CloseIdleConnections() {
+	c.client.CloseIdleConnections()
 }
 
 func checkHTTP2(state *tls.ConnectionState) error {
