@@ -54,10 +54,10 @@ func newConnectClient(conf ClientConfig, target string) Client {
 			NewDialer(conf.Dialer),
 		),
 		target)
-	return newClient(transport, conf.Redirect)
+	return NewRedirectingClient(transport, conf.Redirect)
 }
 
-var _ clientConstructor = newConnectClient
+var _ ClientConstructor = newConnectClient
 
 func newConnectDialFunc(target string, connectSSL bool, dialer netutil.Dialer) netutil.DialerFunc {
 	return func(ctx context.Context, network, address string) (conn net.Conn, err error) {

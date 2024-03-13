@@ -27,7 +27,7 @@ type ClientConfig struct {
 	ConnectSSL bool            `config:"connect-ssl"` // Defines if tunnel encrypted.
 }
 
-type clientConstructor func(clientConfig ClientConfig, target string) Client
+type ClientConstructor func(clientConfig ClientConfig, target string) Client
 
 func DefaultClientConfig() ClientConfig {
 	return ClientConfig{
@@ -130,7 +130,7 @@ func NewHTTP2Transport(conf TransportConfig, dial netutil.DialerFunc, target str
 	return tr
 }
 
-func newClient(tr *http.Transport, redirect bool) Client {
+func NewRedirectingClient(tr *http.Transport, redirect bool) Client {
 	if redirect {
 		return redirectClient{&http.Client{Transport: tr}}
 	}
@@ -171,6 +171,20 @@ func (c *panicOnHTTP1Client) Do(req *http.Request) (*http.Response, error) {
 		zap.L().Panic(notHTTP2PanicMsg, zap.Error(err))
 	}
 	return res, nil
+}
+
+func WrapClientHostResolving(client Client, cfg HTTPGunConfig, targetResolved string) Client {
+	hostname := getHostWithoutPort(cfg.Target)
+	scheme := "http"
+	if cfg.SSL {
+		scheme = "https"
+	}
+	return &httpDecoratedClient{
+		client:         client,
+		scheme:         scheme,
+		hostname:       hostname,
+		targetResolved: targetResolved,
+	}
 }
 
 type httpDecoratedClient struct {

@@ -29,7 +29,7 @@ func TestBaseGun_shoot(t *testing.T) {
 		scheme         string
 		hostname       string
 		targetResolved string
-		client         Client
+		client         phttp.Client
 	}
 
 	tests := []struct {

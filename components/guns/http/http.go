@@ -18,11 +18,11 @@ func NewHTTP1Gun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string)
 
 func HTTP1ClientConstructor(clientConfig ClientConfig, target string) Client {
 	transport := NewTransport(clientConfig.Transport, NewDialer(clientConfig.Dialer).DialContext, target)
-	client := newClient(transport, clientConfig.Redirect)
+	client := NewRedirectingClient(transport, clientConfig.Redirect)
 	return client
 }
 
-var _ clientConstructor = HTTP1ClientConstructor
+var _ ClientConstructor = HTTP1ClientConstructor
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
 func NewHTTP2Gun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string) (*BaseGun, error) {
@@ -35,25 +35,16 @@ func NewHTTP2Gun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string)
 
 func HTTP2ClientConstructor(clientConfig ClientConfig, target string) Client {
 	transport := NewHTTP2Transport(clientConfig.Transport, NewDialer(clientConfig.Dialer).DialContext, target)
-	client := newClient(transport, clientConfig.Redirect)
+	client := NewRedirectingClient(transport, clientConfig.Redirect)
 	// Will panic and cancel shooting whet target doesn't support HTTP/2.
 	return &panicOnHTTP1Client{Client: client}
 }
 
-var _ clientConstructor = HTTP2ClientConstructor
+var _ ClientConstructor = HTTP2ClientConstructor
 
-func newHTTPGun(clientConstructor clientConstructor, cfg HTTPGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
-	scheme := "http"
-	if cfg.SSL {
-		scheme = "https"
-	}
+func newHTTPGun(clientConstructor ClientConstructor, cfg HTTPGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
 	client := clientConstructor(cfg.Client, cfg.Target)
-	wrappedClient := &httpDecoratedClient{
-		client:         client,
-		hostname:       getHostWithoutPort(cfg.Target),
-		targetResolved: targetResolved,
-		scheme:         scheme,
-	}
+	wrappedClient := WrapClientHostResolving(client, cfg, targetResolved)
 	return &BaseGun{
 		Config: cfg.Base,
 		OnClose: func() error {

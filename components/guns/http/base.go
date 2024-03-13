@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptrace"
 	"net/http/httputil"
@@ -15,6 +16,7 @@ import (
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/warmup"
+	"github.com/yandex/pandora/lib/netutil"
 	"go.uber.org/zap"
 )
 
@@ -303,4 +305,35 @@ func GetBody(req *http.Request) []byte {
 
 	return nil
 
+}
+
+// DNS resolve optimisation.
+// When DNSCache turned off - do nothing extra, host will be resolved on every shoot.
+// When using resolved target, don't use DNS caching logic - it is useless.
+// If we can resolve accessible target addr - use it as target, not use caching.
+// Otherwise just use DNS cache - we should not fail shooting, we should try to
+// connect on every shoot. DNS cache will save resolved addr after first successful connect.
+func PreResolveTargetAddr(clientConf *ClientConfig, target string) (string, error) {
+	if !clientConf.Dialer.DNSCache {
+		return target, nil
+	}
+	if endpointIsResolved(target) {
+		clientConf.Dialer.DNSCache = false
+		return target, nil
+	}
+	resolved, err := netutil.LookupReachable(target, clientConf.Dialer.Timeout)
+	if err != nil {
+		zap.L().Warn("DNS target pre resolve failed", zap.String("target", target), zap.Error(err))
+		return target, err
+	}
+	clientConf.Dialer.DNSCache = false
+	return resolved, nil
+}
+
+func endpointIsResolved(endpoint string) bool {
+	host, _, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		return false
+	}
+	return net.ParseIP(host) != nil
 }

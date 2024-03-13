@@ -39,7 +39,7 @@ type BaseGun struct {
 	scheme         string
 	hostname       string
 	targetResolved string
-	client         Client
+	client         phttp.Client
 }
 
 var _ Gun = (*BaseGun)(nil)

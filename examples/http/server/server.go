@@ -202,7 +202,7 @@ func (s *Server) statisticHandler(w http.ResponseWriter, r *http.Request) {
 			Code500: s.stats.auth500.Load(),
 		},
 		List: StatisticBodyResponse{
-			Code200: s.stats.list200,
+			Code200: s.stats.List200,
 			Code400: s.stats.list400.Load(),
 			Code500: s.stats.list500.Load(),
 		},

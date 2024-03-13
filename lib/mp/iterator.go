@@ -29,11 +29,11 @@ func (n *NextIterator) Rand(length int) int {
 }
 
 func (n *NextIterator) Next(segment string) int {
+	n.mx.Lock()
+	defer n.mx.Unlock()
 	a, ok := n.gs[segment]
 	if !ok {
-		n.mx.Lock()
 		n.gs[segment] = &atomic.Uint64{}
-		n.mx.Unlock()
 		return 0
 	}
 	add := a.Add(1)
