@@ -6,9 +6,6 @@
 
 To determine what load to create on the server, use a load profile. It sets how the load will be changed and maintained.
 
-Most tools have their own formats for defining load profiles. When configuring a test via the UI, you can get the final profile by adding sections in the correct order.
-
-
 ## line
 
 Linearly increases the load in a given range over a certain period of time.

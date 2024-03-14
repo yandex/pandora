@@ -43,8 +43,8 @@ pools:
 
 ```yaml
 gun:
-  type: http/scenario
-  target: localhost:80
+  type: grpc/scenario
+  target: localhost:8888
 ```
 
 Для сценарного генератора поддерживаются все настройки обычного [gRPC генератора](grpc-generator.md)

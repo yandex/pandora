@@ -1,4 +1,4 @@
-[Home](index.md)
+[К содержанию](index.md)
 
 ---
 
@@ -47,4 +47,4 @@ The results are in `phout.log`. Use [Yandex.Tank](https://yandextank.readthedocs
 
 ---
 
-[Home](index.md)
+[К содержанию](index.md)

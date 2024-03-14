@@ -43,8 +43,8 @@ The minimum generator configuration is as follows
 
 ```yaml
 gun:
-  type: http/scenario
-  target: localhost:80
+  type: grpc/scenario
+  target: localhost:8888
 ```
 
 For a scenario gRPC generator, all settings of a regular gRPC generator are supported [gRPC generator](grpc-generator.md)
