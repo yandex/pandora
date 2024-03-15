@@ -21,6 +21,7 @@
             - [assert/response](#assertresponse)
     - [Scenarios](#scenarios)
     - [Sources](#sources)
+- [References](#references)
 
 ## Configuration
 
@@ -283,6 +284,12 @@ More - [scenario in HTTP generator](./scenario-http-generator.md#scenarios)
 ### Sources
 
 Follow - [Variable sources](scenario/variable_source.md)
+
+# References
+
+- [HTTP generator](http-generator.md)
+- Best practices
+    - [RPS per instance](best_practices/rps-per-instance.md)
 
 ---
 

@@ -6,6 +6,8 @@
 
 You can control the profile of instance starts.
 
+This section can be thought of as how many instances you need, and how quickly they will be available to you.
+
 Types of Instance startup profile:
 
 - [once](#once)

@@ -21,6 +21,7 @@
             - [assert/response](#assertresponse)
     - [Scenarios](#scenarios)
     - [Sources](#sources)
+- [Смотри так же](#cмотри-так-же)
 
 ## Конфигурация
 
@@ -284,6 +285,13 @@ scenario "scenario_name" {
 ### Sources
 
 См документ - [Источники переменных](scenario/variable_source.md)
+
+# Смотри так же
+
+- [HTTP генератор](http-generator.md)
+- Практики использования
+    - [RPS на инстанс](best_practices/rps-per-instance.md)
+
 
 ---
 
