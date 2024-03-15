@@ -131,8 +131,8 @@ func (c *testDecoratedClient) CloseIdleConnections() {
 }
 
 func (s *BaseGunSuite) Test_Shoot_BeforeBindPanics() {
-	s.base.client = &testDecoratedClient{
-		client: s.base.client,
+	s.base.Client = &testDecoratedClient{
+		client: s.base.Client,
 		before: func(req *http.Request) { panic("should not be called\"") },
 		after:  nil,
 	}
@@ -181,7 +181,7 @@ func (s *BaseGunSuite) Test_Shoot() {
 		beforeEachDoOk := func() {
 			body = ioutil.NopCloser(strings.NewReader("aaaaaaa"))
 			s.base.AnswLog = zap.NewNop()
-			s.base.client = &testDecoratedClient{
+			s.base.Client = &testDecoratedClient{
 				before: func(doReq *http.Request) {
 					s.Require().Equal(req, doReq)
 				},
@@ -268,8 +268,8 @@ func (s *BaseGunSuite) Test_Shoot() {
 					return nil
 				}
 
-				s.base.client = &testDecoratedClient{
-					client: s.base.client,
+				s.base.Client = &testDecoratedClient{
+					client: s.base.Client,
 					before: func(doReq *http.Request) {
 						doCalled = true
 					},

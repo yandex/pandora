@@ -12,8 +12,15 @@ type HTTPGunConfig struct {
 	SSL    bool
 }
 
-func NewHTTP1Gun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
-	return newHTTPGun(HTTP1ClientConstructor, conf, answLog, targetResolved)
+func NewHTTP1Gun(cfg HTTPGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
+	var wrappedConstructor = func(clientConfig ClientConfig, target string) Client {
+		return WrapClientHostResolving(
+			HTTP1ClientConstructor(cfg.Client, cfg.Target),
+			cfg,
+			targetResolved,
+		)
+	}
+	return NewBaseGun(wrappedConstructor, cfg, answLog)
 }
 
 func HTTP1ClientConstructor(clientConfig ClientConfig, target string) Client {
@@ -25,12 +32,19 @@ func HTTP1ClientConstructor(clientConfig ClientConfig, target string) Client {
 var _ ClientConstructor = HTTP1ClientConstructor
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
-func NewHTTP2Gun(conf HTTPGunConfig, answLog *zap.Logger, targetResolved string) (*BaseGun, error) {
-	if !conf.SSL {
+func NewHTTP2Gun(cfg HTTPGunConfig, answLog *zap.Logger, targetResolved string) (*BaseGun, error) {
+	if !cfg.SSL {
 		// Open issue on github if you really need this feature.
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
 	}
-	return newHTTPGun(HTTP2ClientConstructor, conf, answLog, targetResolved), nil
+	var wrappedConstructor = func(clientConfig ClientConfig, target string) Client {
+		return WrapClientHostResolving(
+			HTTP2ClientConstructor(cfg.Client, cfg.Target),
+			cfg,
+			targetResolved,
+		)
+	}
+	return NewBaseGun(wrappedConstructor, cfg, answLog), nil
 }
 
 func HTTP2ClientConstructor(clientConfig ClientConfig, target string) Client {
@@ -41,23 +55,6 @@ func HTTP2ClientConstructor(clientConfig ClientConfig, target string) Client {
 }
 
 var _ ClientConstructor = HTTP2ClientConstructor
-
-func newHTTPGun(clientConstructor ClientConstructor, cfg HTTPGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
-	client := clientConstructor(cfg.Client, cfg.Target)
-	wrappedClient := WrapClientHostResolving(client, cfg, targetResolved)
-	return &BaseGun{
-		Config: cfg.Base,
-		OnClose: func() error {
-			client.CloseIdleConnections()
-			return nil
-		},
-		AnswLog: answLog,
-
-		hostname:       getHostWithoutPort(cfg.Target),
-		targetResolved: targetResolved,
-		client:         wrappedClient,
-	}
-}
 
 func DefaultHTTPGunConfig() HTTPGunConfig {
 	return HTTPGunConfig{

@@ -188,7 +188,7 @@ func TestBaseGun_shoot(t *testing.T) {
 			aggregator := netsample.NewMockAggregator(t)
 			aggregator.On("Report", mock.Anything)
 
-			g := &BaseGun{Aggregator: aggregator, client: client}
+			g := &ScenarioGun{base: &phttp.BaseGun{Aggregator: aggregator, Client: client}}
 			tt.wantErr(t, g.shoot(tt.ammoMock, tt.templateVars), fmt.Sprintf("shoot(%v)", tt.ammoMock))
 			require.Equal(t, tt.wantTempateVars, tt.templateVars)
 

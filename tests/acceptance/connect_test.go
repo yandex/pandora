@@ -67,7 +67,6 @@ func (s *ConnectGunSuite) Test_Connect() {
 			isTLS:   false,
 			wantCnt: 15,
 		},
-		// TODO: first record does not look like a TLS handshake. Check https://go.dev/src/crypto/tls/conn.go
 		{
 			name:    "connect-ssl",
 			filecfg: "testdata/connect/connect-ssl.yaml",

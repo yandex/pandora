@@ -68,6 +68,19 @@ func DefaultBaseGunConfig() BaseGunConfig {
 	}
 }
 
+func NewBaseGun(clientConstructor ClientConstructor, cfg HTTPGunConfig, answLog *zap.Logger) *BaseGun {
+	client := clientConstructor(cfg.Client, cfg.Target)
+	return &BaseGun{
+		Config: cfg.Base,
+		OnClose: func() error {
+			client.CloseIdleConnections()
+			return nil
+		},
+		AnswLog: answLog,
+		Client:  client,
+	}
+}
+
 type BaseGun struct {
 	DebugLog   bool // Automaticaly set in Bind if Log accepts debug messages.
 	Config     BaseGunConfig
@@ -75,11 +88,7 @@ type BaseGun struct {
 	OnClose    func() error                    // Optional. Called on Close().
 	Aggregator netsample.Aggregator            // Lazy set via BindResultTo.
 	AnswLog    *zap.Logger
-
-	scheme         string
-	hostname       string
-	targetResolved string
-	client         Client
+	Client     Client
 
 	core.GunDeps
 }
@@ -169,7 +178,7 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 		}
 	}
 	var res *http.Response
-	res, err = b.client.Do(req)
+	res, err = b.Client.Do(req)
 	if b.Config.HTTPTrace.TraceEnabled && timings != nil {
 		sample.SetReceiveTime(timings.GetReceiveTime())
 	}

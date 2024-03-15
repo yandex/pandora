@@ -9,7 +9,7 @@ pools:
       target: {{.target}}
       type: connect
       ssl: true
-      connect-ssl: true
+      connect-ssl: true # first record does not look like a TLS handshake. Check https://go.dev/src/crypto/tls/conn.go
       answlog:
         enabled: false
     rps-per-instance: false

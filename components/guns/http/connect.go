@@ -15,26 +15,21 @@ import (
 )
 
 func NewConnectGun(cfg HTTPGunConfig, answLog *zap.Logger) *BaseGun {
-	scheme := "http"
-	if cfg.SSL {
-		scheme = "https"
+	var wrappedConstructor = func(clientConfig ClientConfig, target string) Client {
+		scheme := "http"
+		if cfg.SSL {
+			scheme = "https"
+		}
+		client := newConnectClient(cfg.Client, cfg.Target)
+		return &httpDecoratedClient{
+			client:         client,
+			hostname:       "",
+			targetResolved: cfg.Target,
+			scheme:         scheme,
+		}
 	}
-	client := newConnectClient(cfg.Client, cfg.Target)
-	wrappedClient := &httpDecoratedClient{
-		client:         client,
-		scheme:         scheme,
-		hostname:       "",
-		targetResolved: cfg.Target,
-	}
-	return &BaseGun{
-		Config: cfg.Base,
-		OnClose: func() error {
-			client.CloseIdleConnections()
-			return nil
-		},
-		AnswLog: answLog,
-		client:  wrappedClient,
-	}
+
+	return NewBaseGun(wrappedConstructor, cfg, answLog)
 }
 
 func DefaultConnectGunConfig() HTTPGunConfig {
