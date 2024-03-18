@@ -20,6 +20,7 @@ type ProviderConfig struct {
 
 type ProvAmmo interface {
 	SetID(id uint64)
+	Clone() ProvAmmo
 }
 
 type Provider[A ProvAmmo] struct {
@@ -87,8 +88,9 @@ func (p *Provider[A]) Acquire() (core.Ammo, bool) {
 	if !ok {
 		return nil, false
 	}
-	ammo.SetID(p.NextID())
-	return ammo, true
+	clone := ammo.Clone()
+	clone.SetID(p.NextID())
+	return clone, true
 }
 
 func (p *Provider[A]) Release(_ core.Ammo) {

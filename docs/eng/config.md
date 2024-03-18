@@ -26,6 +26,8 @@ pools:
       type: phout                    # report format (phout is compatible with Yandex.Tank)
       destination: ./phout.log       # report file name
 
+    rps-per-instance: false          # rps section is counted for each instance or for the whole test. false - for the whole test
+
     rps:                             # shooting schedule
       type: line                     # linear growth
       from: 1                        # from 1 response per second

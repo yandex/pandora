@@ -28,11 +28,9 @@ Pandora is a set of components talking to each other through Go channels. There 
 Ammo Provider knows how to make an ammo object from an ammo file or other external resource. Instances get ammo objects
 from Ammo Provider.
 
-### Instances Pool
+### Instance Pool
 
-Instances Pool manages the creation of Instances. You can think of one Instance as a single user that sends requests to
-a server sequentially. All Instances from one Instances Pool get their ammo from one Ammo Provider. Instances creation
-times are controlled by Startup Scheduler. All Instances from one Instances Pool also have Guns of the same type.
+Instance Pool manages the creation of Instances. You can think of one Instance as a single user that sends requests to a server sequentially. All Instances from one Instance Pool get their ammo from one Ammo Provider. Instances creation times are controlled by Startup Scheduler. All Instances from one Instance Pool also have Guns of the same type.
 
 ### Scheduler
 

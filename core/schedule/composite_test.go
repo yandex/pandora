@@ -1,33 +1,28 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 package schedule
 
 import (
 	"sync"
+	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/coretest"
 	"go.uber.org/atomic"
 )
 
-var _ = Describe("composite", func() {
-	It("empty", func() {
+func Test_composite(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
 		testee := NewComposite()
-		coretest.ExpectScheduleNexts(testee, 0)
+		coretest.ExpectScheduleNexts(t, testee, 0)
 	})
 
-	It("only", func() {
+	t.Run("only", func(t *testing.T) {
 		testee := NewComposite(NewConst(1, time.Second))
-		coretest.ExpectScheduleNexts(testee, 0, time.Second)
+		coretest.ExpectScheduleNexts(t, testee, 0, time.Second)
 	})
 
-	It("composite", func() {
+	t.Run("composite", func(t *testing.T) {
 		testee := NewComposite(
 			NewConst(1, 2*time.Second),
 			NewOnce(2),
@@ -35,7 +30,7 @@ var _ = Describe("composite", func() {
 			NewOnce(0),
 			NewOnce(1),
 		)
-		coretest.ExpectScheduleNexts(testee,
+		coretest.ExpectScheduleNexts(t, testee,
 			0,
 			time.Second,
 
@@ -48,7 +43,7 @@ var _ = Describe("composite", func() {
 	})
 
 	// Load concurrently, and let race detector do it's work.
-	It("race", func() {
+	t.Run("race", func(t *testing.T) {
 		var (
 			nexts          []core.Schedule
 			tokensGot      atomic.Int64
@@ -80,10 +75,10 @@ var _ = Describe("composite", func() {
 			}()
 		}
 		wg.Wait()
-		Expect(tokensGot.Load()).To(Equal(tokensExpected))
+		assert.Equal(t, tokensExpected, tokensGot.Load())
 	})
 
-	It("left with unknown", func() {
+	t.Run("left with unknown", func(t *testing.T) {
 		unlimitedDuration := time.Second
 		testee := NewComposite(
 			NewUnlimited(unlimitedDuration),
@@ -91,23 +86,23 @@ var _ = Describe("composite", func() {
 			NewConst(1, 2*time.Second),
 			NewOnce(1),
 		)
-		Expect(testee.Left()).To(Equal(-1))
+		assert.Equal(t, -1, testee.Left())
 		startAt := time.Now().Add(-unlimitedDuration)
 		testee.Start(startAt)
 
 		unlimitedFinish := startAt.Add(unlimitedDuration)
 		sched := testee.(*compositeSchedule).scheds[0]
-		Expect(sched.(*unlimitedSchedule).finish.Load()).To(Equal(unlimitedFinish))
+		assert.Equal(t, unlimitedFinish, sched.(*unlimitedSchedule).finish.Load())
 
-		Expect(testee.Left()).To(Equal(3))
+		assert.Equal(t, 3, testee.Left())
 
-		actualNexts := coretest.DrainScheduleDuration(testee, unlimitedFinish)
+		actualNexts := coretest.DrainScheduleDuration(t, testee, unlimitedFinish)
 		expectedNests := []time.Duration{
 			0,
 			time.Second,
 			2 * time.Second,
 			2 * time.Second, // Finish.
 		}
-		Expect(actualNexts).To(Equal(expectedNests))
+		assert.Equal(t, expectedNests, actualNexts)
 	})
-})
+}

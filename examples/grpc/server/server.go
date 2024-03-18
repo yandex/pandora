@@ -48,6 +48,13 @@ type GRPCServer struct {
 
 var _ TargetServiceServer = (*GRPCServer)(nil)
 
+func (s *GRPCServer) Hello(ctx context.Context, request *HelloRequest) (*HelloResponse, error) {
+	s.stats.IncHello()
+	return &HelloResponse{
+		Hello: fmt.Sprintf("Hello %s!", request.Name),
+	}, nil
+}
+
 func (s *GRPCServer) Auth(ctx context.Context, request *AuthRequest) (*AuthResponse, error) {
 	userID, token, err := s.checkLoginPass(request.GetLogin(), request.GetPass())
 	if err != nil {
@@ -114,6 +121,7 @@ func (s *GRPCServer) Order(ctx context.Context, request *OrderRequest) (*OrderRe
 
 func (s *GRPCServer) Stats(ctx context.Context, _ *StatsRequest) (*StatsResponse, error) {
 	result := &StatsResponse{
+		Hello: int64(s.stats.hello.Load()),
 		Auth: &StatisticBodyResponse{
 			Code200: s.stats.auth200,
 			Code400: s.stats.auth400.Load(),

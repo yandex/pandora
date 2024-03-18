@@ -59,7 +59,7 @@ func Test_preResolveTargetAddr(t *testing.T) {
 			conf := &phttp.ClientConfig{}
 			conf.Dialer.DNSCache = true
 
-			got, err := PreResolveTargetAddr(conf, tt.target)
+			got, err := phttp.PreResolveTargetAddr(conf, tt.target)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {

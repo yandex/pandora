@@ -1,4 +1,4 @@
-[Home](index.md)
+[К содержанию](index.md)
 
 ---
 
@@ -234,4 +234,4 @@ pools:
 
 ---
 
-[Home](index.md)
+[К содержанию](index.md)

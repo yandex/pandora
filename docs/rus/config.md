@@ -15,26 +15,28 @@ Pandora поддерживает файлы конфигурации в форм
 
 ```yaml
 pools:
-  - id: HTTP pool                    # pool name (for your choice)
+  - id: HTTP pool                    # идентификатор инстанс пула
     gun:
-      type: http                     # gun type
-      target: example.com:80         # gun target
+      type: http                     # тип генератора
+      target: example.com:80         # ... далее идут настройки генератора. Зависят от его типа
     ammo:
-      type: uri                      # ammo format
-      file: ./ammo.uri               # ammo File
+      type: uri                      # тип провайдера
+      file: ./ammo.uri               # ... далее идут настройки провайдера. Зависят от его типа
     result:
-      type: phout                    # report format (phout is compatible with Yandex.Tank)
+      type: phout                    # тип агрегатора (phout - совместим Yandex.Tank)
       destination: ./phout.log       # report file name
 
-    rps:                             # shooting schedule
-      type: line                     # linear growth
-      from: 1                        # from 1 response per second
-      to: 5                          # to 5 responses per second
-      duration: 60s                  # for 60 seconds
+    rps-per-instance: false          # секция rps считается для каждого инстанса или для всего теста. false - для всего теста
 
-    startup:                         # instances startup schedule
-      type: once                     # start 10 instances
-      times: 10
+    rps:                             # планировщик нагрузки
+      type: line                     # тип планировщика
+      from: 1                        # ... далее идут настройки планировщика. Зависят от его типа
+      to: 5
+      duration: 60s
+
+    startup:                         # запуск инстансов
+      type: once                     # тип профиля запуска инстансов
+      times: 10                      # ... далее идут настройки планировщика. Зависят от его типа
 ```
 
 ## Мониторинг и логирование

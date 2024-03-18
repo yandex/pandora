@@ -73,9 +73,7 @@ func (s *GunSuite) Test_SuccessScenario() {
 	ctx := context.Background()
 	log := zap.NewNop()
 	g := httpscenario.NewHTTPGun(phttp.HTTPGunConfig{
-		Gun: phttp.ClientGunConfig{
-			Target: s.addr,
-		},
+		Target: s.addr,
 		Client: phttp.ClientConfig{},
 	}, log, s.addr)
 

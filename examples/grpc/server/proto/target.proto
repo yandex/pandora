@@ -5,6 +5,7 @@ package target;
 option go_package = "server.v1;server";
 
 service TargetService {
+  rpc Hello(HelloRequest) returns (HelloResponse);
   rpc Auth(AuthRequest) returns (AuthResponse);
   rpc List(ListRequest) returns (ListResponse);
   rpc Order(OrderRequest) returns (OrderResponse);
@@ -12,6 +13,13 @@ service TargetService {
   rpc Reset(ResetRequest) returns (ResetResponse);
 }
 
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloResponse {
+  string hello = 1;
+}
 message AuthRequest {
   string login = 1;
   string pass = 2;
@@ -51,6 +59,7 @@ message StatsResponse {
   StatisticBodyResponse Auth = 1;
   StatisticBodyResponse List = 2;
   StatisticBodyResponse Order = 3;
+  int64 Hello = 4;
 }
 
 message StatisticBodyResponse  {

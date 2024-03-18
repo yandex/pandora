@@ -1,4 +1,4 @@
-[Home](index.md)
+[К содержанию](index.md)
 
 ---
 
@@ -102,4 +102,4 @@ to do this.
 
  ---
 
-[Home](index.md)
+[К содержанию](index.md)

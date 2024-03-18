@@ -11,7 +11,7 @@ func newStats(capacity int) *Stats {
 		auth200Mutex:  sync.Mutex{},
 		auth400:       atomic.Uint64{},
 		auth500:       atomic.Uint64{},
-		list200:       make(map[int64]uint64, capacity),
+		List200:       make(map[int64]uint64, capacity),
 		list200Mutex:  sync.Mutex{},
 		list400:       atomic.Uint64{},
 		list500:       atomic.Uint64{},
@@ -28,7 +28,7 @@ type Stats struct {
 	auth200Mutex  sync.Mutex
 	auth400       atomic.Uint64
 	auth500       atomic.Uint64
-	list200       map[int64]uint64
+	List200       map[int64]uint64
 	list200Mutex  sync.Mutex
 	list400       atomic.Uint64
 	list500       atomic.Uint64
@@ -62,7 +62,7 @@ func (s *Stats) IncList500() {
 
 func (s *Stats) IncList200(userID int64) {
 	s.list200Mutex.Lock()
-	s.list200[userID]++
+	s.List200[userID]++
 	s.list200Mutex.Unlock()
 }
 
@@ -88,7 +88,7 @@ func (s *Stats) Reset() {
 	s.auth500.Store(0)
 
 	s.list200Mutex.Lock()
-	s.list200 = map[int64]uint64{}
+	s.List200 = map[int64]uint64{}
 	s.list200Mutex.Unlock()
 	s.list400.Store(0)
 	s.list500.Store(0)

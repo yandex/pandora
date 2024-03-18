@@ -1,20 +1,13 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 package engine
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coreutil"
-	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/lib/tag"
 	"go.uber.org/zap"
 )
@@ -29,7 +22,7 @@ type instance struct {
 
 func newInstance(ctx context.Context, log *zap.Logger, poolID string, id int, deps instanceDeps) (*instance, error) {
 	log = log.With(zap.Int("instance", id))
-	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: poolID, InstanceID: id}
+	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: poolID, InstanceID: id, Shared: deps.gunDeps}
 	sched, err := deps.newSchedule()
 	if err != nil {
 		return nil, err
@@ -38,16 +31,12 @@ func newInstance(ctx context.Context, log *zap.Logger, poolID string, id int, de
 	if err != nil {
 		return nil, err
 	}
-	if warmedUp, ok := gun.(warmup.WarmedUp); ok {
-		if err := warmedUp.AcceptWarmUpResult(deps.gunWarmUpResult); err != nil {
-			return nil, fmt.Errorf("gun failed to accept warmup result: %w", err)
-		}
-	}
+
 	err = gun.Bind(deps.aggregator, gunDeps)
 	if err != nil {
 		return nil, err
 	}
-	inst := &instance{log, id, gun, sched, deps.instanceSharedDeps}
+	inst := &instance{log: log, id: id, gun: gun, schedule: sched, instanceSharedDeps: deps.instanceSharedDeps}
 	return inst, nil
 }
 
@@ -60,7 +49,7 @@ type instanceDeps struct {
 type instanceSharedDeps struct {
 	provider        core.Provider
 	metrics         Metrics
-	gunWarmUpResult interface{}
+	gunDeps         any
 	aggregator      core.Aggregator
 	discardOverflow bool
 }

@@ -1,15 +1,11 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 package plugin
 
 import (
 	"reflect"
+	"testing"
 
-	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/yandex/pandora/core/config"
 )
 
@@ -93,16 +89,16 @@ func ptestFillConf(conf interface{}) error {
 	return config.Decode(map[string]interface{}{"Value": ptestFilledValue}, conf)
 }
 
-func ptestExpectConfigValue(conf interface{}, val string) {
-	conf.(ptestConfChecker).expectConfValue(val)
+func ptestExpectConfigValue(t *testing.T, conf interface{}, val string) {
+	conf.(ptestConfChecker).expectConfValue(t, val)
 }
 
 type ptestConfChecker interface {
-	expectConfValue(string)
+	expectConfValue(t *testing.T, val string)
 }
 
 var _ ptestConfChecker = ptestConfig{}
 var _ ptestConfChecker = &ptestImpl{}
 
-func (c ptestConfig) expectConfValue(val string) { Expect(c.Value).To(Equal(val)) }
-func (p *ptestImpl) expectConfValue(val string)  { Expect(p.Value).To(Equal(val)) }
+func (c ptestConfig) expectConfValue(t *testing.T, val string) { assert.Equal(t, val, c.Value) }
+func (p *ptestImpl) expectConfValue(t *testing.T, val string)  { assert.Equal(t, val, p.Value) }

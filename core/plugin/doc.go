@@ -1,8 +1,3 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 // Package plugin provides a generic inversion of control model for making
 // extensible Go packages, libraries, and applications. Like
 // github.com/progrium/go-extpoints, but reflect based: doesn't require code

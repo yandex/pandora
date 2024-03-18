@@ -1,8 +1,3 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 // Package pluginconfig contains integration plugin with config packages.
 // Doing such integration in different package allows to config and plugin packages
 // not depend on each other, and set hooks when their are really needed.

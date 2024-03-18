@@ -7,8 +7,40 @@ import (
 	"testing"
 
 	pkgerrors "github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestIscoreutilIsCtxErroror(t *testing.T) {
+	canceledContext, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	t.Run("nil error", func(t *testing.T) {
+		assert.True(t, IsCtxError(context.Background(), nil))
+		assert.True(t, IsCtxError(canceledContext, nil))
+	})
+
+	t.Run("context error", func(t *testing.T) {
+		assert.False(t, IsCtxError(context.Background(), context.Canceled))
+		assert.True(t, IsCtxError(canceledContext, context.Canceled))
+	})
+
+	t.Run("caused by context error", func(t *testing.T) {
+		assert.False(t, IsCtxError(context.Background(), pkgerrors.Wrap(context.Canceled, "new err")))
+		assert.True(t, IsCtxError(canceledContext, pkgerrors.Wrap(context.Canceled, "new err")))
+	})
+
+	t.Run("default error wrapping has defferent result", func(t *testing.T) {
+		assert.False(t, IsCtxError(context.Background(), fmt.Errorf("new err %w", context.Canceled)))
+		assert.False(t, IsCtxError(canceledContext, fmt.Errorf("new err %w", context.Canceled)))
+	})
+
+	t.Run("usual error", func(t *testing.T) {
+		err := errors.New("new err")
+		assert.False(t, IsCtxError(canceledContext, err))
+		assert.False(t, IsCtxError(context.Background(), err))
+	})
+}
 
 func TestJoin(t *testing.T) {
 	type args struct {

@@ -1,6 +1,3 @@
-// Copyright (c) 2016 Yandex LLC. All rights reserved.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 package config
 
 import (
