@@ -73,6 +73,12 @@ func (s *ConnectGunSuite) Test_Connect() {
 			isTLS:   true,
 			wantCnt: 4,
 		},
+		{
+			name:    "connect-pool-size",
+			filecfg: "testdata/connect/connect-pool-size.yaml",
+			isTLS:   false,
+			wantCnt: 4,
+		},
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {

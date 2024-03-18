@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
+	"github.com/yandex/pandora/core/clientpool"
 	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/lib/netutil"
 	"go.uber.org/zap"
@@ -28,6 +29,7 @@ type BaseGunConfig struct {
 	AutoTag   AutoTagConfig   `config:"auto-tag"`
 	AnswLog   AnswLogConfig   `config:"answlog"`
 	HTTPTrace HTTPTraceConfig `config:"httptrace"`
+	PoolSize  int             `config:"pool-size"`
 }
 
 // AutoTagConfig configure automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
@@ -78,17 +80,21 @@ func NewBaseGun(clientConstructor ClientConstructor, cfg HTTPGunConfig, answLog 
 		},
 		AnswLog: answLog,
 		Client:  client,
+		ClientConstructor: func() Client {
+			return clientConstructor(cfg.Client, cfg.Target)
+		},
 	}
 }
 
 type BaseGun struct {
-	DebugLog   bool // Automaticaly set in Bind if Log accepts debug messages.
-	Config     BaseGunConfig
-	Connect    func(ctx context.Context) error // Optional hook.
-	OnClose    func() error                    // Optional. Called on Close().
-	Aggregator netsample.Aggregator            // Lazy set via BindResultTo.
-	AnswLog    *zap.Logger
-	Client     Client
+	DebugLog          bool // Automaticaly set in Bind if Log accepts debug messages.
+	Config            BaseGunConfig
+	Connect           func(ctx context.Context) error // Optional hook.
+	OnClose           func() error                    // Optional. Called on Close().
+	Aggregator        netsample.Aggregator            // Lazy set via BindResultTo.
+	AnswLog           *zap.Logger
+	Client            Client
+	ClientConstructor func() Client
 
 	core.GunDeps
 }
@@ -96,8 +102,34 @@ type BaseGun struct {
 var _ Gun = (*BaseGun)(nil)
 var _ io.Closer = (*BaseGun)(nil)
 
-func (b *BaseGun) WarmUp(_ *warmup.Options) (any, error) {
-	return nil, nil
+type SharedDeps struct {
+	clientPool *clientpool.Pool[Client]
+}
+
+func (b *BaseGun) WarmUp(opts *warmup.Options) (any, error) {
+	return b.createSharedDeps(opts)
+}
+
+func (b *BaseGun) createSharedDeps(opts *warmup.Options) (*SharedDeps, error) {
+	clientPool, err := b.prepareClientPool()
+	if err != nil {
+		return nil, err
+	}
+	return &SharedDeps{
+		clientPool: clientPool,
+	}, nil
+}
+
+func (b *BaseGun) prepareClientPool() (*clientpool.Pool[Client], error) {
+	if b.Config.PoolSize <= 0 {
+		return nil, nil
+	}
+	clientPool, _ := clientpool.New[Client](b.Config.PoolSize)
+	for i := 0; i < b.Config.PoolSize; i++ {
+		client := b.ClientConstructor()
+		clientPool.Add(client)
+	}
+	return clientPool, nil
 }
 
 func (b *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error {
@@ -105,6 +137,10 @@ func (b *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error
 	if ent := log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
 		// Enable debug level logging during shooting. Creating log entries isn't free.
 		b.DebugLog = true
+	}
+	extraDeps, ok := deps.Shared.(*SharedDeps)
+	if ok && extraDeps.clientPool != nil {
+		b.Client = extraDeps.clientPool.Next()
 	}
 
 	if b.Aggregator != nil {

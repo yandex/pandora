@@ -1,0 +1,26 @@
+pools:
+  - id: ""
+    ammo:
+      type: uri
+      headers:
+        - '[Content-Type: application/json]'
+      uris:
+        - /
+    result:
+      type: discard
+    gun:
+      target: {{.target}}
+      type: http2
+      answlog:
+        enabled: false
+      pool-size: 1
+    rps-per-instance: false
+    rps:
+      - duration: 1s
+        ops: 8
+        type: const
+    startup:
+      - times: 2
+        type: once
+log:
+  level: debug

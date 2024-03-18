@@ -97,6 +97,16 @@ func (s *PandoraSuite) Test_Http_Check_Passes() {
 			isTLS:   false,
 			wantCnt: 15,
 		},
+		{
+			name:    "http2-pool-size",
+			filecfg: "testdata/http/http2-pool-size.yaml",
+			isTLS:   true,
+			preStartSrv: func(srv *httptest.Server) {
+				_ = http2.ConfigureServer(srv.Config, nil)
+				srv.TLS = srv.Config.TLSConfig
+			},
+			wantCnt: 8,
+		},
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
