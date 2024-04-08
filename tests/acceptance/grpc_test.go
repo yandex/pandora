@@ -158,7 +158,8 @@ func (s *GrpcGunSuite) Test_Run() {
 		{
 			name: "add pool-size testdata/grpc/base.yaml",
 			overwrite: func(c *PandoraConfigGRPC) {
-				c.Pools[0].Gun.PoolSize = 2
+				c.Pools[0].Gun.SharedClient.Enabled = true
+				c.Pools[0].Gun.SharedClient.ClientNumber = 2
 			},
 			wantCnt: 8,
 		},

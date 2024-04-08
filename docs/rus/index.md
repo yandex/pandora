@@ -15,7 +15,7 @@ Pandora - это высокопроизводительный генератор
 - [gRPC генератор](grpc-generator.md)
 - [Сценарный генератор / gRPC](scenario-grpc-generator.md)
 - [Custom](custom.md)
-- [Практики использования](best_practices.md)
+- [Практики использования](best-practices.md)
 - [Производительность Pandora](performance.md)
 - [Архитектура](architecture.md)
 

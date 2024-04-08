@@ -43,13 +43,16 @@ type GrpcDialOptions struct {
 }
 
 type GunConfig struct {
-	Target      string          `validate:"required"`
-	ReflectPort int64           `config:"reflect_port"`
-	Timeout     time.Duration   `config:"timeout"` // grpc request timeout
-	TLS         bool            `config:"tls"`
-	DialOptions GrpcDialOptions `config:"dial_options"`
-	AnswLog     AnswLogConfig   `config:"answlog"`
-	PoolSize    int             `config:"pool-size"`
+	Target       string          `validate:"required"`
+	ReflectPort  int64           `config:"reflect_port"`
+	Timeout      time.Duration   `config:"timeout"` // grpc request timeout
+	TLS          bool            `config:"tls"`
+	DialOptions  GrpcDialOptions `config:"dial_options"`
+	AnswLog      AnswLogConfig   `config:"answlog"`
+	SharedClient struct {
+		ClientNumber int  `config:"client-number,omitempty"`
+		Enabled      bool `config:"enabled"`
+	} `config:"shared-client,omitempty"`
 }
 
 type AnswLogConfig struct {
@@ -134,14 +137,17 @@ func (g *Gun) prepareMethodList(opts *warmup.Options) (map[string]desc.MethodDes
 }
 
 func (g *Gun) prepareClientPool() (*clientpool.Pool[grpcdynamic.Stub], error) {
-	if g.Conf.PoolSize <= 0 {
+	if !g.Conf.SharedClient.Enabled {
 		return nil, nil
 	}
-	clientPool, err := clientpool.New[grpcdynamic.Stub](g.Conf.PoolSize)
+	if g.Conf.SharedClient.ClientNumber < 1 {
+		g.Conf.SharedClient.ClientNumber = 1
+	}
+	clientPool, err := clientpool.New[grpcdynamic.Stub](g.Conf.SharedClient.ClientNumber)
 	if err != nil {
 		return nil, fmt.Errorf("create clientpool err: %w", err)
 	}
-	for i := 0; i < g.Conf.PoolSize; i++ {
+	for i := 0; i < g.Conf.SharedClient.ClientNumber; i++ {
 		conn, err := g.makeConnect()
 		if err != nil {
 			return nil, fmt.Errorf("makeGRPCConnect fail %w", err)

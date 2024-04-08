@@ -1,20 +1,25 @@
 pools:
   - id: ""
     ammo:
-      file: testdata/http/payload.uri
       type: uri
+      headers:
+        - '[Content-Type: application/json]'
+      uris:
+        - /
     result:
       type: discard
     gun:
       target: {{.target}}
-      type: connect
-      pool-size: 1
+      type: http2
       answlog:
         enabled: false
+      shared-client:
+        enabled: true
+        client-number: 1
     rps-per-instance: false
     rps:
       - duration: 1s
-        ops: 4
+        ops: 8
         type: const
     startup:
       - times: 2

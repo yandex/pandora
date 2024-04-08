@@ -11,11 +11,14 @@ type PandoraConfigMonitoring struct {
 	ExpVar PandoraConfigMonitoringExpVar `yaml:"expvar"`
 }
 type PandoraConfigGRPCGun struct {
-	Type        string `yaml:"type"`
-	Target      string `yaml:"target"`
-	TLS         bool   `yaml:"tls"`
-	ReflectPort *int64 `yaml:"reflect_port,omitempty"`
-	PoolSize    int    `yaml:"pool-size,omitempty"`
+	Type         string `yaml:"type"`
+	Target       string `yaml:"target"`
+	TLS          bool   `yaml:"tls"`
+	ReflectPort  *int64 `yaml:"reflect_port,omitempty"`
+	SharedClient struct {
+		ClientNumber int  `yaml:"client-number,omitempty"`
+		Enabled      bool `yaml:"enabled"`
+	} `yaml:"shared-client,omitempty"`
 }
 type PandoraConfigAmmo struct {
 	Type string `yaml:"type"`

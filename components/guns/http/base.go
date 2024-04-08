@@ -26,10 +26,13 @@ const (
 )
 
 type BaseGunConfig struct {
-	AutoTag   AutoTagConfig   `config:"auto-tag"`
-	AnswLog   AnswLogConfig   `config:"answlog"`
-	HTTPTrace HTTPTraceConfig `config:"httptrace"`
-	PoolSize  int             `config:"pool-size"`
+	AutoTag      AutoTagConfig   `config:"auto-tag"`
+	AnswLog      AnswLogConfig   `config:"answlog"`
+	HTTPTrace    HTTPTraceConfig `config:"httptrace"`
+	SharedClient struct {
+		ClientNumber int  `config:"client-number,omitempty"`
+		Enabled      bool `config:"enabled"`
+	} `config:"shared-client,omitempty"`
 }
 
 // AutoTagConfig configure automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
@@ -121,11 +124,14 @@ func (b *BaseGun) createSharedDeps(opts *warmup.Options) (*SharedDeps, error) {
 }
 
 func (b *BaseGun) prepareClientPool() (*clientpool.Pool[Client], error) {
-	if b.Config.PoolSize <= 0 {
+	if !b.Config.SharedClient.Enabled {
 		return nil, nil
 	}
-	clientPool, _ := clientpool.New[Client](b.Config.PoolSize)
-	for i := 0; i < b.Config.PoolSize; i++ {
+	if b.Config.SharedClient.ClientNumber < 1 {
+		b.Config.SharedClient.ClientNumber = 1
+	}
+	clientPool, _ := clientpool.New[Client](b.Config.SharedClient.ClientNumber)
+	for i := 0; i < b.Config.SharedClient.ClientNumber; i++ {
 		client := b.ClientConstructor()
 		clientPool.Add(client)
 	}

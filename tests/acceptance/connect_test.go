@@ -74,8 +74,8 @@ func (s *ConnectGunSuite) Test_Connect() {
 			wantCnt: 4,
 		},
 		{
-			name:    "connect-pool-size",
-			filecfg: "testdata/connect/connect-pool-size.yaml",
+			name:    "connect-shared-client",
+			filecfg: "testdata/connect/connect-shared-client.yaml",
 			isTLS:   false,
 			wantCnt: 4,
 		},

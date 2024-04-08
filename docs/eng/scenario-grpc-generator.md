@@ -290,6 +290,7 @@ Follow - [Variable sources](scenario/variable_source.md)
 - [HTTP generator](http-generator.md)
 - Best practices
     - [RPS per instance](best_practices/rps-per-instance.md)
+    - [Shared client](best_practices/shared-client.md)
 
 ---
 

@@ -98,8 +98,8 @@ func (s *PandoraSuite) Test_Http_Check_Passes() {
 			wantCnt: 15,
 		},
 		{
-			name:    "http2-pool-size",
-			filecfg: "testdata/http/http2-pool-size.yaml",
+			name:    "http2-shared-client",
+			filecfg: "testdata/http/http2-shared-client.yaml",
 			isTLS:   true,
 			preStartSrv: func(srv *httptest.Server) {
 				_ = http2.ConfigureServer(srv.Config, nil)

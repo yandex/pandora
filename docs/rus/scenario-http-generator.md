@@ -412,6 +412,7 @@ scenario "scenario_second" {
 - [HTTP генератор](http-generator.md)
 - Практики использования
     - [RPS на инстанс](best_practices/rps-per-instance.md)
+    - [Общий транспорт](best_practices/shared-client.md)
 
 
 

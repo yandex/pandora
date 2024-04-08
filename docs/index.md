@@ -16,7 +16,7 @@ write your own load scenarios in Go, compiling them just before your test.
 - [gRPC generators](eng/grpc-generator.md)
 - [Scenario generator / gRPC](eng/scenario-grpc-generator.md)
 - [Custom guns](eng/custom.md)
-- [Best practices](eng/best_practices.md)
+- [Best practices](eng/best-practices.md)
 - [Pandora’s performance](eng/performance.md)
 - [Architectural overview](eng/architecture.md)
 

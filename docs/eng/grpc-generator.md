@@ -12,6 +12,9 @@ gun:
   target: '[hostname]:443'
   timeout: 15s              # Grpc request timeout. Default: 15s
   tls: false                # If true, Pandora accepts any certificate presented by the server and any host name in that certificate. Default: false
+  shared-client:
+    enabled: false          # If TRUE, the generator will use a common transport client for all instances
+    client-number: 1        # The number of shared clients can be increased. The default is 1
   dial_options:
     authority: some.host    # Specifies the value to be used as the :authority pseudo-header and as the server name in authentication handshake
     timeout: 1s             # Timeout for dialing GRPC connect. Default: 1s
@@ -47,6 +50,12 @@ But to unify reports it converts them into HTTP codes.
 | Unauthenticated 16 | 16               | 401              |
 | unknown            | -                | 500              |
 
+
+# References
+
+- Best practices
+  - [RPS per instance](best_practices/rps-per-instance.md)
+  - [Shared client](best_practices/shared-client.md)
 
 ---
 

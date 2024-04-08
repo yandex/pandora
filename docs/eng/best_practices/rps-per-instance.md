@@ -1,3 +1,7 @@
+[Home](../../index.md)
+
+---
+
 # RPS per instance
 
 Usually in tests, when we increase the speed of requests submitted to the target service by specifying the `line`, `const`, `step` scheme in the rps section,
@@ -38,3 +42,7 @@ pools:
 log:
   level: error
 ```
+
+---
+
+[Home](../../index.md)
