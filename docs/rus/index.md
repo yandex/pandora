@@ -6,13 +6,16 @@ Pandora - это высокопроизводительный генератор
 
 - [Установка](install.md)
 - [Конфигурация](config.md)
-- [Первый тест](tuturial.md)
+- [Первый тест](tutorial.md)
 - [Профиль нагрузки](load-profile.md)
+- [Профиль создание инстансов](startup.md)
 - [HTTP providers](providers.md)
 - [HTTP генератор](http-generator.md)
 - [Сценарный генератор / HTTP](scenario-http-generator.md)
+- [gRPC генератор](grpc-generator.md)
 - [Сценарный генератор / gRPC](scenario-grpc-generator.md)
 - [Custom](custom.md)
+- [Практики использования](best-practices.md)
 - [Производительность Pandora](performance.md)
 - [Архитектура](architecture.md)
 

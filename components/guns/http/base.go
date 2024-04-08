@@ -1,8 +1,3 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 package phttp
 
 import (
@@ -11,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptrace"
 	"net/http/httputil"
@@ -19,6 +15,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
+	"github.com/yandex/pandora/core/clientpool"
+	"github.com/yandex/pandora/core/warmup"
+	"github.com/yandex/pandora/lib/netutil"
 	"go.uber.org/zap"
 )
 
@@ -27,9 +26,13 @@ const (
 )
 
 type BaseGunConfig struct {
-	AutoTag   AutoTagConfig   `config:"auto-tag"`
-	AnswLog   AnswLogConfig   `config:"answlog"`
-	HTTPTrace HTTPTraceConfig `config:"httptrace"`
+	AutoTag      AutoTagConfig   `config:"auto-tag"`
+	AnswLog      AnswLogConfig   `config:"answlog"`
+	HTTPTrace    HTTPTraceConfig `config:"httptrace"`
+	SharedClient struct {
+		ClientNumber int  `config:"client-number,omitempty"`
+		Enabled      bool `config:"enabled"`
+	} `config:"shared-client,omitempty"`
 }
 
 // AutoTagConfig configure automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
@@ -53,42 +56,97 @@ type HTTPTraceConfig struct {
 
 func DefaultBaseGunConfig() BaseGunConfig {
 	return BaseGunConfig{
-		AutoTagConfig{
+		AutoTag: AutoTagConfig{
 			Enabled:     false,
 			URIElements: 2,
 			NoTagOnly:   true,
 		},
-		AnswLogConfig{
+		AnswLog: AnswLogConfig{
 			Enabled: false,
 			Path:    "answ.log",
 			Filter:  "error",
 		},
-		HTTPTraceConfig{
+		HTTPTrace: HTTPTraceConfig{
 			DumpEnabled:  false,
 			TraceEnabled: false,
 		},
 	}
 }
 
+func NewBaseGun(clientConstructor ClientConstructor, cfg HTTPGunConfig, answLog *zap.Logger) *BaseGun {
+	client := clientConstructor(cfg.Client, cfg.Target)
+	return &BaseGun{
+		Config: cfg.Base,
+		OnClose: func() error {
+			client.CloseIdleConnections()
+			return nil
+		},
+		AnswLog: answLog,
+		Client:  client,
+		ClientConstructor: func() Client {
+			return clientConstructor(cfg.Client, cfg.Target)
+		},
+	}
+}
+
 type BaseGun struct {
-	DebugLog   bool // Automaticaly set in Bind if Log accepts debug messages.
-	Config     BaseGunConfig
-	Do         func(r *http.Request) (*http.Response, error) // Required.
-	Connect    func(ctx context.Context) error               // Optional hook.
-	OnClose    func() error                                  // Optional. Called on Close().
-	Aggregator netsample.Aggregator                          // Lazy set via BindResultTo.
-	AnswLog    *zap.Logger
+	DebugLog          bool // Automaticaly set in Bind if Log accepts debug messages.
+	Config            BaseGunConfig
+	Connect           func(ctx context.Context) error // Optional hook.
+	OnClose           func() error                    // Optional. Called on Close().
+	Aggregator        netsample.Aggregator            // Lazy set via BindResultTo.
+	AnswLog           *zap.Logger
+	Client            Client
+	ClientConstructor func() Client
+
 	core.GunDeps
 }
 
 var _ Gun = (*BaseGun)(nil)
 var _ io.Closer = (*BaseGun)(nil)
 
+type SharedDeps struct {
+	clientPool *clientpool.Pool[Client]
+}
+
+func (b *BaseGun) WarmUp(opts *warmup.Options) (any, error) {
+	return b.createSharedDeps(opts)
+}
+
+func (b *BaseGun) createSharedDeps(opts *warmup.Options) (*SharedDeps, error) {
+	clientPool, err := b.prepareClientPool()
+	if err != nil {
+		return nil, err
+	}
+	return &SharedDeps{
+		clientPool: clientPool,
+	}, nil
+}
+
+func (b *BaseGun) prepareClientPool() (*clientpool.Pool[Client], error) {
+	if !b.Config.SharedClient.Enabled {
+		return nil, nil
+	}
+	if b.Config.SharedClient.ClientNumber < 1 {
+		b.Config.SharedClient.ClientNumber = 1
+	}
+	clientPool, _ := clientpool.New[Client](b.Config.SharedClient.ClientNumber)
+	for i := 0; i < b.Config.SharedClient.ClientNumber; i++ {
+		client := b.ClientConstructor()
+		clientPool.Add(client)
+	}
+	return clientPool, nil
+}
+
 func (b *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error {
 	log := deps.Log
 	if ent := log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
 		// Enable debug level logging during shooting. Creating log entries isn't free.
 		b.DebugLog = true
+	}
+	extraDeps, ok := deps.Shared.(*SharedDeps)
+	if ok && extraDeps.clientPool != nil {
+		b.Client = extraDeps.clientPool.Next()
 	}
 
 	if b.Aggregator != nil {
@@ -162,7 +220,7 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 		}
 	}
 	var res *http.Response
-	res, err = b.Do(req)
+	res, err = b.Client.Do(req)
 	if b.Config.HTTPTrace.TraceEnabled && timings != nil {
 		sample.SetReceiveTime(timings.GetReceiveTime())
 	}
@@ -298,4 +356,35 @@ func GetBody(req *http.Request) []byte {
 
 	return nil
 
+}
+
+// DNS resolve optimisation.
+// When DNSCache turned off - do nothing extra, host will be resolved on every shoot.
+// When using resolved target, don't use DNS caching logic - it is useless.
+// If we can resolve accessible target addr - use it as target, not use caching.
+// Otherwise just use DNS cache - we should not fail shooting, we should try to
+// connect on every shoot. DNS cache will save resolved addr after first successful connect.
+func PreResolveTargetAddr(clientConf *ClientConfig, target string) (string, error) {
+	if !clientConf.Dialer.DNSCache {
+		return target, nil
+	}
+	if endpointIsResolved(target) {
+		clientConf.Dialer.DNSCache = false
+		return target, nil
+	}
+	resolved, err := netutil.LookupReachable(target, clientConf.Dialer.Timeout)
+	if err != nil {
+		zap.L().Warn("DNS target pre resolve failed", zap.String("target", target), zap.Error(err))
+		return target, err
+	}
+	clientConf.Dialer.DNSCache = false
+	return resolved, nil
+}
+
+func endpointIsResolved(endpoint string) bool {
+	host, _, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		return false
+	}
+	return net.ParseIP(host) != nil
 }

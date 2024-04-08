@@ -21,6 +21,7 @@
             - [assert/response](#assertresponse)
     - [Scenarios](#scenarios)
     - [Sources](#sources)
+- [References](#references)
 
 ## Configuration
 
@@ -43,8 +44,8 @@ The minimum generator configuration is as follows
 
 ```yaml
 gun:
-  type: http/scenario
-  target: localhost:80
+  type: grpc/scenario
+  target: localhost:8888
 ```
 
 For a scenario gRPC generator, all settings of a regular gRPC generator are supported [gRPC generator](grpc-generator.md)
@@ -283,6 +284,13 @@ More - [scenario in HTTP generator](./scenario-http-generator.md#scenarios)
 ### Sources
 
 Follow - [Variable sources](scenario/variable_source.md)
+
+# References
+
+- [HTTP generator](http-generator.md)
+- Best practices
+    - [RPS per instance](best_practices/rps-per-instance.md)
+    - [Shared client](best_practices/shared-client.md)
 
 ---
 

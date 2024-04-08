@@ -23,6 +23,7 @@
             - [assert/response](#assertresponse)
     - [Scenarios](#scenarios)
     - [Sources](#sources)
+- [References](#references)
 
 ## Configuration
 
@@ -402,6 +403,14 @@ scenario "scenario_second" {
 ### Sources
 
 Follow - [Variable sources](scenario/variable_source.md)
+
+# References
+
+- [HTTP generator](http-generator.md)
+- Best practices
+    - [RPS per instance](best_practices/rps-per-instance.md)
+    - [Shared client](best_practices/shared-client.md)
+
 
 ---
 

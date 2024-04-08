@@ -4,6 +4,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/yandex/pandora/components/providers/scenario"
 )
 
 type SourceStorage interface {
@@ -20,6 +22,15 @@ type Scenario struct {
 
 func (a *Scenario) SetID(id uint64) {
 	a.ID = id
+}
+
+func (a *Scenario) Clone() scenario.ProvAmmo {
+	return &Scenario{
+		Requests:        a.Requests,
+		Name:            a.Name,
+		MinWaitingTime:  a.MinWaitingTime,
+		VariableStorage: a.VariableStorage,
+	}
 }
 
 type Request struct {

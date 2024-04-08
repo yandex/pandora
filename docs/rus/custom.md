@@ -1,4 +1,4 @@
-[Home](index.md)
+[К содержанию](index.md)
 
 ---
 
@@ -452,4 +452,4 @@ func main() {
 
 ---
 
-[Home](index.md)
+[К содержанию](index.md)

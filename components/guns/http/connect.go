@@ -1,8 +1,3 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 package phttp
 
 import (
@@ -19,67 +14,45 @@ import (
 	"go.uber.org/zap"
 )
 
-type ConnectGunConfig struct {
-	Target        string       `validate:"endpoint,required"`
-	ConnectSSL    bool         `config:"connect-ssl"` // Defines if tunnel encrypted.
-	SSL           bool         // As in HTTP gun, defines scheme for http requests.
-	Client        ClientConfig `config:",squash"`
-	BaseGunConfig `config:",squash"`
-}
-
-func NewConnectGun(conf ConnectGunConfig, answLog *zap.Logger) *ConnectGun {
-	scheme := "http"
-	if conf.SSL {
-		scheme = "https"
+func NewConnectGun(cfg HTTPGunConfig, answLog *zap.Logger) *BaseGun {
+	var wrappedConstructor = func(clientConfig ClientConfig, target string) Client {
+		scheme := "http"
+		if cfg.SSL {
+			scheme = "https"
+		}
+		client := newConnectClient(cfg.Client, cfg.Target)
+		return &httpDecoratedClient{
+			client:         client,
+			hostname:       "",
+			targetResolved: cfg.Target,
+			scheme:         scheme,
+		}
 	}
-	client := newConnectClient(conf)
-	var g ConnectGun
-	g = ConnectGun{
-		BaseGun: BaseGun{
-			Config: conf.BaseGunConfig,
-			Do:     g.Do,
-			OnClose: func() error {
-				client.CloseIdleConnections()
-				return nil
-			},
-			AnswLog: answLog,
-		},
-		scheme: scheme,
-		client: client,
-	}
-	return &g
+
+	return NewBaseGun(wrappedConstructor, cfg, answLog)
 }
 
-type ConnectGun struct {
-	BaseGun
-	scheme string
-	client Client
-}
-
-var _ Gun = (*ConnectGun)(nil)
-
-func (g *ConnectGun) Do(req *http.Request) (*http.Response, error) {
-	req.URL.Scheme = g.scheme
-	return g.client.Do(req)
-}
-
-func DefaultConnectGunConfig() ConnectGunConfig {
-	return ConnectGunConfig{
-		SSL:        false,
-		ConnectSSL: false,
-		Client:     DefaultClientConfig(),
+func DefaultConnectGunConfig() HTTPGunConfig {
+	return HTTPGunConfig{
+		SSL:    false,
+		Client: DefaultClientConfig(),
+		Base:   DefaultBaseGunConfig(),
 	}
 }
 
-func newConnectClient(conf ConnectGunConfig) Client {
-	transport := NewTransport(conf.Client.Transport,
+func newConnectClient(conf ClientConfig, target string) Client {
+	transport := NewTransport(
+		conf.Transport,
 		newConnectDialFunc(
-			conf.Target,
+			target,
 			conf.ConnectSSL,
-			NewDialer(conf.Client.Dialer),
-		), conf.Target)
-	return newClient(transport, conf.Client.Redirect)
+			NewDialer(conf.Dialer),
+		),
+		target)
+	return NewRedirectingClient(transport, conf.Redirect)
 }
+
+var _ ClientConstructor = newConnectClient
 
 func newConnectDialFunc(target string, connectSSL bool, dialer netutil.Dialer) netutil.DialerFunc {
 	return func(ctx context.Context, network, address string) (conn net.Conn, err error) {

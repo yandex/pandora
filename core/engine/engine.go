@@ -1,8 +1,3 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 package engine
 
 import (
@@ -113,7 +108,7 @@ func (e *Engine) Wait() {
 
 func newPool(log *zap.Logger, m Metrics, onWaitDone func(), conf InstancePoolConfig) *instancePool {
 	log = log.With(zap.String("pool", conf.ID))
-	return &instancePool{log, m, onWaitDone, conf, nil}
+	return &instancePool{log: log, metrics: m, onWaitDone: onWaitDone, InstancePoolConfig: conf}
 }
 
 type instancePool struct {
@@ -121,7 +116,7 @@ type instancePool struct {
 	metrics    Metrics
 	onWaitDone func()
 	InstancePoolConfig
-	gunWarmUpResult interface{}
+	sharedGunDeps any
 }
 
 // Run start instance pool. Run blocks until fail happen, or all instances finish.
@@ -174,10 +169,7 @@ func (p *instancePool) warmUpGun(ctx context.Context) error {
 		return fmt.Errorf("can't initiate a gun: %w", err)
 	}
 	if gunWithWarmUp, ok := gun.(warmup.WarmedUp); ok {
-		p.gunWarmUpResult, err = gunWithWarmUp.WarmUp(&warmup.Options{
-			Log: p.log,
-			Ctx: ctx,
-		})
+		p.sharedGunDeps, err = gunWithWarmUp.WarmUp(&warmup.Options{Log: p.log, Ctx: ctx})
 		if err != nil {
 			return fmt.Errorf("gun warm up failed: %w", err)
 		}
@@ -367,7 +359,7 @@ func (p *instancePool) startInstances(
 		instanceSharedDeps: instanceSharedDeps{
 			provider:        p.Provider,
 			metrics:         p.metrics,
-			gunWarmUpResult: p.gunWarmUpResult,
+			gunDeps:         p.sharedGunDeps,
 			aggregator:      p.Aggregator,
 			discardOverflow: p.DiscardOverflow,
 		},

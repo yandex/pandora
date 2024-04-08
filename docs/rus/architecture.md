@@ -28,11 +28,12 @@ Pandora - это набор компонентов, взаимодействую
 Ammo Provider знает, как создать объект Payload из payload файла (ammo file) или другого внешнего ресурса.
 И их задача передать Payload Instance'у. См метод `func (p *Provider) Acquire() (core.Ammo, bool)`
 
-### Instances Pool
+### Instance Pool
 
-Instances Pool manages the creation of Instances. You can think of one Instance as a single user that sends requests to
-a server sequentially. All Instances from one Instances Pool get their ammo from one Ammo Provider. Instances creation
-times are controlled by Startup Scheduler. All Instances from one Instances Pool also have Guns of the same type.
+**Пул инстансов** управляет созданием **инстансов**. Один инстанс можно представить как одного пользователя, который
+**последовательно** отправляет запросы на сервер. Все инстансы из одного пула инстансов получают данные от одного
+**провайдера**. Время создания инстанса контролируется **планировщиком**. Все инстансы из одного пула инстансов имеют генераторы
+одного типа.
 
 ### Scheduler
 

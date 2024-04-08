@@ -1,8 +1,3 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-// Author: Vladimir Skipor <skipor@yandex-team.ru>
-
 package phttp
 
 import (
@@ -26,10 +21,13 @@ type Client interface {
 }
 
 type ClientConfig struct {
-	Redirect  bool            // When true, follow HTTP redirects.
-	Dialer    DialerConfig    `config:"dial"`
-	Transport TransportConfig `config:",squash"`
+	Redirect   bool            // When true, follow HTTP redirects.
+	Dialer     DialerConfig    `config:"dial"`
+	Transport  TransportConfig `config:",squash"`
+	ConnectSSL bool            `config:"connect-ssl"` // Defines if tunnel encrypted.
 }
+
+type ClientConstructor func(clientConfig ClientConfig, target string) Client
 
 func DefaultClientConfig() ClientConfig {
 	return ClientConfig{
@@ -132,7 +130,7 @@ func NewHTTP2Transport(conf TransportConfig, dial netutil.DialerFunc, target str
 	return tr
 }
 
-func newClient(tr *http.Transport, redirect bool) Client {
+func NewRedirectingClient(tr *http.Transport, redirect bool) Client {
 	if redirect {
 		return redirectClient{&http.Client{Transport: tr}}
 	}
@@ -173,6 +171,43 @@ func (c *panicOnHTTP1Client) Do(req *http.Request) (*http.Response, error) {
 		zap.L().Panic(notHTTP2PanicMsg, zap.Error(err))
 	}
 	return res, nil
+}
+
+func WrapClientHostResolving(client Client, cfg HTTPGunConfig, targetResolved string) Client {
+	hostname := getHostWithoutPort(cfg.Target)
+	scheme := "http"
+	if cfg.SSL {
+		scheme = "https"
+	}
+	return &httpDecoratedClient{
+		client:         client,
+		scheme:         scheme,
+		hostname:       hostname,
+		targetResolved: targetResolved,
+	}
+}
+
+type httpDecoratedClient struct {
+	client         Client
+	scheme         string
+	hostname       string
+	targetResolved string
+}
+
+func (c *httpDecoratedClient) Do(req *http.Request) (*http.Response, error) {
+	if req.Host == "" {
+		req.Host = c.hostname
+	}
+
+	if c.targetResolved != "" {
+		req.URL.Host = c.targetResolved
+	}
+	req.URL.Scheme = c.scheme
+	return c.client.Do(req)
+}
+
+func (c *httpDecoratedClient) CloseIdleConnections() {
+	c.client.CloseIdleConnections()
 }
 
 func checkHTTP2(state *tls.ConnectionState) error {

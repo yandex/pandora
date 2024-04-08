@@ -20,6 +20,9 @@ gun:
   idle-conn-timeout: 90s        # Maximum amount of time an idle (keep-alive) connection will remain idle before closing itself. Zero means no limit. Default: 90s
   response-header-timeout: 0    # Amount of time to wait for a server's response headers after fully writing the request (including its body, if any). Zero means no timeout. Default: 0
   expect-continue-timeout: 1s   # Amount of time to wait for a server's first response headers after fully writing the request headers if the request has an "Expect: 100-continue" header. Zero means no timeout. Default: 1s
+  shared-client:
+    enabled: true               # Если TRUE, генератор будет использовать общий транспортный клиент для всех инстансов
+    client-number: 1            # Количество общих клиентов можно увеличить. По умолчанию 1
   dial:
     timeout: 1s                 # TCP connect timeout. Default: 3s
     dns-cache: true             # Enable DNS cache, remember remote address on first try, and use it in the future. Default: true
@@ -38,6 +41,12 @@ gun:
     dump: true              # calculate response bytes
     trace: true             # calculate different request stages: connect time, send time, latency, request bytes
 ```
+
+# Смотри так же
+
+- Практики использования
+  - [RPS на инстанс](best_practices/rps-per-instance.md)
+  - [Общий транспорт](best_practices/shared-client.md)
 
 ---
 

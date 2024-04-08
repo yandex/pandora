@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/yandex/pandora/components/providers/scenario"
 )
 
 type SourceStorage interface {
@@ -20,6 +21,15 @@ type Scenario struct {
 
 func (a *Scenario) SetID(id uint64) {
 	a.id = id
+}
+
+func (a *Scenario) Clone() scenario.ProvAmmo {
+	return &Scenario{
+		Calls:           a.Calls,
+		Name:            a.Name,
+		MinWaitingTime:  a.MinWaitingTime,
+		VariableStorage: a.VariableStorage,
+	}
 }
 
 type Call struct {

@@ -1,32 +1,22 @@
-package httphttp2
+package acceptance
 
 import (
-	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"sync"
 	"testing"
-	"text/template"
 
 	"github.com/spf13/afero"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/yandex/pandora/cli"
 	grpc "github.com/yandex/pandora/components/grpc/import"
 	phttpimport "github.com/yandex/pandora/components/phttp/import"
-	"github.com/yandex/pandora/core"
-	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/core/engine"
 	coreimport "github.com/yandex/pandora/core/import"
-	"github.com/yandex/pandora/lib/monitoring"
+	"github.com/yandex/pandora/lib/testutil"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest/observer"
 	"golang.org/x/net/http2"
-	"gopkg.in/yaml.v2"
 )
 
 var testOnce = &sync.Once{}
@@ -44,13 +34,14 @@ type PandoraSuite struct {
 
 func (s *PandoraSuite) SetupSuite() {
 	s.fs = afero.NewOsFs()
-	coreimport.Import(s.fs)
-	phttpimport.Import(s.fs)
-	grpc.Import(s.fs)
+	testOnce.Do(func() {
+		coreimport.Import(s.fs)
+		phttpimport.Import(s.fs)
+		grpc.Import(s.fs)
+	})
 
-	s.log = newNullLogger()
-	// s.log = newLogger()
-	s.metrics = newEngineMetrics()
+	s.log = testutil.NewNullLogger()
+	s.metrics = newEngineMetrics("http_suite")
 }
 
 func (s *PandoraSuite) Test_Http_Check_Passes() {
@@ -106,6 +97,16 @@ func (s *PandoraSuite) Test_Http_Check_Passes() {
 			isTLS:   false,
 			wantCnt: 15,
 		},
+		{
+			name:    "http2-shared-client",
+			filecfg: "testdata/http/http2-shared-client.yaml",
+			isTLS:   true,
+			preStartSrv: func(srv *httptest.Server) {
+				_ = http2.ConfigureServer(srv.Config, nil)
+				srv.TLS = srv.Config.TLSConfig
+			},
+			wantCnt: 8,
+		},
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
@@ -144,70 +145,4 @@ func (s *PandoraSuite) Test_Http_Check_Passes() {
 			s.Require().Equal(tt.wantCnt, len(aggr.samples))
 		})
 	}
-}
-
-func parseConfigFile(t *testing.T, filename string, serverAddr string) *cli.CliConfig {
-	mapCfg := unmarshalConfigFile(t, filename, serverAddr)
-	conf := decodeConfig(t, mapCfg)
-	return conf
-}
-
-func decodeConfig(t *testing.T, mapCfg map[string]any) *cli.CliConfig {
-	conf := cli.DefaultConfig()
-	err := config.DecodeAndValidate(mapCfg, conf)
-	require.NoError(t, err)
-	return conf
-}
-
-func unmarshalConfigFile(t *testing.T, filename string, serverAddr string) map[string]any {
-	f, err := os.ReadFile(filename)
-	require.NoError(t, err)
-	tmpl, err := template.New("x").Parse(string(f))
-	require.NoError(t, err)
-	b := &bytes.Buffer{}
-	err = tmpl.Execute(b, map[string]string{"target": serverAddr})
-	require.NoError(t, err)
-	mapCfg := map[string]any{}
-	err = yaml.Unmarshal(b.Bytes(), &mapCfg)
-	require.NoError(t, err)
-	return mapCfg
-}
-
-func newNullLogger() *zap.Logger {
-	c, _ := observer.New(zap.InfoLevel)
-	return zap.New(c)
-}
-
-func newLogger() *zap.Logger {
-	zapConf := zap.NewDevelopmentConfig()
-	zapConf.Level.SetLevel(zapcore.DebugLevel)
-	log, err := zapConf.Build(zap.AddCaller())
-	if err != nil {
-		zap.L().Fatal("Logger build failed", zap.Error(err))
-	}
-	return log
-}
-
-func newEngineMetrics() engine.Metrics {
-	return engine.Metrics{
-		Request:        monitoring.NewCounter("engine_Requests"),
-		Response:       monitoring.NewCounter("engine_Responses"),
-		InstanceStart:  monitoring.NewCounter("engine_UsersStarted"),
-		InstanceFinish: monitoring.NewCounter("engine_UsersFinished"),
-	}
-}
-
-type aggregator struct {
-	mx      sync.Mutex
-	samples []core.Sample
-}
-
-func (a *aggregator) Run(ctx context.Context, deps core.AggregatorDeps) error {
-	return nil
-}
-
-func (a *aggregator) Report(s core.Sample) {
-	a.mx.Lock()
-	defer a.mx.Unlock()
-	a.samples = append(a.samples, s)
 }

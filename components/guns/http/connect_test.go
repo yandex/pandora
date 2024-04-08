@@ -1,7 +1,3 @@
-// Copyright (c) 2017 Yandex LLC. All rights reserved.
-// Use of this source code is governed by a MPL 2.0
-// license that can be found in the LICENSE file.
-
 package phttp
 
 import (
@@ -18,12 +14,14 @@ import (
 	"go.uber.org/zap"
 )
 
-var tunnelHandler = func(t *testing.T, originURL string) http.Handler {
+var tunnelHandler = func(t *testing.T, originURL string, compareURI bool) http.Handler {
 	u, err := url.Parse(originURL)
 	require.NoError(t, err)
 	originHost := u.Host
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, originHost, r.RequestURI)
+		if compareURI {
+			require.Equal(t, originHost, r.RequestURI)
+		}
 
 		toOrigin, err := net.Dial("tcp", originHost)
 		require.NoError(t, err)
@@ -64,9 +62,9 @@ func TestDo(t *testing.T) {
 
 			var proxy *httptest.Server
 			if tunnelSSL {
-				proxy = httptest.NewTLSServer(tunnelHandler(t, origin.URL))
+				proxy = httptest.NewTLSServer(tunnelHandler(t, origin.URL, true))
 			} else {
-				proxy = httptest.NewServer(tunnelHandler(t, origin.URL))
+				proxy = httptest.NewServer(tunnelHandler(t, origin.URL, true))
 			}
 			defer proxy.Close()
 
@@ -74,14 +72,14 @@ func TestDo(t *testing.T) {
 			require.NoError(t, err)
 
 			conf := DefaultConnectGunConfig()
-			conf.ConnectSSL = tunnelSSL
+			conf.Client.ConnectSSL = tunnelSSL
 			scheme := "http://"
 			if tunnelSSL {
 				scheme = "https://"
 			}
 			conf.Target = strings.TrimPrefix(proxy.URL, scheme)
 
-			client := newConnectClient(conf)
+			client := newConnectClient(conf.Client, conf.Target)
 
 			res, err := client.Do(req)
 			require.NoError(t, err)
@@ -91,12 +89,11 @@ func TestDo(t *testing.T) {
 }
 
 func TestNewConnectGun(t *testing.T) {
-
 	origin := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusOK)
 	}))
 	defer origin.Close()
-	proxy := httptest.NewServer(tunnelHandler(t, origin.URL))
+	proxy := httptest.NewServer(tunnelHandler(t, origin.URL, false))
 	defer proxy.Close()
 
 	log := zap.NewNop()

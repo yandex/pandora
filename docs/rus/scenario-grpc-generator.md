@@ -21,6 +21,7 @@
             - [assert/response](#assertresponse)
     - [Scenarios](#scenarios)
     - [Sources](#sources)
+- [Смотри так же](#cмотри-так-же)
 
 ## Конфигурация
 
@@ -43,8 +44,8 @@ pools:
 
 ```yaml
 gun:
-  type: http/scenario
-  target: localhost:80
+  type: grpc/scenario
+  target: localhost:8888
 ```
 
 Для сценарного генератора поддерживаются все настройки обычного [gRPC генератора](grpc-generator.md)
@@ -284,6 +285,14 @@ scenario "scenario_name" {
 ### Sources
 
 См документ - [Источники переменных](scenario/variable_source.md)
+
+# Смотри так же
+
+- [HTTP генератор](http-generator.md)
+- Практики использования
+    - [RPS на инстанс](best_practices/rps-per-instance.md)
+    - [Общий транспорт](best_practices/shared-client.md)
+
 
 ---
 

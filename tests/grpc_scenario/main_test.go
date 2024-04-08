@@ -88,13 +88,10 @@ func (s *GunSuite) Test_Scenario() {
 	}
 	g := grpcscenario.NewGun(cfg)
 
-	res, err := g.WarmUp(&warmup.Options{Log: log, Ctx: ctx})
+	sharedDeps, err := g.WarmUp(&warmup.Options{Log: log, Ctx: ctx})
 	s.NoError(err)
 
-	err = g.AcceptWarmUpResult(res)
-	s.NoError(err)
-
-	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: "test", InstanceID: 1}
+	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: "test", InstanceID: 1, Shared: sharedDeps}
 	aggr := &Aggregator{}
 	err = g.Bind(aggr, gunDeps)
 	s.NoError(err)
@@ -151,13 +148,10 @@ func (s *GunSuite) Test_FullScenario() {
 	}
 	g := grpcscenario.NewGun(gunConfig)
 
-	res, err := g.WarmUp(&warmup.Options{Log: log, Ctx: ctx})
+	sharedDeps, err := g.WarmUp(&warmup.Options{Log: log, Ctx: ctx})
 	s.NoError(err)
 
-	err = g.AcceptWarmUpResult(res)
-	s.NoError(err)
-
-	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: "pool_id", InstanceID: 1}
+	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: "pool_id", InstanceID: 1, Shared: sharedDeps}
 	aggr := &Aggregator{}
 	err = g.Bind(aggr, gunDeps)
 	s.NoError(err)
@@ -201,13 +195,10 @@ func (s *GunSuite) Test_ErrorScenario() {
 	}
 	g := grpcscenario.NewGun(cfg)
 
-	res, err := g.WarmUp(&warmup.Options{Log: log, Ctx: ctx})
+	sharedDeps, err := g.WarmUp(&warmup.Options{Log: log, Ctx: ctx})
 	s.NoError(err)
 
-	err = g.AcceptWarmUpResult(res)
-	s.NoError(err)
-
-	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: "test", InstanceID: 1}
+	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: "test", InstanceID: 1, Shared: sharedDeps}
 	aggr := &Aggregator{}
 	err = g.Bind(aggr, gunDeps)
 	s.NoError(err)

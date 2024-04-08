@@ -1,0 +1,1 @@
+{"tag": "auth", "call": "target.TargetService.Hello", "payload": {"name": "test"}}

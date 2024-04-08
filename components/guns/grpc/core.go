@@ -4,7 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -15,6 +18,7 @@ import (
 	ammo "github.com/yandex/pandora/components/providers/grpc"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
+	"github.com/yandex/pandora/core/clientpool"
 	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/lib/answlog"
 	"go.uber.org/zap"
@@ -39,11 +43,16 @@ type GrpcDialOptions struct {
 }
 
 type GunConfig struct {
-	Target      string          `validate:"required"`
-	Timeout     time.Duration   `config:"timeout"` // grpc request timeout
-	TLS         bool            `config:"tls"`
-	DialOptions GrpcDialOptions `config:"dial_options"`
-	AnswLog     AnswLogConfig   `config:"answlog"`
+	Target       string          `validate:"required"`
+	ReflectPort  int64           `config:"reflect_port"`
+	Timeout      time.Duration   `config:"timeout"` // grpc request timeout
+	TLS          bool            `config:"tls"`
+	DialOptions  GrpcDialOptions `config:"dial_options"`
+	AnswLog      AnswLogConfig   `config:"answlog"`
+	SharedClient struct {
+		ClientNumber int  `config:"client-number,omitempty"`
+		Enabled      bool `config:"enabled"`
+	} `config:"shared-client,omitempty"`
 }
 
 type AnswLogConfig struct {
@@ -54,7 +63,6 @@ type AnswLogConfig struct {
 
 type Gun struct {
 	DebugLog bool
-	Client   *grpc.ClientConn
 	Conf     GunConfig
 	Aggr     core.Aggregator
 	core.GunDeps
@@ -76,8 +84,27 @@ func DefaultGunConfig() GunConfig {
 	}
 }
 
-func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
-	conn, err := MakeGRPCConnect(g.Conf.Target, g.Conf.TLS, g.Conf.DialOptions)
+func (g *Gun) WarmUp(opts *warmup.Options) (any, error) {
+	return g.createSharedDeps(opts)
+}
+
+func (g *Gun) createSharedDeps(opts *warmup.Options) (*SharedDeps, error) {
+	services, err := g.prepareMethodList(opts)
+	if err != nil {
+		return nil, err
+	}
+	clientPool, err := g.prepareClientPool()
+	if err != nil {
+		return nil, err
+	}
+	return &SharedDeps{
+		services:   services,
+		clientPool: clientPool,
+	}, nil
+}
+
+func (g *Gun) prepareMethodList(opts *warmup.Options) (map[string]desc.MethodDescriptor, error) {
+	conn, err := g.makeReflectionConnect()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to target: %w", err)
 	}
@@ -109,13 +136,25 @@ func (g *Gun) WarmUp(opts *warmup.Options) (interface{}, error) {
 	return services, nil
 }
 
-func (g *Gun) AcceptWarmUpResult(i interface{}) error {
-	services, ok := i.(map[string]desc.MethodDescriptor)
-	if !ok {
-		return fmt.Errorf("grpc WarmUp result should be services: map[string]desc.MethodDescriptor")
+func (g *Gun) prepareClientPool() (*clientpool.Pool[grpcdynamic.Stub], error) {
+	if !g.Conf.SharedClient.Enabled {
+		return nil, nil
 	}
-	g.Services = services
-	return nil
+	if g.Conf.SharedClient.ClientNumber < 1 {
+		g.Conf.SharedClient.ClientNumber = 1
+	}
+	clientPool, err := clientpool.New[grpcdynamic.Stub](g.Conf.SharedClient.ClientNumber)
+	if err != nil {
+		return nil, fmt.Errorf("create clientpool err: %w", err)
+	}
+	for i := 0; i < g.Conf.SharedClient.ClientNumber; i++ {
+		conn, err := g.makeConnect()
+		if err != nil {
+			return nil, fmt.Errorf("makeGRPCConnect fail %w", err)
+		}
+		clientPool.Add(grpcdynamic.NewStub(conn))
+	}
+	return clientPool, nil
 }
 
 func NewGun(conf GunConfig) *Gun {
@@ -124,14 +163,23 @@ func NewGun(conf GunConfig) *Gun {
 }
 
 func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
-	conn, err := MakeGRPCConnect(g.Conf.Target, g.Conf.TLS, g.Conf.DialOptions)
-	if err != nil {
-		return fmt.Errorf("makeGRPCConnect fail %w", err)
+	sharedDeps, ok := deps.Shared.(*SharedDeps)
+	if !ok {
+		return errors.New("grpc WarmUp result should be struct: *SharedDeps")
 	}
-	g.Client = conn
+	g.Services = sharedDeps.services
+	if sharedDeps.clientPool != nil {
+		g.Stub = sharedDeps.clientPool.Next()
+	} else {
+		conn, err := g.makeConnect()
+		if err != nil {
+			return fmt.Errorf("makeGRPCConnect fail %w", err)
+		}
+		g.Stub = grpcdynamic.NewStub(conn)
+	}
+
 	g.Aggr = aggr
 	g.GunDeps = deps
-	g.Stub = grpcdynamic.NewStub(conn)
 
 	if ent := deps.Log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
 		deps.Log.Warn("Deprecation Warning: log level: debug doesn't produce request/response logs anymore. Please use AnswLog option instead:\nanswlog:\n  enabled: true\n  filter: all|warning|error\n  path: answ.log")
@@ -213,6 +261,15 @@ func (g *Gun) AnswLogging(logger *zap.Logger, method *desc.MethodDescriptor, req
 	logger.Debug("Response:", zap.Stringer("resp", response), zap.Error(grpcErr))
 }
 
+func (g *Gun) makeConnect() (conn *grpc.ClientConn, err error) {
+	return MakeGRPCConnect(g.Conf.Target, g.Conf.TLS, g.Conf.DialOptions)
+}
+
+func (g *Gun) makeReflectionConnect() (conn *grpc.ClientConn, err error) {
+	target := replacePort(g.Conf.Target, g.Conf.ReflectPort)
+	return MakeGRPCConnect(target, g.Conf.TLS, g.Conf.DialOptions)
+}
+
 func MakeGRPCConnect(target string, isTLS bool, dialOptions GrpcDialOptions) (conn *grpc.ClientConn, err error) {
 	opts := []grpc.DialOption{}
 	if isTLS {
@@ -270,6 +327,24 @@ func ConvertGrpcStatus(err error) int {
 	default:
 		return 500
 	}
+}
+
+func replacePort(host string, port int64) string {
+	if port == 0 {
+		return host
+	}
+	split := strings.Split(host, ":")
+	if len(split) == 1 {
+		return host + ":" + strconv.FormatInt(port, 10)
+	}
+
+	oldPort := split[len(split)-1]
+	if _, err := strconv.ParseInt(oldPort, 10, 64); err != nil {
+		return host + ":" + strconv.FormatInt(port, 10)
+	}
+
+	split[len(split)-1] = strconv.FormatInt(port, 10)
+	return strings.Join(split, ":")
 }
 
 var _ warmup.WarmedUp = (*Gun)(nil)
