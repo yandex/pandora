@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest, macOS-latest ]
-        arch: [ amd64 ]
+        arch: [ amd64, arm64 ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
