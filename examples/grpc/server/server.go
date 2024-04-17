@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math/rand"
 	"strconv"
 	"sync"
 
+	"github.com/yandex/pandora/lib/str"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -19,19 +19,9 @@ const (
 )
 
 func NewServer(logger *slog.Logger, seed int64) *GRPCServer {
-	r := rand.New(rand.NewSource(seed))
-	var randStringRunes = func(n int) string {
-		var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-		b := make([]rune, n)
-		for i := range b {
-			b[i] = letterRunes[r.Intn(len(letterRunes))]
-		}
-		return string(b)
-	}
-
 	keys := make(map[string]int64, userCount)
 	for i := int64(1); i <= userCount; i++ {
-		keys[randStringRunes(64)] = i
+		keys[str.RandStringRunes(64, "")] = i
 	}
 	logger.Info("New server created", slog.Any("keys", keys))
 

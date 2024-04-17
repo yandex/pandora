@@ -2,6 +2,8 @@ module github.com/yandex/pandora
 
 go 1.21
 
+toolchain go1.22.1
+
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/antchfx/htmlquery v1.2.4
@@ -10,6 +12,7 @@ require (
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052
 	github.com/facebookgo/stackerr v0.0.0-20150612192056-c2fcf88613f4
+	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/golang/protobuf v1.5.4
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/hcl/v2 v2.16.2
@@ -37,8 +40,8 @@ require (
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/bufbuild/protocompile v0.8.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/frankban/quicktest v1.14.5 // indirect
-	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/frankban/quicktest v1.14.6 // indirect
+	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-test/deep v1.1.0 // indirect
@@ -53,7 +56,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rogpeppe/go-internal v1.11.0 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
@@ -77,5 +80,3 @@ require (
 replace github.com/jackc/pgtype => github.com/jackc/pgtype v1.12.0
 
 replace github.com/aws/aws-sdk-go => github.com/aws/aws-sdk-go v1.46.7
-
-toolchain go1.22.1

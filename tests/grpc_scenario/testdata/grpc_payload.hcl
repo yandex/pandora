@@ -7,10 +7,10 @@ variable_source "users" "file/csv" {
 variable_source "filter_src" "file/json" {
   file = "testdata/filter.json"
 }
-variable_source "variables" "variables" {
+variable_source "global" "variables" {
   variables = {
-    header = "yandex"
-    b      = "s"
+    tmpInt = "randInt(0, 30)"
+    tmpString = "randString(10, asdf)"
   }
 }
 
@@ -23,6 +23,7 @@ call "auth_req" {
   preprocessor "prepare" {
     mapping = {
       user = "source.users[next]"
+      uuid = "uuid()"
     }
   }
   payload = <<EOF

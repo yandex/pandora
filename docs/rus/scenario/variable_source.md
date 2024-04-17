@@ -104,7 +104,7 @@ variable_source "users" "file/json" {
 Пример
 
 ```terraform
-variable_source "variables" "variables" {
+variable_source "global" "variables" {
   variables = {
     host = localhost
     port = 8090
@@ -112,13 +112,17 @@ variable_source "variables" "variables" {
 }
 ```
 
-Создание источника с переменными. Добавление ему имени `variables`.
+Создание источника с переменными. Добавление ему имени `global`.
 
 Использование переменных из данного источника
 
 ```gotempate
-{% raw %}{{.source.variables.host}}:{{.source.variables.port}}{% endraw %}
+{% raw %}{{.source.global.host}}:{{.source.global.port}}{% endraw %}
 ```
+
+Дополнительная особенность данного источника - возможность использовать функции рандомизации
+
+Подробнее см [функции рандомизации](functions.md)
 
 ---
 

@@ -194,13 +194,13 @@ scenarios:
 - preprocessors
 - postprocessors
 
-### Templater
+#### Templater
 
 The `uri`, `headers`, `body` fields are templatized.
 
 The standard go template is used.
 
-#### Variable names in templates
+##### Variable names in templates
 
 Variable names have the full path of their definition.
 
@@ -211,6 +211,18 @@ Variable `users` from source `user_file` - `{% raw %}{{.source.user_file.users}}
 Variable `token` from the `list_req` query postprocessor - `{% raw %}{{.request.list_req.postprocessor.token}}{% endraw %}`
 
 Variable `item` from the `list_req` query preprocessor - `{% raw %}{{.request.list_req.preprocessor.item}}{% endraw %}`
+
+##### Functions in Templates
+
+Since the standard Go templating engine is used, it is possible to use built-in functions available at https://pkg.go.dev/text/template#hdr-Functions.
+
+Additionally, some functions include:
+
+- randInt
+- randString
+- uuid
+
+For more details about randomization functions, see [more](scenario/functions.md).
 
 #### Preprocessors
 
@@ -246,6 +258,14 @@ request "req_name" {
   }
 }
 ```
+
+Additionally, in the preprocessor, it is possible to create variables using randomization functions:
+
+- randInt()
+- randString()
+- uuid()
+
+For more details about randomization functions, see [more](scenario/functions.md).
 
 #### Postprocessors
 

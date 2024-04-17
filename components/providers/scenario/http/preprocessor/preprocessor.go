@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/yandex/pandora/components/providers/scenario/templater"
 	"github.com/yandex/pandora/lib/mp"
 )
 
@@ -20,8 +21,17 @@ func (p *Preprocessor) Process(templateVars map[string]any) (map[string]any, err
 		return nil, errors.New("templateVars must not be nil")
 	}
 	result := make(map[string]any, len(p.Mapping))
+	var (
+		val any
+		err error
+	)
 	for k, v := range p.Mapping {
-		val, err := mp.GetMapValue(templateVars, v, p.iterator)
+		fun, args := templater.ParseFunc(v)
+		if fun != nil {
+			val, err = templater.ExecTemplateFuncWithVariables(fun, args, templateVars, p.iterator)
+		} else {
+			val, err = mp.GetMapValue(templateVars, v, p.iterator)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to get value for %s: %w", k, err)
 		}

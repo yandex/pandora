@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	gun "github.com/yandex/pandora/components/guns/http_scenario"
+	"github.com/yandex/pandora/components/providers/scenario/templater"
 )
 
 func NewHTMLTemplater() Templater {
@@ -64,7 +65,7 @@ func (t *HTMLTemplater) getTemplate(tmplBody, scenarioName, stepName, key string
 	tmpl, ok := t.templatesCache.Load(urlKey)
 	if !ok {
 		var err error
-		tmpl, err = template.New(urlKey).Parse(tmplBody)
+		tmpl, err = template.New(urlKey).Funcs(templater.GetFuncs()).Parse(tmplBody)
 		if err != nil {
 			return nil, fmt.Errorf("scenario/TextTemplater.Apply, template.New, %w", err)
 		}

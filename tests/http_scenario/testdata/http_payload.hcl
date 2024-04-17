@@ -8,16 +8,22 @@ variable_source "users" "file/csv" {
 variable_source "filter_src" "file/json" {
   file = "testdata/filter.json"
 }
+variable_source "global" "variables" {
+  variables = {
+    id = "randInt(10,20)"
+  }
+}
 request "auth_req" {
   method = "POST"
   uri    = "/auth"
   headers = {
     Content-Type = "application/json"
     Useragent    = "Yandex"
+    Global-Id = "{{ .source.global.id }}"
   }
   tag       = "auth"
   body      = <<EOF
-{"user_id":  {{.request.auth_req.preprocessor.user_id}}}
+{"user_id":  {{.request.auth_req.preprocessor.user_id}}, "name":"{{.request.auth_req.preprocessor.rand_name}}", "uuid":"{{uuid}}"}
 EOF
   templater {
     type = "html"
@@ -26,6 +32,7 @@ EOF
   preprocessor {
     mapping = {
       user_id = "source.users[next].user_id"
+      rand_name = "randString(5, abc)"
     }
   }
   postprocessor "var/header" {
