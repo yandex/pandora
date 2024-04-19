@@ -105,7 +105,7 @@ Using variables from this source
 Пример
 
 ```terraform
-variable_source "variables" "variables" {
+variable_source "global" "variables" {
   variables = {
     host = localhost
     port = 8090
@@ -113,14 +113,17 @@ variable_source "variables" "variables" {
 }
 ```
 
-Creating a source with variables. Add the name `variables` to it.
+Creating a source with variables. Add the name `global` to it.
 
 Using variables from this source
 
 ```gotempate
-{% raw %}{{.source.variables.host}}:{{.source.variables.port}}{% endraw %}
+{% raw %}{{.source.global.host}}:{{.source.global.port}}{% endraw %}
 ```
 
+An additional feature of this source is the ability to use randomization functions.
+
+For more details, see [randomization functions](functions.md).
 
 ---
 

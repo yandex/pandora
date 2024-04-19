@@ -15,6 +15,7 @@
     - [Запросы](#запросы)
         - [Шаблонизатор](#шаблонизатор)
             - [Имена переменных в шаблонрах](#имена-переменных-в-шаблонах)
+            - [Функции в шаблонах](#функции-в-шаблонах)
         - [Preprocessors](#preprocessors)
         - [Postprocessors](#postprocessors)
             - [var/jsonpath](#varjsonpath)
@@ -197,13 +198,13 @@ scenarios:
 - preprocessors
 - postprocessors
 
-### Шаблонизатор
+#### Шаблонизатор
 
 Поля `uri`, `headers`, `body` шаблонризируются.
 
 Используется стандартный go template.
 
-#### Имена переменных в шаблонах
+##### Имена переменных в шаблонах
 
 Имена переменных имеют полный путь их определения.
 
@@ -214,6 +215,19 @@ scenarios:
 Переменная `item` из препроцессора запроса `list_req` - `{% raw %}{{.request.list_req.preprocessor.item}}{% endraw %}`
 
 Переменная `token` из постпроцессора запроса `list_req` - `{% raw %}{{.request.list_req.postprocessor.token}}{% endraw %}`
+
+##### Функции в шаблонах
+
+Так как используется стандартные шаблонизатор Го в нем можно использовать встроенные функции
+https://pkg.go.dev/text/template#hdr-Functions
+
+А так же некоторые функции 
+
+- randInt
+- randString
+- uuid
+
+Подробнее про функции рандомизации см в [документации](scenario/functions.md)
 
 #### Preprocessors
 
@@ -249,6 +263,13 @@ request "req_name" {
   }
 }
 ```
+
+Так же в препроцессоре есть возможность создавать переменные с использованием функций рандомизации
+- randInt()
+- randString()
+- uuid()
+
+Подробнее про функции рандомизации см в [документации](scenario/functions.md)
 
 #### Postprocessors
 

@@ -1,6 +1,7 @@
 package templater
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -198,6 +199,116 @@ func TestTextTemplater_Apply(t *testing.T) {
 				assert.Equal(t, test.expectedURL, test.parts.URL)
 				assert.Equal(t, test.expectedHeaders, test.parts.Headers)
 				assert.Equal(t, test.expectedBody, string(test.parts.Body))
+			}
+		})
+	}
+}
+
+func TestTextTemplater_Apply_WithRandFunct(t *testing.T) {
+	tests := []struct {
+		name        string
+		parts       *gun.RequestParts
+		vs          map[string]interface{}
+		assertBody  func(t *testing.T, body string)
+		expectError bool
+	}{
+		{
+			name:  "randInt with vars",
+			parts: &gun.RequestParts{Body: []byte(`{{ randInt .from .to }}`)},
+			vs: map[string]interface{}{
+				"from": int64(10),
+				"to":   30,
+			},
+			assertBody: func(t *testing.T, body string) {
+				v, err := strconv.ParseInt(body, 10, 64)
+				require.NoError(t, err)
+				require.InDelta(t, 20, v, 10)
+			},
+			expectError: false,
+		},
+		{
+			name:  "randInt with literals",
+			parts: &gun.RequestParts{Body: []byte(`{{ randInt 10 30 }}`)},
+			vs:    map[string]interface{}{},
+			assertBody: func(t *testing.T, body string) {
+				v, err := strconv.ParseInt(body, 10, 64)
+				require.NoError(t, err)
+				require.InDelta(t, 20, v, 10)
+			},
+			expectError: false,
+		},
+		{
+			name:  "randInt with literals",
+			parts: &gun.RequestParts{Body: []byte(`{{ randInt -10 }}`)},
+			vs:    map[string]interface{}{},
+			assertBody: func(t *testing.T, body string) {
+				v, err := strconv.ParseInt(body, 10, 64)
+				require.NoError(t, err)
+				require.InDelta(t, -5, v, 5)
+			},
+			expectError: false,
+		},
+		{
+			name:        "randInt with invalid args",
+			parts:       &gun.RequestParts{Body: []byte(`{{ randInt 10 "asdf" }}`)},
+			vs:          map[string]interface{}{},
+			assertBody:  nil,
+			expectError: true,
+		},
+		{
+			name:  "randString with 2 arg",
+			parts: &gun.RequestParts{Body: []byte(`{{ randString 10 "asdfgzxcv" }}`)},
+			vs:    map[string]interface{}{},
+			assertBody: func(t *testing.T, body string) {
+				require.Len(t, body, 10)
+			},
+			expectError: false,
+		},
+		{
+			name:  "randString with 1 arg",
+			parts: &gun.RequestParts{Body: []byte(`{{ randString 10 }}`)},
+			vs:    map[string]interface{}{},
+			assertBody: func(t *testing.T, body string) {
+				require.Len(t, body, 10)
+			},
+			expectError: false,
+		},
+		{
+			name:  "randString with 0 arg",
+			parts: &gun.RequestParts{Body: []byte(`{{ randString }}`)},
+			vs:    map[string]interface{}{},
+			assertBody: func(t *testing.T, body string) {
+				require.Len(t, body, 1)
+			},
+			expectError: false,
+		},
+		{
+			name:        "randString with invalid arg",
+			parts:       &gun.RequestParts{Body: []byte(`{{ randString "asdf" }}`)},
+			vs:          map[string]interface{}{},
+			assertBody:  nil,
+			expectError: true,
+		},
+		{
+			name:  "uuid",
+			parts: &gun.RequestParts{Body: []byte(`{{ uuid }}`)},
+			vs:    map[string]interface{}{},
+			assertBody: func(t *testing.T, body string) {
+				require.Len(t, body, 36)
+			},
+			expectError: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			templater := &TextTemplater{}
+			err := templater.Apply(tt.parts, tt.vs, "scenarioName", "stepName")
+
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				tt.assertBody(t, string(tt.parts.Body))
 			}
 		})
 	}

@@ -17,8 +17,11 @@ func (e *ErrSegmentNotFound) Error() string {
 }
 
 func GetMapValue(current map[string]any, path string, iter Iterator) (any, error) {
+	if current == nil {
+		return nil, nil
+	}
 	var curSegment strings.Builder
-	segments := strings.Split(path, ".")
+	segments := strings.Split(strings.TrimPrefix(path, "."), ".")
 
 	for i, segment := range segments {
 		segment = strings.TrimSpace(segment)

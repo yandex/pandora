@@ -2,8 +2,14 @@ package str
 
 import (
 	"errors"
+	"math/rand"
 	"strings"
+	"time"
 )
+
+const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+
+var randSource = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func ParseStringFunc(shoot string) (string, []string, error) {
 	openIdx := strings.IndexRune(shoot, '(')
@@ -27,4 +33,16 @@ func ParseStringFunc(shoot string) (string, []string, error) {
 		args[i] = strings.TrimSpace(args[i])
 	}
 	return name, args, nil
+}
+
+func RandStringRunes(n int64, s string) string {
+	if len(s) == 0 {
+		s = letters
+	}
+	var letterRunes = []rune(s)
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[randSource.Intn(len(letterRunes))]
+	}
+	return string(b)
 }
