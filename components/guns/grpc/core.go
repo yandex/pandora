@@ -43,13 +43,14 @@ type GrpcDialOptions struct {
 }
 
 type GunConfig struct {
-	Target       string          `validate:"required"`
-	ReflectPort  int64           `config:"reflect_port"`
-	Timeout      time.Duration   `config:"timeout"` // grpc request timeout
-	TLS          bool            `config:"tls"`
-	DialOptions  GrpcDialOptions `config:"dial_options"`
-	AnswLog      AnswLogConfig   `config:"answlog"`
-	SharedClient struct {
+	Target          string          `validate:"required"`
+	ReflectPort     int64           `config:"reflect_port"`
+	ReflectMetadata metadata.MD     `config:"reflect_metadata"`
+	Timeout         time.Duration   `config:"timeout"` // grpc request timeout
+	TLS             bool            `config:"tls"`
+	DialOptions     GrpcDialOptions `config:"dial_options"`
+	AnswLog         AnswLogConfig   `config:"answlog"`
+	SharedClient    struct {
 		ClientNumber int  `config:"client-number,omitempty"`
 		Enabled      bool `config:"enabled"`
 	} `config:"shared-client,omitempty"`
@@ -110,8 +111,7 @@ func (g *Gun) prepareMethodList(opts *warmup.Options) (map[string]desc.MethodDes
 	}
 	defer conn.Close()
 
-	meta := make(metadata.MD)
-	refCtx := metadata.NewOutgoingContext(context.Background(), meta)
+	refCtx := metadata.NewOutgoingContext(context.Background(), g.Conf.ReflectMetadata)
 	refClient := grpcreflect.NewClientAuto(refCtx, conn)
 	listServices, err := refClient.ListServices()
 	if err != nil {
