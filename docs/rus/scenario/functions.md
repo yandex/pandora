@@ -49,27 +49,53 @@ https://pkg.go.dev/text/template#hdr-Functions
 
 ### uuid
 
-`{{ uuid }}`
+```gotemplate
+{% raw %}{{ uuid }}{% endraw %}
+```
 
 ### randInt
 
-`{{ randInt }}`
+без аргументов
+```gotemplate
+{% raw %}{{ randInt }}{% endraw %}
+```
 
-`{{ randInt 10 }}`
+1 аргумент
+```gotemplate
+{% raw %}{{ randInt 10 }}{% endraw %}
+```
 
-`{{ randInt 100 200 }}`
+2 аргумента
+```gotemplate
+{% raw %}{{ randInt 100 200 }}{% endraw %}
+```
 
-`{{ randInt 200 .source.global.max_rand_int }}` 
+2 аргумента используем из источника переменных
+```gotemplate
+{% raw %}{{ randInt 200 .source.global.max_rand_int }}{% endraw %} 
+```
 
 ### randString
 
-`{{ randString }}`
+без аргументов
+```gotemplate
+{% raw %}{{ randString }}{% endraw %}
+```
 
-`{{ randString 10 }}`
+1 аргумент
+```gotemplate
+{% raw %}{{ randString 10 }}{% endraw %}
+```
 
-`{{ randString 10 abcde }}`
+2 аргумента
+```gotemplate
+{% raw %}{{ randString 10 abcde }}{% endraw %}
+```
 
-`{{ randString 20 .source.global.letters }}`
+2 аргумента используем из источника переменных
+```gotemplate
+{% raw %}{{ randString 20 .source.global.letters }}{% endraw %}
+```
 
 ## В источник данных - variables
 

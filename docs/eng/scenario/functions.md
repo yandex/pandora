@@ -47,27 +47,53 @@ functions can be found at [Go template functions](https://pkg.go.dev/text/templa
 
 ### uuid
 
-`{{ uuid }}`
+```gotemplate
+{% raw %}{{ uuid }}{% endraw %}
+```
 
 ### randInt
 
-`{{ randInt }}`
+no arguments
+```gotemplate
+{% raw %}{{ randInt }}{% endraw %}
+```
 
-`{{ randInt 10 }}`
+1 argument
+```gotemplate
+{% raw %}{{ randInt 10 }}{% endraw %}
+```
 
-`{{ randInt 100 200 }}`
+2 arguments
+```gotemplate
+{% raw %}{{ randInt 100 200 }}{% endraw %}
+```
 
-`{{ randInt 200 .source.global.max_rand_int }}`
+2 arguments using source variable
+```gotemplate
+{% raw %}{{ randInt 200 .source.global.max_rand_int }}{% endraw %} 
+```
 
 ### randString
 
-`{{ randString }}`
+no arguments
+```gotemplate
+{% raw %}{{ randString }}{% endraw %}
+```
 
-`{{ randString 10 }}`
+1 argument
+```gotemplate
+{% raw %}{{ randString 10 }}{% endraw %}
+```
 
-`{{ randString 10 abcde }}`
+2 arguments
+```gotemplate
+{% raw %}{{ randString 10 abcde }}{% endraw %}
+```
 
-`{{ randString 20 .source.global.letters }}`
+2 arguments using source variable
+```gotemplate
+{% raw %}{{ randString 20 .source.global.letters }}{% endraw %}
+```
 
 ## In the Data Source - variables
 
