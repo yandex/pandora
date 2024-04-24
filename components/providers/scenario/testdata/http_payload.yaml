@@ -20,7 +20,7 @@ requests:
   - name: auth_req
     method: POST
     uri: /auth
-    headers:
+    headers: &global-headers
       Content-Type: application/json
       Useragent: Yandex
     tag: auth
@@ -53,10 +53,9 @@ requests:
   - name: list_req
     method: GET
     uri: /list
-    headers:
+    headers: &auth-headers
+      <<: *global-headers
       Authorization: Bearer {{.request.auth_req.postprocessor.token}}
-      Content-Type: application/json
-      Useragent: Yandex
     tag: list
     postprocessors:
       - type: var/jsonpath
@@ -67,9 +66,7 @@ requests:
     method: POST
     uri: /order
     headers:
-      Authorization: Bearer {{.request.auth_req.postprocessor.token}}
-      Content-Type: application/json
-      Useragent: Yandex
+      <<: *auth-headers
     tag: order_req
     body: |
       {"item_id": {{.request.order_req.preprocessor.item}}}
