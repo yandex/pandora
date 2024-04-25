@@ -27,6 +27,7 @@ pools:
       destination: ./phout.log       # report file name
 
     rps-per-instance: false          # секция rps считается для каждого инстанса или для всего теста. false - для всего теста
+    discard_overflow: true           # строгое следование генератором расписания запросов
 
     rps:                             # планировщик нагрузки
       type: line                     # тип планировщика

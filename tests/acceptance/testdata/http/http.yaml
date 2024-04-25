@@ -1,5 +1,5 @@
 pools:
-  - id: ""
+  - id: "http pool"
     ammo:
       file: testdata/http/payload.uri
       type: uri
