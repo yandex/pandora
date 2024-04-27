@@ -151,7 +151,7 @@ func (g *ScenarioGun) shootStep(step Request, sample *netsample.Sample, ammoName
 		var dumpErr error
 		reqBytes, dumpErr = httputil.DumpRequestOut(req, true)
 		if dumpErr != nil {
-			g.base.Log.Error("Error dumping request: %s", zap.Error(dumpErr))
+			g.base.Log.Error("Error dumping request:", zap.Error(dumpErr))
 		}
 	}
 

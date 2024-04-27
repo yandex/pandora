@@ -118,6 +118,9 @@ func (g *Gun) shoot(ammo *Scenario, templateVars map[string]any) error {
 
 	requestVars := map[string]any{}
 	templateVars["request"] = requestVars
+	if g.gun.DebugLog {
+		g.gun.GunDeps.Log.Debug("Source variables", zap.Any("variables", templateVars))
+	}
 
 	startAt := time.Now()
 	for _, call := range ammo.Calls {
@@ -156,7 +159,7 @@ func (g *Gun) shootStep(step *Call, sample *netsample.Sample, ammoName string, t
 		}
 		preprocVars = mergeMaps(preprocVars, pp)
 		if g.gun.DebugLog {
-			g.gun.GunDeps.Log.Debug("PreparePreprocessor variables", zap.Any(fmt.Sprintf(".resuest.%s.preprocessor", step.Name), pp))
+			g.gun.GunDeps.Log.Debug("PreparePreprocessor variables", zap.Any(fmt.Sprintf(".request.%s.preprocessor", step.Name), pp))
 		}
 	}
 	stepVars["preprocessor"] = preprocVars
@@ -200,22 +203,7 @@ func (g *Gun) shootStep(step *Call, sample *netsample.Sample, ammoName string, t
 		g.gun.GunDeps.Log.Error("response error", zap.Error(err))
 	}
 
-	if g.gun.Conf.AnswLog.Enabled {
-		switch g.gun.Conf.AnswLog.Filter {
-		case "all":
-			g.gun.AnswLogging(g.gun.AnswLog, &method, message, out, grpcErr)
-
-		case "warning":
-			if code >= 400 {
-				g.gun.AnswLogging(g.gun.AnswLog, &method, message, out, grpcErr)
-			}
-
-		case "error":
-			if code >= 500 {
-				g.gun.AnswLogging(g.gun.AnswLog, &method, message, out, grpcErr)
-			}
-		}
-	}
+	g.gun.Answ(&method, message, step.Metadata, out, grpcErr, code)
 
 	for _, postProcessor := range step.Postprocessors {
 		pp, err := postProcessor.Process(out, code)
