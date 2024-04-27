@@ -311,7 +311,7 @@ func MetadataServerInterceptor(metadataChecker func(ctx context.Context) (contex
 func MetadataServerStreamInterceptor(metadataChecker func(ctx context.Context) (context.Context, error)) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
 		ctx := ss.Context()
-		ctx, err = metadataChecker(ctx)
+		_, err = metadataChecker(ctx)
 		if err != nil {
 			return fmt.Errorf("metadata checker: %w", err)
 		}
