@@ -14,29 +14,32 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewConnectGun(cfg HTTPGunConfig, answLog *zap.Logger) *BaseGun {
-	var wrappedConstructor = func(clientConfig ClientConfig, target string) Client {
-		scheme := "http"
-		if cfg.SSL {
-			scheme = "https"
-		}
-		client := newConnectClient(cfg.Client, cfg.Target)
-		return &httpDecoratedClient{
-			client:         client,
-			hostname:       "",
-			targetResolved: cfg.Target,
-			scheme:         scheme,
-		}
+func NewConnectGun(cfg GunConfig, answLog *zap.Logger) *BaseGun {
+	if cfg.TargetResolved == "" {
+		cfg.TargetResolved = cfg.Target
 	}
 
-	return NewBaseGun(wrappedConstructor, cfg, answLog)
+	return NewBaseGun(newConnectClient, cfg, answLog)
 }
 
-func DefaultConnectGunConfig() HTTPGunConfig {
-	return HTTPGunConfig{
+func DefaultConnectGunConfig() GunConfig {
+	return GunConfig{
 		SSL:    false,
 		Client: DefaultClientConfig(),
-		Base:   DefaultBaseGunConfig(),
+		AutoTag: AutoTagConfig{
+			Enabled:     false,
+			URIElements: 2,
+			NoTagOnly:   true,
+		},
+		AnswLog: AnswLogConfig{
+			Enabled: false,
+			Path:    "answ.log",
+			Filter:  "error",
+		},
+		HTTPTrace: HTTPTraceConfig{
+			DumpEnabled:  false,
+			TraceEnabled: false,
+		},
 	}
 }
 

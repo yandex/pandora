@@ -16,24 +16,27 @@ func Import(fs afero.Fs) {
 	scenarioGun.Import(fs)
 	scenarioProvider.Import(fs)
 
-	register.Gun("http", func(conf phttp.HTTPGunConfig) func() core.Gun {
+	register.Gun("http", func(conf phttp.GunConfig) func() core.Gun {
 		targetResolved, _ := phttp.PreResolveTargetAddr(&conf.Client, conf.Target)
-		answLog := answlog.Init(conf.Base.AnswLog.Path, conf.Base.AnswLog.Enabled)
-		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTP1Gun(conf, answLog, targetResolved)) }
+		conf.TargetResolved = targetResolved
+		answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled)
+		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTP1Gun(conf, answLog)) }
 	}, phttp.DefaultHTTPGunConfig)
 
-	register.Gun("http2", func(conf phttp.HTTPGunConfig) func() (core.Gun, error) {
+	register.Gun("http2", func(conf phttp.GunConfig) func() (core.Gun, error) {
 		targetResolved, _ := phttp.PreResolveTargetAddr(&conf.Client, conf.Target)
-		answLog := answlog.Init(conf.Base.AnswLog.Path, conf.Base.AnswLog.Enabled)
+		conf.TargetResolved = targetResolved
+		answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled)
 		return func() (core.Gun, error) {
-			gun, err := phttp.NewHTTP2Gun(conf, answLog, targetResolved)
+			gun, err := phttp.NewHTTP2Gun(conf, answLog)
 			return phttp.WrapGun(gun), err
 		}
 	}, phttp.DefaultHTTP2GunConfig)
 
-	register.Gun("connect", func(conf phttp.HTTPGunConfig) func() core.Gun {
+	register.Gun("connect", func(conf phttp.GunConfig) func() core.Gun {
 		conf.Target, _ = phttp.PreResolveTargetAddr(&conf.Client, conf.Target)
-		answLog := answlog.Init(conf.Base.AnswLog.Path, conf.Base.AnswLog.Enabled)
+		conf.TargetResolved = conf.Target
+		answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled)
 		return func() core.Gun {
 			return phttp.WrapGun(phttp.NewConnectGun(conf, answLog))
 		}

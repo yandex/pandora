@@ -5,22 +5,23 @@ import (
 	"go.uber.org/zap"
 )
 
-type HTTPGunConfig struct {
-	Base   BaseGunConfig `config:",squash"`
-	Client ClientConfig  `config:",squash"`
-	Target string        `validate:"endpoint,required"`
-	SSL    bool
+type GunConfig struct {
+	Client         ClientConfig `config:",squash"`
+	Target         string       `validate:"endpoint,required"`
+	TargetResolved string       `config:"-"`
+	SSL            bool
+
+	AutoTag      AutoTagConfig   `config:"auto-tag"`
+	AnswLog      AnswLogConfig   `config:"answlog"`
+	HTTPTrace    HTTPTraceConfig `config:"httptrace"`
+	SharedClient struct {
+		ClientNumber int  `config:"client-number,omitempty"`
+		Enabled      bool `config:"enabled"`
+	} `config:"shared-client,omitempty"`
 }
 
-func NewHTTP1Gun(cfg HTTPGunConfig, answLog *zap.Logger, targetResolved string) *BaseGun {
-	var wrappedConstructor = func(clientConfig ClientConfig, target string) Client {
-		return WrapClientHostResolving(
-			HTTP1ClientConstructor(cfg.Client, cfg.Target),
-			cfg,
-			targetResolved,
-		)
-	}
-	return NewBaseGun(wrappedConstructor, cfg, answLog)
+func NewHTTP1Gun(cfg GunConfig, answLog *zap.Logger) *BaseGun {
+	return NewBaseGun(HTTP1ClientConstructor, cfg, answLog)
 }
 
 func HTTP1ClientConstructor(clientConfig ClientConfig, target string) Client {
@@ -32,19 +33,12 @@ func HTTP1ClientConstructor(clientConfig ClientConfig, target string) Client {
 var _ ClientConstructor = HTTP1ClientConstructor
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
-func NewHTTP2Gun(cfg HTTPGunConfig, answLog *zap.Logger, targetResolved string) (*BaseGun, error) {
+func NewHTTP2Gun(cfg GunConfig, answLog *zap.Logger) (*BaseGun, error) {
 	if !cfg.SSL {
 		// Open issue on github if you really need this feature.
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
 	}
-	var wrappedConstructor = func(clientConfig ClientConfig, target string) Client {
-		return WrapClientHostResolving(
-			HTTP2ClientConstructor(cfg.Client, cfg.Target),
-			cfg,
-			targetResolved,
-		)
-	}
-	return NewBaseGun(wrappedConstructor, cfg, answLog), nil
+	return NewBaseGun(HTTP2ClientConstructor, cfg, answLog), nil
 }
 
 func HTTP2ClientConstructor(clientConfig ClientConfig, target string) Client {
@@ -56,18 +50,44 @@ func HTTP2ClientConstructor(clientConfig ClientConfig, target string) Client {
 
 var _ ClientConstructor = HTTP2ClientConstructor
 
-func DefaultHTTPGunConfig() HTTPGunConfig {
-	return HTTPGunConfig{
+func DefaultHTTPGunConfig() GunConfig {
+	return GunConfig{
 		SSL:    false,
-		Base:   DefaultBaseGunConfig(),
 		Client: DefaultClientConfig(),
+		AutoTag: AutoTagConfig{
+			Enabled:     false,
+			URIElements: 2,
+			NoTagOnly:   true,
+		},
+		AnswLog: AnswLogConfig{
+			Enabled: false,
+			Path:    "answ.log",
+			Filter:  "error",
+		},
+		HTTPTrace: HTTPTraceConfig{
+			DumpEnabled:  false,
+			TraceEnabled: false,
+		},
 	}
 }
 
-func DefaultHTTP2GunConfig() HTTPGunConfig {
-	return HTTPGunConfig{
+func DefaultHTTP2GunConfig() GunConfig {
+	return GunConfig{
 		Client: DefaultClientConfig(),
-		Base:   DefaultBaseGunConfig(),
-		SSL:    true,
+		AutoTag: AutoTagConfig{
+			Enabled:     false,
+			URIElements: 2,
+			NoTagOnly:   true,
+		},
+		AnswLog: AnswLogConfig{
+			Enabled: false,
+			Path:    "answ.log",
+			Filter:  "error",
+		},
+		HTTPTrace: HTTPTraceConfig{
+			DumpEnabled:  false,
+			TraceEnabled: false,
+		},
+		SSL: true,
 	}
 }

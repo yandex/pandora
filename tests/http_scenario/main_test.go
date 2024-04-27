@@ -72,10 +72,11 @@ func (s *GunSuite) SetupTest() {
 func (s *GunSuite) Test_SuccessScenario() {
 	ctx := context.Background()
 	log := zap.NewNop()
-	g := httpscenario.NewHTTPGun(phttp.HTTPGunConfig{
-		Target: s.addr,
-		Client: phttp.ClientConfig{},
-	}, log, s.addr)
+	g := httpscenario.NewHTTPGun(phttp.GunConfig{
+		Target:         s.addr,
+		TargetResolved: s.addr,
+		Client:         phttp.ClientConfig{},
+	}, log)
 
 	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: "pool_id", InstanceID: 1}
 	aggr := &Aggregator{}

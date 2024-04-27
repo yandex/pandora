@@ -33,7 +33,6 @@ func TestMultiFormatString(t *testing.T) {
 	}
 	for k, v := range list {
 		s := FormatString(v)
-		t.Log(s)
 		if s != k {
 			t.Errorf("Error: %v to %s,but %s", v, k, s)
 		}
