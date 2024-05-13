@@ -4,8 +4,13 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/hashicorp/hcl/v2/hclsimple"
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/spf13/afero"
+	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/function"
+	"github.com/zclconf/go-cty/cty/function/stdlib"
 )
 
 type AmmoHCL struct {
@@ -91,14 +96,114 @@ type CallPreprocessorHCL struct {
 func ParseHCLFile(file afero.File) (AmmoHCL, error) {
 	const op = "hcl.ParseHCLFile"
 
-	var config AmmoHCL
 	bytes, err := io.ReadAll(file)
 	if err != nil {
 		return AmmoHCL{}, fmt.Errorf("%s, io.ReadAll, %w", op, err)
 	}
-	err = hclsimple.Decode(file.Name(), bytes, nil, &config)
-	if err != nil {
-		return AmmoHCL{}, fmt.Errorf("%s, hclsimple.Decode, %w", op, err)
+
+	parser := hclparse.NewParser()
+	f, diag := parser.ParseHCL(bytes, file.Name())
+	if diag.HasErrors() {
+		return AmmoHCL{}, diag
+	}
+
+	localsBodyContent, remainingBody, diag := f.Body.PartialContent(localsSchema())
+	// diag still may have errors, because PartialContent doesn't know about Functions and self-references to locals
+	if localsBodyContent == nil || remainingBody == nil {
+		return AmmoHCL{}, diag
+	}
+
+	hclContext, diag := decodeLocals(localsBodyContent)
+	if diag.HasErrors() {
+		return AmmoHCL{}, diag
+	}
+
+	var config AmmoHCL
+	diag = gohcl.DecodeBody(remainingBody, hclContext, &config)
+	if diag.HasErrors() {
+		return AmmoHCL{}, diag
 	}
 	return config, nil
+}
+
+func decodeLocals(localsBodyContent *hcl.BodyContent) (*hcl.EvalContext, hcl.Diagnostics) {
+	vars := map[string]cty.Value{}
+	hclContext := buildHclContext(vars)
+	for _, block := range localsBodyContent.Blocks {
+		if block == nil {
+			continue
+		}
+		if block.Type == "locals" {
+			newVars, err := decodeLocalBlock(block, hclContext)
+			if err != nil {
+				return nil, err
+			}
+			hclContext = buildHclContext(mergeMaps(vars, newVars))
+		}
+	}
+	return hclContext, nil
+}
+
+func mergeMaps[K comparable, V any](to, from map[K]V) map[K]V {
+	for k, v := range from {
+		to[k] = v
+	}
+	return to
+}
+
+func decodeLocalBlock(localsBlock *hcl.Block, hclContext *hcl.EvalContext) (map[string]cty.Value, hcl.Diagnostics) {
+	attrs, err := localsBlock.Body.JustAttributes()
+	if err != nil {
+		return nil, err
+	}
+
+	vars := map[string]cty.Value{}
+	for name, attr := range attrs {
+		val, err := attr.Expr.Value(hclContext)
+		if err != nil {
+			return nil, err
+		}
+		vars[name] = val
+	}
+
+	return vars, nil
+}
+
+func localsSchema() *hcl.BodySchema {
+	return &hcl.BodySchema{
+		Blocks: []hcl.BlockHeaderSchema{
+			{
+				Type:       "locals",
+				LabelNames: []string{},
+			},
+		},
+	}
+}
+
+func buildHclContext(vars map[string]cty.Value) *hcl.EvalContext {
+	return &hcl.EvalContext{
+		Variables: map[string]cty.Value{
+			"local": cty.ObjectVal(vars),
+		},
+		Functions: map[string]function.Function{
+			// collection functions
+			"coalesce":     stdlib.CoalesceFunc,
+			"coalescelist": stdlib.CoalesceListFunc,
+			"compact":      stdlib.CompactFunc,
+			"concat":       stdlib.ConcatFunc,
+			"distinct":     stdlib.DistinctFunc,
+			"element":      stdlib.ElementFunc,
+			"flatten":      stdlib.FlattenFunc,
+			"index":        stdlib.IndexFunc,
+			"keys":         stdlib.KeysFunc,
+			"lookup":       stdlib.LookupFunc,
+			"merge":        stdlib.MergeFunc,
+			"reverse":      stdlib.ReverseListFunc,
+			"slice":        stdlib.SliceFunc,
+			"sort":         stdlib.SortFunc,
+			"split":        stdlib.SplitFunc,
+			"values":       stdlib.ValuesFunc,
+			"zipmap":       stdlib.ZipmapFunc,
+		},
+	}
 }

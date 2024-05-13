@@ -43,13 +43,14 @@ type GrpcDialOptions struct {
 }
 
 type GunConfig struct {
-	Target       string          `validate:"required"`
-	ReflectPort  int64           `config:"reflect_port"`
-	Timeout      time.Duration   `config:"timeout"` // grpc request timeout
-	TLS          bool            `config:"tls"`
-	DialOptions  GrpcDialOptions `config:"dial_options"`
-	AnswLog      AnswLogConfig   `config:"answlog"`
-	SharedClient struct {
+	Target          string          `validate:"required"`
+	ReflectPort     int64           `config:"reflect_port"`
+	ReflectMetadata metadata.MD     `config:"reflect_metadata"`
+	Timeout         time.Duration   `config:"timeout"` // grpc request timeout
+	TLS             bool            `config:"tls"`
+	DialOptions     GrpcDialOptions `config:"dial_options"`
+	AnswLog         AnswLogConfig   `config:"answlog"`
+	SharedClient    struct {
 		ClientNumber int  `config:"client-number,omitempty"`
 		Enabled      bool `config:"enabled"`
 	} `config:"shared-client,omitempty"`
@@ -110,8 +111,7 @@ func (g *Gun) prepareMethodList(opts *warmup.Options) (map[string]desc.MethodDes
 	}
 	defer conn.Close()
 
-	meta := make(metadata.MD)
-	refCtx := metadata.NewOutgoingContext(context.Background(), meta)
+	refCtx := metadata.NewOutgoingContext(context.Background(), g.Conf.ReflectMetadata)
 	refClient := grpcreflect.NewClientAuto(refCtx, conn)
 	listServices, err := refClient.ListServices()
 	if err != nil {
@@ -238,27 +238,35 @@ func (g *Gun) shoot(ammo *ammo.Ammo) {
 		g.GunDeps.Log.Error("response error", zap.Error(err))
 	}
 
+	g.Answ(&method, message, ammo.Metadata, out, grpcErr, code)
+}
+
+func (g *Gun) Answ(method *desc.MethodDescriptor, message *dynamic.Message, metadata map[string]string, out proto.Message, grpcErr error, code int) {
 	if g.Conf.AnswLog.Enabled {
 		switch g.Conf.AnswLog.Filter {
 		case "all":
-			g.AnswLogging(g.AnswLog, &method, message, out, grpcErr)
+			g.AnswLogging(g.AnswLog, method, message, metadata, out, grpcErr)
 
 		case "warning":
 			if code >= 400 {
-				g.AnswLogging(g.AnswLog, &method, message, out, grpcErr)
+				g.AnswLogging(g.AnswLog, method, message, metadata, out, grpcErr)
 			}
 
 		case "error":
 			if code >= 500 {
-				g.AnswLogging(g.AnswLog, &method, message, out, grpcErr)
+				g.AnswLogging(g.AnswLog, method, message, metadata, out, grpcErr)
 			}
 		}
 	}
 }
 
-func (g *Gun) AnswLogging(logger *zap.Logger, method *desc.MethodDescriptor, request proto.Message, response proto.Message, grpcErr error) {
-	logger.Debug("Request:", zap.Stringer("method", method), zap.Stringer("message", request))
-	logger.Debug("Response:", zap.Stringer("resp", response), zap.Error(grpcErr))
+func (g *Gun) AnswLogging(logger *zap.Logger, method *desc.MethodDescriptor, request proto.Message, metadata map[string]string, response proto.Message, grpcErr error) {
+	logger.Debug("Request:", zap.Stringer("method", method), zap.Stringer("message", request), zap.Any("metadata", metadata))
+	if response != nil {
+		logger.Debug("Response:", zap.Stringer("resp", response), zap.Error(grpcErr))
+	} else {
+		logger.Debug("Response:", zap.String("resp", "empty"), zap.Error(grpcErr))
+	}
 }
 
 func (g *Gun) makeConnect() (conn *grpc.ClientConn, err error) {

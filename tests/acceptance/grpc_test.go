@@ -2,12 +2,14 @@ package acceptance
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -21,6 +23,7 @@ import (
 	"github.com/yandex/pandora/lib/testutil"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/yaml.v2"
 )
@@ -116,6 +119,89 @@ func TestCheckGRPCReflectServer(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, int64(8), st.Hello)
 	})
+
+	t.Run("reflect with custom metadata", func(t *testing.T) {
+		metadataKey := "testKey"
+		metadataValue := "testValue"
+		wrongMDValuesLengthError := errors.New("wrong metadata values length")
+		wrongMDValueError := errors.New("wrong metadata value")
+		metadataChecker := func(ctx context.Context) (context.Context, error) {
+			md, ok := metadata.FromIncomingContext(ctx)
+			if !ok {
+				return nil, wrongMDValuesLengthError
+			}
+			vals := md.Get(metadataKey)
+			if len(vals) != 1 {
+				return nil, wrongMDValuesLengthError
+			}
+			if vals[0] != metadataValue {
+				return nil, wrongMDValueError
+			}
+			return ctx, nil
+		}
+		grpcServer := grpc.NewServer(
+			grpc.UnaryInterceptor(MetadataServerInterceptor(metadataChecker)),
+			grpc.StreamInterceptor(MetadataServerStreamInterceptor(metadataChecker)))
+		srv := server.NewServer(logger, time.Now().UnixNano())
+		server.RegisterTargetServiceServer(grpcServer, srv)
+		grpcAddress := "localhost:18888"
+		reflection.Register(grpcServer)
+		l, err := net.Listen("tcp", grpcAddress)
+		require.NoError(t, err)
+		go func() {
+			err = grpcServer.Serve(l)
+			require.NoError(t, err)
+		}()
+
+		defer func() {
+			grpcServer.Stop()
+		}()
+
+		cases := []struct {
+			name string
+			conf *cli.CliConfig
+			err  error
+		}{
+			{
+				name: "success",
+				conf: parseFileContentToCliConfig(t, baseFile, func(c *PandoraConfigGRPC) {
+					md := metadata.New(map[string]string{metadataKey: metadataValue})
+					c.Pools[0].Gun.ReflectMetadata = &md
+				}),
+			},
+			{
+				name: "no metadata",
+				conf: parseFileContentToCliConfig(t, baseFile, nil),
+				err:  wrongMDValuesLengthError,
+			},
+			{
+				name: "wrong metadata value",
+				conf: parseFileContentToCliConfig(t, baseFile, func(c *PandoraConfigGRPC) {
+					md := metadata.New(map[string]string{metadataKey: "wrong-value"})
+					c.Pools[0].Gun.ReflectMetadata = &md
+				}),
+				err: wrongMDValueError,
+			},
+		}
+
+		for _, cc := range cases {
+			t.Run(cc.name, func(t *testing.T) {
+				require.Equal(t, 1, len(cc.conf.Engine.Pools))
+				aggr := &aggregator{}
+				cc.conf.Engine.Pools[0].Aggregator = aggr
+
+				pandora := engine.New(pandoraLogger, pandoraMetrics, cc.conf.Engine)
+				err = pandora.Run(context.Background())
+
+				if cc.err == nil {
+					require.NoError(t, err)
+				} else {
+					require.Error(t, err)
+					require.Contains(t, err.Error(), cc.err.Error())
+				}
+			})
+		}
+	})
 }
 
 func TestGrpcGunSuite(t *testing.T) {
@@ -210,4 +296,25 @@ func parseFileContentToCliConfig(t *testing.T, baseFile []byte, overwrite func(c
 	require.NoError(t, err)
 
 	return decodeConfig(t, mapCfg)
+}
+
+func MetadataServerInterceptor(metadataChecker func(ctx context.Context) (context.Context, error)) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+		ctx, err = metadataChecker(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("metadata checker: %w", err)
+		}
+		return handler(ctx, req)
+	}
+}
+
+func MetadataServerStreamInterceptor(metadataChecker func(ctx context.Context) (context.Context, error)) grpc.StreamServerInterceptor {
+	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+		ctx := ss.Context()
+		_, err = metadataChecker(ctx)
+		if err != nil {
+			return fmt.Errorf("metadata checker: %w", err)
+		}
+		return handler(srv, ss)
+	}
 }

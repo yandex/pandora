@@ -27,6 +27,7 @@ pools:
       destination: ./phout.log       # report file name
 
     rps-per-instance: false          # rps section is counted for each instance or for the whole test. false - for the whole test
+    discard_overflow: true           # strict adherence to the request schedule
 
     rps:                             # shooting schedule
       type: line                     # linear growth

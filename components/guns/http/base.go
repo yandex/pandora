@@ -25,16 +25,6 @@ const (
 	EmptyTag = "__EMPTY__"
 )
 
-type BaseGunConfig struct {
-	AutoTag      AutoTagConfig   `config:"auto-tag"`
-	AnswLog      AnswLogConfig   `config:"answlog"`
-	HTTPTrace    HTTPTraceConfig `config:"httptrace"`
-	SharedClient struct {
-		ClientNumber int  `config:"client-number,omitempty"`
-		Enabled      bool `config:"enabled"`
-	} `config:"shared-client,omitempty"`
-}
-
 // AutoTagConfig configure automatic tags generation based on ammo URI. First AutoTag URI path elements becomes tag.
 // Example: /my/very/deep/page?id=23&param=33 -> /my/very when uri-elements: 2.
 type AutoTagConfig struct {
@@ -54,29 +44,10 @@ type HTTPTraceConfig struct {
 	TraceEnabled bool `config:"trace"`
 }
 
-func DefaultBaseGunConfig() BaseGunConfig {
-	return BaseGunConfig{
-		AutoTag: AutoTagConfig{
-			Enabled:     false,
-			URIElements: 2,
-			NoTagOnly:   true,
-		},
-		AnswLog: AnswLogConfig{
-			Enabled: false,
-			Path:    "answ.log",
-			Filter:  "error",
-		},
-		HTTPTrace: HTTPTraceConfig{
-			DumpEnabled:  false,
-			TraceEnabled: false,
-		},
-	}
-}
-
-func NewBaseGun(clientConstructor ClientConstructor, cfg HTTPGunConfig, answLog *zap.Logger) *BaseGun {
+func NewBaseGun(clientConstructor ClientConstructor, cfg GunConfig, answLog *zap.Logger) *BaseGun {
 	client := clientConstructor(cfg.Client, cfg.Target)
 	return &BaseGun{
-		Config: cfg.Base,
+		Config: cfg,
 		OnClose: func() error {
 			client.CloseIdleConnections()
 			return nil
@@ -91,7 +62,7 @@ func NewBaseGun(clientConstructor ClientConstructor, cfg HTTPGunConfig, answLog 
 
 type BaseGun struct {
 	DebugLog          bool // Automaticaly set in Bind if Log accepts debug messages.
-	Config            BaseGunConfig
+	Config            GunConfig
 	Connect           func(ctx context.Context) error // Optional hook.
 	OnClose           func() error                    // Optional. Called on Close().
 	Aggregator        netsample.Aggregator            // Lazy set via BindResultTo.
@@ -183,6 +154,17 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 		b.Log.Warn("Invalid ammo", zap.Uint64("request", ammo.ID()))
 		return
 	}
+
+	if b.Config.SSL {
+		req.URL.Scheme = "https"
+	} else {
+		req.URL.Scheme = "http"
+	}
+	if req.Host == "" {
+		req.Host = getHostWithoutPort(b.Config.Target)
+	}
+	req.URL.Host = b.Config.TargetResolved
+
 	if b.DebugLog {
 		b.Log.Debug("Prepared ammo to shoot", zap.Stringer("url", req.URL))
 	}

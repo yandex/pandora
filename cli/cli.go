@@ -25,7 +25,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const Version = "0.5.23"
+const Version = "0.5.24"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 
@@ -218,6 +218,7 @@ func readConfig(args []string) *CliConfig {
 		}
 	}
 
+	log.Info("Pandora version", zap.String("version", Version))
 	if useStdinConfig {
 		v.SetConfigType("yaml")
 		configBuffer, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
@@ -235,6 +236,15 @@ func readConfig(args []string) *CliConfig {
 			log.Fatal("Config read failed", zap.Error(err))
 		}
 	}
+	pools := v.Get("pools").([]any)
+	for i, pool := range pools {
+		poolMap := pool.(map[string]any)
+		if _, ok := poolMap["discard_overflow"]; !ok {
+			poolMap["discard_overflow"] = true
+		}
+		pools[i] = poolMap
+	}
+	v.Set("pools", pools)
 
 	conf := DefaultConfig()
 	err = config.DecodeAndValidate(v.AllSettings(), conf)

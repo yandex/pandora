@@ -15,6 +15,7 @@
     - [Calls](#calls)
         - [Templater](#templater)
             - [Variable names in templates](#variable-names-in-templates)
+            - [Functions in templates](#functions-in-templates)
         - [Preprocessors](#preprocessors)
             - [prepare](#prepare)
         - [Postprocessors](#postprocessors)
@@ -207,6 +208,18 @@ Variable `item` from the `list_req` call preprocessor - `{% raw %}{{{.request.li
 > To maintain similarity with http scripts, the response section from the grpc call is saved to the `postprocessor` section
 
 Variable `token`  from the `list_req` call is `{% raw %}{{{.request.list_req.postprocessor.token}}{% endraw %}`
+
+##### Functions in Templates
+
+Since the standard Go templating engine is used, it is possible to use built-in functions available at https://pkg.go.dev/text/template#hdr-Functions.
+
+Additionally, some functions include:
+
+- randInt
+- randString
+- uuid
+
+For more details about randomization functions, see [more](scenario/functions.md).
 
 #### Preprocessors
 

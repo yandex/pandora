@@ -15,6 +15,7 @@
     - [Requests](#requests)
         - [Templater](#templater)
             - [Variable names in templates](#variable-names-in-templates)
+            - [Functions in templates](#functions-in-templates)
         - [Preprocessors](#preprocessors)
         - [Postprocessors](#postprocessors)
             - [var/jsonpath](#varjsonpath)

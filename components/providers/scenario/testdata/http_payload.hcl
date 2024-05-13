@@ -1,4 +1,16 @@
-
+locals {
+  common_headers = {
+    Content-Type  = "application/json"
+    Useragent     = "Yandex"
+  }
+  next = "next"
+}
+locals {
+  auth_headers = merge(local.common_headers, {
+    Authorization = "Bearer {{.request.auth_req.postprocessor.token}}"
+  })
+  next = "next"
+}
 variable_source "users" "file/csv" {
   file              = "testdata/users.csv"
   fields            = ["user_id", "name", "pass"]
@@ -17,10 +29,7 @@ variable_source "variables" "variables" {
 request "auth_req" {
   method = "POST"
   uri    = "/auth"
-  headers = {
-    Content-Type = "application/json"
-    Useragent    = "Yandex"
-  }
+  headers   = local.common_headers
   tag       = "auth"
   body      = <<EOF
 {"user_id":  {{.request.auth_req.preprocessor.user_id}}}
@@ -31,7 +40,7 @@ EOF
 
   preprocessor {
     mapping = {
-      user_id = "source.users[next].user_id"
+      user_id = "source.users[${local.next}].user_id"
     }
   }
   postprocessor "var/header" {
@@ -61,11 +70,9 @@ EOF
 }
 request "list_req" {
   method = "GET"
-  headers = {
+  headers = merge(local.common_headers, {
     Authorization = "Bearer {{.request.auth_req.postprocessor.token}}"
-    Content-Type  = "application/json"
-    Useragent     = "Yandex"
-  }
+  })
   tag = "list"
   uri = "/list"
 
@@ -79,11 +86,7 @@ request "list_req" {
 request "order_req" {
   method = "POST"
   uri    = "/order"
-  headers = {
-    Authorization = "Bearer {{.request.auth_req.postprocessor.token}}"
-    Content-Type  = "application/json"
-    Useragent     = "Yandex"
-  }
+  headers = local.auth_headers
   tag  = "order_req"
   body = <<EOF
 {"item_id": {{.request.order_req.preprocessor.item}}}

@@ -20,7 +20,7 @@ import (
 func TestBaseGun_shoot(t *testing.T) {
 	type fields struct {
 		DebugLog       bool
-		Config         phttp.BaseGunConfig
+		Config         phttp.GunConfig
 		Connect        func(ctx context.Context) error
 		OnClose        func() error
 		Aggregator     netsample.Aggregator
