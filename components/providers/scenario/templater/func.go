@@ -46,6 +46,9 @@ func parseStr(v string) (string, []string) {
 	}
 	v = strings.TrimSuffix(strings.Join(args[1:], "("), ")")
 	args = strings.Split(v, ",")
+	if len(args) == 1 && args[0] == "" {
+		return name, nil
+	}
 	for i := 0; i < len(args); i++ {
 		args[i] = strings.TrimSpace(args[i])
 	}

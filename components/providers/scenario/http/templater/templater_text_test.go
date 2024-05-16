@@ -238,6 +238,17 @@ func TestTextTemplater_Apply_WithRandFunct(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name:  "randInt with no args",
+			parts: &gun.RequestParts{Body: []byte(`{{ randInt }}`)},
+			vs:    map[string]interface{}{},
+			assertBody: func(t *testing.T, body string) {
+				v, err := strconv.ParseInt(body, 10, 64)
+				require.NoError(t, err)
+				require.InDelta(t, 5, v, 5)
+			},
+			expectError: false,
+		},
+		{
 			name:  "randInt with literals",
 			parts: &gun.RequestParts{Body: []byte(`{{ randInt -10 }}`)},
 			vs:    map[string]interface{}{},
