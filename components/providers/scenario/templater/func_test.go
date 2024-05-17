@@ -191,10 +191,22 @@ func TestParseFunc(t *testing.T) {
 		wantArgs []string
 	}{
 		{
-			name:     "Simple",
+			name:     "Two args",
 			arg:      "randInt(10, 20)",
 			wantF:    RandInt,
 			wantArgs: []string{"10", "20"},
+		},
+		{
+			name:     "One arg",
+			arg:      "randInt(10)",
+			wantF:    RandInt,
+			wantArgs: []string{"10"},
+		},
+		{
+			name:     "No args",
+			arg:      "randInt()",
+			wantF:    RandInt,
+			wantArgs: nil,
 		},
 	}
 	for _, tt := range tests {
