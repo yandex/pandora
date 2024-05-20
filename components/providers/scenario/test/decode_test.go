@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/components/providers/scenario/config"
 	_import "github.com/yandex/pandora/components/providers/scenario/import"
 	"github.com/yandex/pandora/core/plugin/pluginconfig"
@@ -22,12 +23,14 @@ func Test_ReadConfig_YamlAndHclSameResult(t *testing.T) {
 
 	t.Run("http", func(t *testing.T) {
 		fromHCL, err := config.ReadAmmoConfig(testFS, "../testdata/http_payload.hcl")
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		fromHCL.Locals = nil
 
 		fromYaml, err := config.ReadAmmoConfig(testFS, "../testdata/http_payload.yaml")
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		fromYaml.Locals = nil
 
-		assert.Equal(t, fromHCL, fromYaml)
+		require.Equal(t, fromHCL, fromYaml)
 	})
 }
 

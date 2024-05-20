@@ -11,6 +11,7 @@
     - [Общий принцип](#общий-принцип)
     - [HCL пример](#hcl-пример)
     - [YAML пример](#yaml-пример)
+    - [Locals](#locals)
 - [Возможности](#возможности)
     - [Вызовы](#вызовы)
         - [Шаблонизатор](#шаблонизатор)
@@ -87,6 +88,18 @@ ammo:
 ### HCL пример
 
 ```terraform
+locals {
+  common_meta = {
+    "metadata" = "server.proto"
+  }
+  next = "next"
+}
+locals {
+  auth_meta = merge(local.common_meta, {
+    authorization = "{{.request.auth_req.postprocessor.token}}"
+  })
+  next = "next"
+}
 variable_source "users" "file/csv" {
   file              = "users.csv"
   fields            = ["user_id", "login", "pass"]
@@ -106,9 +119,7 @@ variable_source "variables" "variables" {
 call "auth_req" {
   call     = "target.TargetService.Auth"
   tag      = "auth"
-  metadata = {
-    "metadata" = "server.proto"
-  }
+  metadata = local.auth_meta
   preprocessor "prepare" {
     mapping = {
       user = "source.users[next]"
@@ -121,7 +132,6 @@ EOF
     payload     = ["token"]
     status_code = 200
   }
-}}
 }
 
 scenario "scenario_name" {
@@ -139,6 +149,9 @@ scenario "scenario_name" {
 ### YAML пример
 
 ```yaml
+locals:
+  my-meta: &global-meta
+    metadata: "server.proto"
 variable_sources:
   - type: "file/csv"
     name: "users"
@@ -155,7 +168,7 @@ calls:
     tag: auth
     method: POST
     metadata:
-      metadata: "server.proto"
+      <<: *global-meta
     preprocessors:
       - type: prepare
         mapping:
@@ -174,6 +187,10 @@ scenarios:
       auth_req
     ]
 ```
+
+### Locals
+
+Про блок locals смотрите в отдельной [статье Locals](scenario/locals.md)
 
 ## Возможности
 

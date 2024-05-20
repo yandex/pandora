@@ -11,6 +11,7 @@
     - [General principle](#general-principle)
     - [HCL example](#hcl-example)
     - [YAML example](#yaml-example)
+    - [Locals](#locals)
 - [Features](#features)
     - [Requests](#requests)
         - [Templater](#templater)
@@ -97,6 +98,19 @@ Request - HTTP request. Has the standard HTTP request fields plus additional fie
 ### HCL example
 
 ```terraform
+locals {
+  common_headers = {
+    Content-Type  = "application/json"
+    Useragent     = "Yandex"
+  }
+  next = "next"
+}
+locals {
+  auth_headers = merge(local.common_headers, {
+    Authorization = "Bearer {{.request.auth_req.postprocessor.token}}"
+  })
+  next = "next"
+}
 variable_source "source_name" "file/csv" {
   file              = "file.csv"
   fields            = ["id", "name"]
@@ -107,9 +121,9 @@ variable_source "source_name" "file/csv" {
 request "request_name" {
   method  = "POST"
   uri     = "/uri"
-  headers = {
-    HeaderName = "header value"
-  }
+  headers = merge(local.common_headers, {
+    Authorization = "Bearer {{.request.auth_req.postprocessor.token}}"
+  })
   tag       = "tag"
   body      = <<EOF
 <body/>
@@ -144,6 +158,10 @@ scenario "scenario_name" {
 ### YAML example
 
 ```yaml
+locals:
+  my-headers: &global-headers
+    Content-Type: application/json
+    Useragent: Yandex
 variable_sources:
   - type: "file/csv"
     name: "source_name"
@@ -157,7 +175,7 @@ requests:
     uri: '/uri'
     method: POST
     headers:
-      Header-Name: "header value"
+      <<: *global-headers
     tag: tag
     body: '<body/>'
     preprocessor:
@@ -178,6 +196,10 @@ scenarios:
       request_name
     ]
 ```
+
+### Locals
+
+See [Locals article](scenario/locals.md)
 
 ## Features
 

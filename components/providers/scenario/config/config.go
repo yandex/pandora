@@ -13,6 +13,7 @@ import (
 
 // AmmoConfig is a config for dynamic converting from map[string]interface{}
 type AmmoConfig struct {
+	Locals          map[string]any
 	VariableSources []vs.VariableSource `config:"variable_sources"`
 	Requests        []RequestConfig
 	Calls           []CallConfig
