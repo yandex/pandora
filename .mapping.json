@@ -23,6 +23,7 @@
   ".changes/v0.5.23.md":"load/projects/pandora/.changes/v0.5.23.md",
   ".changes/v0.5.24.md":"load/projects/pandora/.changes/v0.5.24.md",
   ".changes/v0.5.25.md":"load/projects/pandora/.changes/v0.5.25.md",
+  ".changes/v0.5.26.md":"load/projects/pandora/.changes/v0.5.26.md",
   ".changie.yaml":"load/projects/pandora/.changie.yaml",
   ".github/workflows/release.yml":"load/projects/pandora/.github/workflows/release.yml",
   ".github/workflows/test.yml":"load/projects/pandora/.github/workflows/test.yml",
