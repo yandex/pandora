@@ -12,6 +12,9 @@ gun:
   target: '[hostname]:443'
   timeout: 15s              # Таймаут для запросов gRPC. По умолчанию: 15s
   tls: false                # Если true, Pandora принимает любой сертификат, представленный сервером, и любое имя хоста в этом сертификате. По умолчанию: false
+  reflect_port: 8000        # Если ваш рефлекшн сервис находится на отличном от основного сервера порту
+  reflect_metadata:         # Отдельные metadata данные для рефлекшн сервис
+    auth: Token
   shared-client:
     enabled: true           # Если TRUE, генератор будет использовать общий транспортный клиент для всех инстансов
     client-number: 1        # Количество общих клиентов можно увеличить. По умолчанию 1
@@ -53,6 +56,7 @@ gun:
 
 # Смотри так же
 
+- [Сценарный генератор / gRPC](scenario-grpc-generator.md)
 - Практики использования
   - [RPS на инстанс](best_practices/rps-per-instance.md)
   - [Общий транспорт](best_practices/shared-client.md)

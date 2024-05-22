@@ -1,8 +1,6 @@
 {
   ".changes/header.tpl.md":"load/projects/pandora/.changes/header.tpl.md",
   ".changes/unreleased/.gitkeep":"load/projects/pandora/.changes/unreleased/.gitkeep",
-  ".changes/unreleased/Added-20240517-144818.yaml":"load/projects/pandora/.changes/unreleased/Added-20240517-144818.yaml",
-  ".changes/unreleased/Added-20240517-144851.yaml":"load/projects/pandora/.changes/unreleased/Added-20240517-144851.yaml",
   ".changes/v0.5.04.md":"load/projects/pandora/.changes/v0.5.04.md",
   ".changes/v0.5.05.md":"load/projects/pandora/.changes/v0.5.05.md",
   ".changes/v0.5.06.md":"load/projects/pandora/.changes/v0.5.06.md",
