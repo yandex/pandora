@@ -15,7 +15,7 @@ var _ core.Provider = (*scenario.Provider[*gun.Scenario])(nil)
 const defaultSinkSize = 100
 
 func NewProvider(fs afero.Fs, conf scenario.ProviderConfig) (core.Provider, error) {
-	const op = "config.NewProvider"
+	const op = "scenario_grpc.NewProvider"
 	ammoCfg, err := config.ReadAmmoConfig(fs, conf.File)
 	if err != nil {
 		return nil, fmt.Errorf("%s ReadAmmoConfig %w", op, err)

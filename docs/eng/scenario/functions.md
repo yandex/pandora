@@ -135,6 +135,28 @@ preprocessor {
 }
 ```
 
+# HCL functions
+
+You can use follow function 
+
+- [coalesce](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/coalesce)
+- [coalescelist](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/coalescelist)
+- [compact](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/compact)
+- [concat](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/concat)
+- [distinct](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/distinct)
+- [element](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/element)
+- [flatten](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/flatten)
+- [index](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/index-fn)
+- [keys](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/keys)
+- [lookup](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/lookup)
+- [merge](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/merge)
+- [reverse](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/reverse)
+- [slice](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/slice)
+- [sort](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/sort)
+- [split](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/string/split)
+- [values](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/values)
+- [zipmap](https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions/collection/zipmap)
+
 
 ---
 

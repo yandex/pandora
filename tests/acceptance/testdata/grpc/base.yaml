@@ -5,6 +5,8 @@ pools:
       target: localhost:18888
       tls: false
       use-shared-client: false
+      reflect_metadata:
+        auth: Token
     ammo:
       type: grpc/json
       file: testdata/grpc/grpc.payload

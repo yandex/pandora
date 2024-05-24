@@ -12,6 +12,9 @@
 
 Pandora is a high-performance load generator in Go language. It has built-in HTTP(S) and HTTP/2 support and you can write your own load scenarios in Go, compiling them just before your test.
 
+## Documentation
+[Documentation](https://yandex.github.io/pandora/)
+
 ## How to start
 
 ### Binary releases
@@ -71,9 +74,3 @@ Create changelog release file - `changie batch v0.5.21`
 Same for next version - `changie batch $(changie next patch)`
 
 Merge to main CHANGELOG.md file - `changie merge`
-
-## Documentation
-[Documentation](https://yandex.github.io/pandora/)
-
-## Old Documentation
-[ReadTheDocs](https://yandexpandora.readthedocs.io/)

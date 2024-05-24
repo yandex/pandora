@@ -21,13 +21,13 @@ import (
 const defaultTimeout = time.Second * 15
 
 type GunConfig struct {
-	Target          string          `validate:"required"`
-	ReflectPort     int64           `config:"reflect_port"`
-	ReflectMetadata metadata.MD     `config:"reflect_metadata"`
-	Timeout         time.Duration   `config:"timeout"` // grpc request timeout
-	TLS             bool            `config:"tls"`
-	DialOptions     GrpcDialOptions `config:"dial_options"`
-	AnswLog         AnswLogConfig   `config:"answlog"`
+	Target          string            `validate:"required"`
+	ReflectPort     int64             `config:"reflect_port"`
+	ReflectMetadata map[string]string `config:"reflect_metadata"`
+	Timeout         time.Duration     `config:"timeout"` // grpc request timeout
+	TLS             bool              `config:"tls"`
+	DialOptions     GrpcDialOptions   `config:"dial_options"`
+	AnswLog         AnswLogConfig     `config:"answlog"`
 }
 
 type GrpcDialOptions struct {

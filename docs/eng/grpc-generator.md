@@ -12,6 +12,9 @@ gun:
   target: '[hostname]:443'
   timeout: 15s              # Grpc request timeout. Default: 15s
   tls: false                # If true, Pandora accepts any certificate presented by the server and any host name in that certificate. Default: false
+  reflect_port: 8000        # If your reflection service is located on a port other than the main server
+  reflect_metadata:         # Separate metadata data for reflection service
+    auth: Token
   shared-client:
     enabled: false          # If TRUE, the generator will use a common transport client for all instances
     client-number: 1        # The number of shared clients can be increased. The default is 1
@@ -53,6 +56,7 @@ But to unify reports it converts them into HTTP codes.
 
 # References
 
+- [Scenario generator / gRPC](scenario-grpc-generator.md)
 - Best practices
   - [RPS per instance](best_practices/rps-per-instance.md)
   - [Shared client](best_practices/shared-client.md)

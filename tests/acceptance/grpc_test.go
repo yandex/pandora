@@ -165,8 +165,7 @@ func TestCheckGRPCReflectServer(t *testing.T) {
 			{
 				name: "success",
 				conf: parseFileContentToCliConfig(t, baseFile, func(c *PandoraConfigGRPC) {
-					md := metadata.New(map[string]string{metadataKey: metadataValue})
-					c.Pools[0].Gun.ReflectMetadata = &md
+					c.Pools[0].Gun.ReflectMetadata = map[string]string{metadataKey: metadataValue}
 				}),
 			},
 			{
@@ -177,8 +176,7 @@ func TestCheckGRPCReflectServer(t *testing.T) {
 			{
 				name: "wrong metadata value",
 				conf: parseFileContentToCliConfig(t, baseFile, func(c *PandoraConfigGRPC) {
-					md := metadata.New(map[string]string{metadataKey: "wrong-value"})
-					c.Pools[0].Gun.ReflectMetadata = &md
+					c.Pools[0].Gun.ReflectMetadata = map[string]string{metadataKey: "wrong-value"}
 				}),
 				err: wrongMDValueError,
 			},

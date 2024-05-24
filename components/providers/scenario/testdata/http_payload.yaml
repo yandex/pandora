@@ -1,3 +1,7 @@
+locals:
+  global-headers: &global-headers
+    Content-Type: application/json
+    Useragent: Yandex
 variable_sources:
   - name: users
     type: file/csv
@@ -20,9 +24,8 @@ requests:
   - name: auth_req
     method: POST
     uri: /auth
-    headers: &global-headers
-      Content-Type: application/json
-      Useragent: Yandex
+    headers:
+      <<: *global-headers
     tag: auth
     body: |
       {"user_id":  {{.request.auth_req.preprocessor.user_id}}}

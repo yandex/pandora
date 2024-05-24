@@ -1,7 +1,5 @@
 package acceptance
 
-import "google.golang.org/grpc/metadata"
-
 type PandoraConfigLog struct {
 	Level string `yaml:"level"`
 }
@@ -13,11 +11,11 @@ type PandoraConfigMonitoring struct {
 	ExpVar PandoraConfigMonitoringExpVar `yaml:"expvar"`
 }
 type PandoraConfigGRPCGun struct {
-	Type            string       `yaml:"type"`
-	Target          string       `yaml:"target"`
-	TLS             bool         `yaml:"tls"`
-	ReflectPort     *int64       `yaml:"reflect_port,omitempty"`
-	ReflectMetadata *metadata.MD `yaml:"reflect_metadata,omitempty"`
+	Type            string            `yaml:"type"`
+	Target          string            `yaml:"target"`
+	TLS             bool              `yaml:"tls"`
+	ReflectPort     *int64            `yaml:"reflect_port,omitempty"`
+	ReflectMetadata map[string]string `yaml:"reflect_metadata,omitempty"`
 	SharedClient    struct {
 		ClientNumber int  `yaml:"client-number,omitempty"`
 		Enabled      bool `yaml:"enabled"`
