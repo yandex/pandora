@@ -53,6 +53,17 @@ pandora myconfig.yaml
 Or use Pandora with [Yandex.Tank](https://yandextank.readthedocs.io/en/latest/core_and_modules.html#pandora) and
 [Overload](https://overload.yandex.net).
 
+## Performance tests
+
+These tests are run when a release is created from a tag. See [.github/workflows/yc.yml](.github/workflows/yc.yml)
+
+The scripts used to run are [performance-test/automation](performance-test/automation)
+
+And the tests are in the following directory - [performance-test/test-config](performance-test/test-config). 
+Where one directory is one test. 
+Each test has a autostop point configured. 
+When all tests pass, all their autostop points will be written in the release description.
+
 ## Changelog
 
 Install https://github.com/miniscruff/changie

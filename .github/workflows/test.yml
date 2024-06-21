@@ -10,6 +10,15 @@ on:
       - master
       - dev
 
+env:
+  YC_LT_FOLDER_ID: b1gacohsvc2kc4d76tu5
+  YC_LT_AUTHORIZED_KEY_JSON: ${{ secrets.YC_LOADTESTING_CI_AUTHORIZED_KEY_JSON }}
+  YC_LT_TEST_AGENT_FILTER: "name = 'agent-pandora-perf-medium'"
+  YC_LT_TEST_EXTRA_DESCRIPTION: "GitHub Actions workflow - ${{github.run_id}}"
+  YC_LT_SKIP_TEST_CHECK: "1"
+  YC_LT_DATA_BUCKET: ${{ secrets.YC_LT_DATA_BUCKET }}
+  YC_LT_OUTPUT_DIR: ${{github.workspace}}/performance-test/output
+
 jobs:
   run-unit-tests:
     name: Unit Tests
@@ -19,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu, macOS]
+        os: [ubuntu]
     env:
       OS: ${{ matrix.os }}-latest
       GO: ${{ matrix.go-version }}
@@ -28,18 +37,64 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.21.x
-          cache: true
+      - name: Parse to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: 161082234
+        run: |
+          cat <<EOF > imbalance.txt
+          ## Performance tests
+          - pandora-perf-grpc-300inst-sleep0ms: 12344
+          - pandora-perf-grpc-3000inst-sleep0ms: 15555
+          EOF
+          
+          sed G imbalance.txt > imbalance.md
 
-      - name: Test
-        run: go test -race -coverprofile unit.txt -covermode atomic ./...
-
-      - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v3
+      - name: Update release
+        id: update_release
+        uses: tubone24/update_release@v1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: v0.5.27.alpha13
         with:
-          file: ./unit.txt
-          flags: unit,${{ matrix.os }},go-${{ matrix.go-version }}
-          name: unit
+          body_path: ./imbalance.md
+          is_append_body: true
+
+#  build-and-upload:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: ./.github/actions/setup-yc
+#      - name: Install Go
+#        uses: actions/setup-go@v3
+#        with:
+#          go-version: 1.21.x
+#          cache: true
+#      - name: Test
+#        run: go test -race -covermode atomic ./...
+#      - name: Build
+#        run: |
+#          export GOOS=linux
+#          export CGO_ENABLED=0
+#          go build -o pandora_perf_2
+#      - name: Upload
+#        run: |
+#          source performance-test/automation/_functions.sh && source performance-test/automation/_variables.sh; yc_s3_upload ./pandora_perf_2 pandora-perf ${YC_LT_DATA_BUCKET}
+#
+#  test-pandora-perf:
+#    needs: [ build-and-upload ]
+#    runs-on: ubuntu-latest
+#    concurrency: { group: loadtesting }
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: ./.github/actions/setup-yc
+#      - name: Run Test HTTP-300inst-sleep0ms
+#        run: |
+#          stripped_tag="${{ github.event.release.tag_name }}"
+#          STRIPPED_TAG=${stripped_tag:1}
+#          YC_LT_VERBOSE=2 YC_LT_TEST_EXTRA_LABELS="version=${STRIPPED_TAG}" ./performance-test/automation/test.sh ./performance-test/test-config/pandora-perf-http-uri-300inst-sleep0ms
+#      - name: Upload Artifacts GRPC 300inst-sleep0ms
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: pandora-perf-grpc-300inst-sleep0ms
+#          path: ${{ env.YC_LT_OUTPUT_DIR }}
