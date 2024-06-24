@@ -235,7 +235,7 @@ func (g *Gun) shoot(ammo *ammo.Ammo) {
 	code = ConvertGrpcStatus(grpcErr)
 
 	if grpcErr != nil {
-		g.GunDeps.Log.Error("response error", zap.Error(err))
+		g.GunDeps.Log.Error("response error", zap.Error(grpcErr))
 	}
 
 	g.Answ(&method, message, ammo.Metadata, out, grpcErr, code)
