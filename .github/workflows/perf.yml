@@ -1,0 +1,28 @@
+name: Ex perf test
+
+on:
+  push:
+    branches:
+      - yandex_task_perf
+
+
+env:
+  YC_LT_FOLDER_ID: b1gacohsvc2kc4d76tu5
+  YC_LT_AUTHORIZED_KEY_JSON: ${{ secrets.YC_LOADTESTING_CI_AUTHORIZED_KEY_JSON }}
+  YC_LT_TEST_AGENT_FILTER: "name = 'agent-pandora-perf-medium'"
+  YC_LT_TEST_EXTRA_DESCRIPTION: "GitHub Actions workflow - ${{github.run_id}}"
+  YC_LT_SKIP_TEST_CHECK: "1"
+  YC_LT_DATA_BUCKET: ${{ secrets.YC_LT_DATA_BUCKET }}
+  YC_LT_OUTPUT_DIR: ${{github.workspace}}/performance-test/output
+
+jobs:
+  test-pandora-perf:
+    runs-on: ubuntu-latest
+    concurrency: { group: loadtesting }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-yc
+      - name: Run Test HTTP-300inst-sleep0ms-overflow-false
+        run: |
+          stripped_tag="${{ github.event.release.tag_name }}"
+          YC_LT_TEST_EXTRA_LABELS="version=${STRIPPED_TAG}" ./performance-test/automation/test.sh ./performance-test/test-config/pandora-perf-http-uri-300inst-sleep0ms-overflow-false
