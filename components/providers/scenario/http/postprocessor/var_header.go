@@ -46,15 +46,22 @@ func (p *VarHeaderPostprocessor) parseValue(v string) (value string, modifier fu
 	if len(vals) == 1 {
 		return vals[0], func(in string) string { return in }, nil
 	}
-	if len(vals) > 2 {
-		return "", nil, fmt.Errorf("VarHeaderPostprocessor supports only one modifier yet")
-	}
-	modifier, err = p.parseModifier(vals[1])
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to parse modifier %s: %w", vals[1], err)
+
+	value = vals[0]
+	modifier = func(in string) string { return in }
+
+	for _, modStr := range vals[1:] {
+		mod, err := p.parseModifier(modStr)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to parse modifier %s: %w", modStr, err)
+		}
+		previousModifier := modifier
+		modifier = func(in string) string {
+			return mod(previousModifier(in))
+		}
 	}
 
-	return vals[0], modifier, nil
+	return value, modifier, nil
 }
 
 func (p *VarHeaderPostprocessor) parseModifier(s string) (func(in string) string, error) {

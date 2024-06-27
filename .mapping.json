@@ -26,6 +26,7 @@
   ".changes/v0.5.26.md":"load/projects/pandora/.changes/v0.5.26.md",
   ".changes/v0.5.27.md":"load/projects/pandora/.changes/v0.5.27.md",
   ".changes/v0.5.28.md":"load/projects/pandora/.changes/v0.5.28.md",
+  ".changes/v0.5.29.md":"load/projects/pandora/.changes/v0.5.29.md",
   ".changie.yaml":"load/projects/pandora/.changie.yaml",
   ".github/actions/setup-yc/action.yml":"load/projects/pandora/.github/actions/setup-yc/action.yml",
   ".github/workflows/release.yml":"load/projects/pandora/.github/workflows/release.yml",
