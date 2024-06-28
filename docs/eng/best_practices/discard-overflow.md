@@ -23,7 +23,8 @@ The instance setting `discard_overflow` determines which behavior to follow.
    instances.
 2. `discard_overflow: true` - Strict adherence to the request schedule by the generator. Requests that do not fit into
    the schedule are discarded. The test duration is predetermined. Requests that fail to meet the schedule are marked as
-   failed (with a net error `777`, and also tagged as discarded).
+   failed (with a net error `777`, and also tagged as discarded). Pandora considers a test to have failed schedule, if 
+   the time of the request is 2 seconds behind. That is 2 second sliding window is used.
 
 By default, starting from version pandora@0.5.24, the setting `discard_overflow: true` is enabled.
 

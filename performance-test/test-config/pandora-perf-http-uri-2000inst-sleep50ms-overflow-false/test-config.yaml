@@ -1,0 +1,62 @@
+autostop:
+  enabled: true
+  autostop:
+    - quantile (50,60ms,10s)
+    - instances(2000,10s)
+  package: yandextank.plugins.Autostop
+  report_file: autostop_report.txt
+uploader:
+  enabled: true
+  package: yandextank.plugins.DataUploader
+  job_name: pandora-perf-http-uri-2000inst-sleep50ms-overflow-false
+  job_dsc: ''
+  ver: ''
+  api_address: loadtesting.api.cloud.yandex.net:443
+pandora:
+  enabled: true
+  package: yandextank.plugins.Pandora
+  pandora_cmd: ./pandora-perf
+  config_content:
+    pools:
+      - id: HTTP
+        gun:
+          type: http
+          target: localhost:8092
+          ssl: false
+        ammo:
+          type: uri
+          uris:
+            - /hello?sleep=50ms hellotag
+        result:
+          type: phout
+          destination: ./phout.log
+        startup:
+          type: once
+          times: 2000
+        rps:
+          - type: line
+            from: 1
+            to: 40000
+            duration: 60s
+        discard_overflow: false
+    log:
+      level: error
+    monitoring:
+      expvar:
+        enabled: true
+        port: 1234
+telegraf:
+  enabled: true
+  package: yandextank.plugins.Telegraf
+  config:
+    hosts:
+      localhost: null
+    metrics:
+      cpu: null
+      mem: null
+      diskio: null
+      net: null
+      netstat: null
+      system: null
+      kernel: null
+core: {}

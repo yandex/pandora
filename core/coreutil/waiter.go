@@ -7,10 +7,12 @@ import (
 	"github.com/yandex/pandora/core"
 )
 
+const MaxOverdueDuration = 2 * time.Second
+
 // Waiter goroutine unsafe wrapper for efficient waiting schedule.
 type Waiter struct {
-	sched         core.Schedule
-	slowDownItems int
+	sched           core.Schedule
+	overdueDuration time.Duration
 
 	// Lazy initialized.
 	timer   *time.Timer
@@ -28,28 +30,29 @@ func (w *Waiter) Wait(ctx context.Context) (ok bool) {
 	// Check, that context is not done. Very quick: 5 ns for op, due to benchmark.
 	select {
 	case <-ctx.Done():
-		w.slowDownItems = 0
+		w.overdueDuration = 0
 		return false
 	default:
 	}
 	next, ok := w.sched.Next()
 	if !ok {
-		w.slowDownItems = 0
+		w.overdueDuration = 0
 		return false
 	}
 	// Get current time lazily.
 	// For once schedule, for example, we need to get it only once.
-	if next.Before(w.lastNow) {
-		w.slowDownItems++
+	waitFor := next.Sub(w.lastNow)
+	if waitFor <= 0 {
+		w.overdueDuration = 0 - waitFor
 		return true
 	}
 	w.lastNow = time.Now()
-	waitFor := next.Sub(w.lastNow)
+	waitFor = next.Sub(w.lastNow)
 	if waitFor <= 0 {
-		w.slowDownItems++
+		w.overdueDuration = 0 - waitFor
 		return true
 	}
-	w.slowDownItems = 0
+	w.overdueDuration = 0
 	// Lazy init. We don't need timer for unlimited and once schedule.
 	if w.timer == nil {
 		w.timer = time.NewTimer(waitFor)
@@ -70,7 +73,7 @@ func (w *Waiter) IsSlowDown(ctx context.Context) (ok bool) {
 	case <-ctx.Done():
 		return false
 	default:
-		return w.slowDownItems >= 2
+		return w.overdueDuration >= MaxOverdueDuration
 	}
 }
 

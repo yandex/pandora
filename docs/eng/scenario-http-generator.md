@@ -297,9 +297,11 @@ For more details about randomization functions, see [more](scenario/functions.md
 HCL example
 
 ```terraform
-postprocessor "var/jsonpath" {
-  mapping = {
-    token = "$.auth_key"
+request "your_request_name" {
+  postprocessor "var/jsonpath" {
+    mapping = {
+      token = "$.auth_key"
+    }
   }
 }
 ```
@@ -307,32 +309,60 @@ postprocessor "var/jsonpath" {
 ##### var/xpath
 
 ```terraform
-postprocessor "var/xpath" {
-  mapping = {
-    data = "//div[@class='data']"
+request "your_request_name" {
+  postprocessor "var/xpath" {
+    mapping = {
+      data = "//div[@class='data']"
+    }
   }
 }
 ```
 
 ##### var/header
 
-Creates a new variable from response headers
+Creates a new variable from the response headers.
 
-It is possible to specify simple string manipulations via pipe
+It is possible to specify simple string manipulations via pipe.
 
+Modifiers:
 - lower
 - upper
-- substr(from, length)
+- substr(from, length) - where `length` is optional
 - replace(search, replace)
 
+Modifiers can be chained.
+
+**Example:**
+
+If you get a response with the headers
+```http request
+X-Trace-ID: we1fswe284awsfewf
+Authorization: Basic Ym9zY236Ym9zY28= 
+```
+
+And you need to save for future use `traceID=we1fswe284awsfewf` & `auth=ym9zy236ym9zy28`
+
+you can use the postprocessor with the modifiers
+
 ```terraform
-postprocessor "var/header" {
-  mapping = {
-    ContentType      = "Content-Type|upper"
-    httpAuthorization = "Http-Authorization"
+request "your_request_name" {
+  postprocessor "var/header" {
+    mapping = {
+      traceID = "X-Trace-ID"
+      auth    = "Authorization|lower|replace(=,)|substr(6)"
+    }
   }
 }
 ```
+
+In templates you can use the result of this postprocessor as
+
+Translated with DeepL.com (free version)
+```gotemplate
+`{% raw %}{{.request.your_request_name.postprocessor.auth}}{% endraw %}`
+`{% raw %}{{.request.your_request_name.postprocessor.traceID}}{% endraw %}`
+```
+
 
 ##### assert/response
 
@@ -341,16 +371,18 @@ Checks header and body content
 Upon assertion, further scenario execution is dropped
 
 ```terraform
-postprocessor "assert/response" {
-  headers = {
-    "Content-Type" = "application/json"
-  }
-  body        = ["token"]
-  status_code = 200
+request "your_request_name" {
+  postprocessor "assert/response" {
+    headers = {
+      "Content-Type" = "application/json"
+    }
+    body        = ["token"]
+    status_code = 200
 
-  size {
-    val = 10000
-    op  = ">"
+    size {
+      val = 10000
+      op  = ">"
+    }
   }
 }
 ```

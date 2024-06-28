@@ -37,33 +37,33 @@ EOF
   }
   postprocessor "var/header" {
     mapping = {
-      Content-Type      = "Content-Type|upper"
-      httpAuthorization = "Http-Authorization"
+      Content-Type = "Content-Type|upper"
+      auth         = "Authorization|substr(7)"
     }
   }
   postprocessor "var/jsonpath" {
     mapping = {
-      token = "$.auth_key"
+      result = "$.result"
     }
   }
   postprocessor "assert/response" {
     headers = {
       Content-Type = "json"
     }
-    body = ["key"]
+    body = ["{\"result\":\"ok\"}"]
     size {
-      val = 40
       op  = ">"
+      val = 10
     }
   }
   postprocessor "assert/response" {
-    body = ["auth"]
+    body = ["result"]
   }
 }
 request "list_req" {
   method = "GET"
   headers = {
-    Authorization = "Bearer {{.request.auth_req.postprocessor.token}}"
+    Authorization = "Bearer {{.request.auth_req.postprocessor.auth}}"
     Content-Type  = "application/json"
     Useragent     = "Yandex"
   }
@@ -81,7 +81,7 @@ request "order_req" {
   method = "POST"
   uri    = "/order"
   headers = {
-    Authorization = "Bearer {{.request.auth_req.postprocessor.token}}"
+    Authorization = "Bearer {{.request.auth_req.postprocessor.auth}}"
     Content-Type  = "application/json"
     Useragent     = "Yandex"
   }
@@ -101,7 +101,7 @@ request "order_req2" {
   method = "POST"
   uri    = "/order"
   headers = {
-    Authorization = "Bearer {{.request.auth_req.postprocessor.token}}"
+    Authorization = "Bearer {{.request.auth_req.postprocessor.auth}}"
     Content-Type  = "application/json"
     Useragent     = "Yandex"
   }

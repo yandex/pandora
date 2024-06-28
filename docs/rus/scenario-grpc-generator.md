@@ -319,7 +319,7 @@ scenario "scenario_name" {
 
 # Смотри так же
 
-- [HTTP генератор](http-generator.md)
+- [gRPC генератор](grpc-generator.md)
 - Практики использования
     - [RPS на инстанс](best_practices/rps-per-instance.md)
     - [Общий транспорт](best_practices/shared-client.md)

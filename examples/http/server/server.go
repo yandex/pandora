@@ -108,7 +108,8 @@ func (s *Server) authHandler(w http.ResponseWriter, r *http.Request) {
 	s.mu.RUnlock()
 
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write([]byte(fmt.Sprintf(`{"auth_key": "%s"}`, authKey)))
+	w.Header().Set("Authorization", "Bearer "+authKey)
+	_, _ = w.Write([]byte(`{"result":"ok"}`))
 }
 
 func (s *Server) listHandler(w http.ResponseWriter, r *http.Request) {

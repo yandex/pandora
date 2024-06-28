@@ -1,0 +1,15 @@
+{
+    "labels": {
+        "type": "pandora-perf",
+        "generator": "pandora",
+        "target": "local-mock",
+        "pandora_generator": "http",
+        "provider": "uri-inconfig",
+        "discard_overflow": true,
+        "previder_preloaded": false,
+        "shared_client": 0
+    },
+    "external_data": [
+        {"name": "pandora-perf", "s3bucket": "pandora-perf", "s3file": "pandora-perf"}
+    ]
+}

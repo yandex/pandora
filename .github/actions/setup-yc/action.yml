@@ -1,0 +1,25 @@
+name: 'Setup YC tools'
+description: 'Setup and configure required tools'
+runs:
+  using: "composite"
+  steps:
+    - name: Check secret is set
+      shell: bash
+      run: |
+        if [[ -z "$YC_LT_AUTHORIZED_KEY_JSON" ]]; then echo "YC_LT_AUTHORIZED_KEY_JSON is empty" && exit 1; else echo "YC_LT_AUTHORIZED_KEY_JSON is set"; fi
+    - name: install utilities
+      shell: bash
+      run: |
+        sudo DEBIAN_FRONTEND=noninteractive apt update
+        sudo DEBIAN_FRONTEND=noninteractive apt install -y curl jq
+        sudo curl -f -s -LO https://storage.yandexcloud.net/yandexcloud-yc/install.sh
+        sudo bash install.sh -i /usr/local/yandex-cloud -n
+        sudo ln -sf /usr/local/yandex-cloud/bin/yc /usr/local/bin/yc
+    - name: configure yc cli
+      shell: bash
+      run: |
+        echo "$YC_LT_AUTHORIZED_KEY_JSON" > key.json
+        yc config profile create sa-profile
+        yc config set service-account-key ./key.json
+        yc config set format json
+        yc config set folder-id "$YC_LT_FOLDER_ID"
