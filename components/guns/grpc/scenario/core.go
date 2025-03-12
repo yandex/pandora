@@ -165,7 +165,8 @@ func (g *Gun) shootStep(step *Call, sample *netsample.Sample, ammoName string, t
 	stepVars["preprocessor"] = preprocVars
 
 	// Template
-	payloadJSON, err := g.templ.Apply(step.Payload, step.Metadata, templateVars, ammoName, step.Name)
+	mdata := maps.Clone(step.Metadata)
+	payloadJSON, err := g.templ.Apply(step.Payload, mdata, templateVars, ammoName, step.Name)
 	if err != nil {
 		return fmt.Errorf("%s templater.Apply %w", op, err)
 	}
@@ -194,7 +195,7 @@ func (g *Gun) shootStep(step *Call, sample *netsample.Sample, ammoName string, t
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	ctx = metadata.NewOutgoingContext(ctx, metadata.New(step.Metadata))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.New(mdata))
 	out, grpcErr := g.gun.Stub.InvokeRpc(ctx, &method, message)
 	code = grpcgun.ConvertGrpcStatus(grpcErr)
 	sample.SetProtoCode(code) // for setRTT inside
