@@ -21,7 +21,6 @@ weight: 4
 rps:
     type: const
     duration: 300s
-    from: 1
     ops: 10000
 ```
 
