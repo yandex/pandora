@@ -365,6 +365,80 @@ request "your_request_name" {
 }
 ```
 
+##### assert/json-schema
+
+Проверяет соответствие ответа от сервера указанной json-схеме
+
+**HCL-примеры конфигурации:**
+
+**Использование схемы из файла:**
+
+```terraform
+request "your_request_name" {
+  postprocessor "assert/json-schema" {
+    source = "file"
+    schema = "my_json_schema.json"
+  }
+}
+```
+**Использование схемы из json-строки:**
+
+```terraform
+request "your_request_name" {
+  postprocessor "assert/json-schema" {
+    source = "json_string"
+    schema = "{ \"type\" : \"object\" }"
+  }
+}
+```
+
+**Использование схемы, которая расположена на хосте:**
+
+**Важно: обязательно указывайте схему (http/https)**
+
+```terraform
+request "your_request_name" {
+  postprocessor "assert/json-schema" {
+    source = "url"
+    schema = "https://examplehost.com/#validation_schema.json"
+  }
+}
+```
+
+**YAML-пример конфигурации**
+
+**Использование схемы из файла:**
+```yaml
+requests:
+  - name: "your_request_name"
+    postprocessors:
+      - type: assert/json-schema
+        source: file
+        schema: "my_json_schema.json"
+```
+
+**Использование схемы из json-строки:**
+```yaml
+requests:
+  - name: "your_request_name"
+    postprocessors:
+      - type: assert/json-schema
+        source: json_string
+        schema: '{ "type" : "array" }'
+```
+
+**Использование схемы, которая расположена на хосте:**
+
+**Важно: обязательно указывайте схему (http/https)**
+```yaml
+requests:
+  - name: "your_request_name"
+    postprocessors:
+      - type: assert/json-schema
+        source: url
+        schema: "https://examplehost.com/#validation_schema.json"
+```
+
 ### Scenarios
 
 Минимальные поля для сценария - имя и перечень запросов

@@ -365,6 +365,80 @@ request "your_request_name" {
 }
 ```
 
+##### assert/json-schema
+
+Checks response body matches the specified json-schema
+
+**HCL examples:**
+
+**Use json-schema from file:**
+
+```terraform
+request "your_request_name" {
+  postprocessor "assert/json-schema" {
+    source = "file"
+    schema = "my_json_schema.json"
+  }
+}
+```
+**Use json-schema from json-string:**
+
+```terraform
+request "your_request_name" {
+  postprocessor "assert/json-schema" {
+    source = "json_string"
+    schema = "{ \"type\" : \"object\" }"
+  }
+}
+```
+
+**Use json-schema located on the host:**
+
+**Important: specify the request scheme (http/https)**
+
+```terraform
+request "your_request_name" {
+  postprocessor "assert/json-schema" {
+    source = "url"
+    schema = "https://examplehost.com/#validation_schema.json"
+  }
+}
+```
+
+**YAML examples**
+
+**Use json-schema from file:**
+```yaml
+requests:
+  - name: "your_request_name"
+    postprocessors:
+      - type: assert/json-schema
+        source: file
+        schema: "my_json_schema.json"
+```
+
+**Use json-schema from json-string:**
+```yaml
+requests:
+  - name: "your_request_name"
+    postprocessors:
+      - type: assert/json-schema
+        source: json_string
+        schema: '{ "type" : "array" }'
+```
+
+**Use json-schema located on the host:**
+
+**Important: specify the request scheme (http/https)**
+```yaml
+requests:
+  - name: "your_request_name"
+    postprocessors:
+      - type: assert/json-schema
+        source: url
+        schema: "https://examplehost.com/#validation_schema.json"
+```
+
 ### Scenarios
 
 The minimum fields for the script are name and list of requests

@@ -45,6 +45,7 @@ func Import(fs afero.Fs) {
 		RegisterPostprocessor("var/xpath", NewVarXpathPostprocessor)
 		RegisterPostprocessor("var/header", NewVarHeaderPostprocessor)
 		RegisterPostprocessor("assert/response", NewAssertResponsePostprocessor)
+		RegisterPostprocessor("assert/json-schema", NewAssertJsonSchemaPostprocessor)
 
 		RegisterTemplater("text", func() gun.Templater {
 			return templater.NewTextTemplater()
@@ -111,4 +112,12 @@ func NewVarXpathPostprocessor(cfg postprocessor.Config) gun.Postprocessor {
 	return &postprocessor.VarXpathPostprocessor{
 		Mapping: cfg.Mapping,
 	}
+}
+
+func NewAssertJsonSchemaPostprocessor(cfg postprocessor.AssertJsonSchema) (gun.Postprocessor, error) {
+	err := cfg.Validate()
+	if err != nil {
+		return nil, err
+	}
+	return &cfg, nil
 }

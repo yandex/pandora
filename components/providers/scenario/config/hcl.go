@@ -65,6 +65,8 @@ type RequestPostprocessorHCL struct {
 	Body       *[]string          `hcl:"body" yaml:"body,omitempty"`
 	StatusCode *int               `hcl:"status_code" yaml:"status_code,omitempty"`
 	Size       *AssertSizeHCL     `hcl:"size,block" yaml:"size,omitempty"`
+	Source     string             `hcl:"source" yaml:"source,omitempty"`
+	Schema     string             `hcl:"schema" yaml:"schema,omitempty"`
 }
 
 type RequestPreprocessorHCL struct {
