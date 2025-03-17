@@ -20,7 +20,6 @@ generates 10000 requests per second for 300 seconds
 rps:
     type: const
     duration: 300s
-    from: 1
     ops: 10000
 ```
 
