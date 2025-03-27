@@ -37,6 +37,16 @@ pools:
       file: ./ammofile               # ammo file path
 ```
 
+If the lines in a ammo file are more than 64 KB in length, specify the buffer size for reading lines using the `maxammosize` parameter. The value is specified in bytes and must be greater than the longest string. Configuration example:
+
+```yaml
+pools:
+  - ammo:
+      type: uri             # ammo format
+      file: ./ammofile      # ammo file path
+      maxammosize: 1000000  # maximum ammo size
+```
+
 ### raw (request-style)
 
 Raw HTTP request format. If you like to use _telnet_ firing HTTP requests, you'll love this.
@@ -130,6 +140,16 @@ pools:
       headers:
         - "[Host: yourhost.tld]"
         - "[User-Agent: some user agent]"
+```
+
+If the lines in a ammo file are more than 64 KB in length, specify the buffer size for reading lines using the `maxammosize` parameter. The value is specified in bytes and must be greater than the longest string.  Configuration example:
+
+```yaml
+pools:
+  - ammo:
+      type: uri             # ammo format
+      file: ./ammofile      # ammo file path
+      maxammosize: 1000000  # maximum ammo size
 ```
 
 ## Features

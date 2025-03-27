@@ -37,6 +37,16 @@ pools:
       file: ./ammofile               # ammo file path
 ```
 
+В случае, если строки в файле с патронами имеют длину более 64 кБайт следует указывать размер буфера для чтения строк с помощью параметра `maxammosize`. Значение указывается в байтах и должно быть больше самой длинной строки. Пример конфига:
+
+```yaml
+pools:
+  - ammo:
+      type: http/json       # ammo format
+      file: ./ammofile      # ammo file path
+      maxammosize: 1000000  # maximum ammo size
+```
+
 ### raw (request-style)
 
 Формат Raw HTTP-запроса. Если вы любите использовать _telnet_, обстреливающий HTTP-запросы, вам понравится это.
@@ -130,6 +140,16 @@ pools:
       headers:
         - "[Host: yourhost.tld]"
         - "[User-Agent: some user agent]"
+```
+
+В случае, если строки в файле с патронами имеют длину более 64 кБайт следует указывать размер буфера для чтения строк с помощью параметра `maxammosize`. Значение указывается в байтах и должно быть больше самой длинной строки. Пример конфига:
+
+```yaml
+pools:
+  - ammo:
+      type: uri             # ammo format
+      file: ./ammofile      # ammo file path
+      maxammosize: 1000000  # maximum ammo size
 ```
 
 ## Возможности
