@@ -142,8 +142,6 @@ replace github.com/temporalio/features/harness/go => github.com/temporalio/featu
 
 replace github.com/temporalio/omes => github.com/temporalio/omes v0.0.0-20240429210145-5fa5c107b7a8
 
-replace github.com/goccy/go-yaml => github.com/goccy/go-yaml v1.9.5
-
 replace github.com/aleroyer/rsyslog_exporter => github.com/prometheus-community/rsyslog_exporter v1.1.0
 
 replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.20.5
