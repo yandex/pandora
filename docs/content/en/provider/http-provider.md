@@ -244,3 +244,21 @@ pools:
       ...
       preload: true
 ```
+
+### Limiting the number of ammos
+
+By default, all providers start reading from the beginning when they reach the end of the ammos.
+The `passes` parameter is used to limit the number of repetitions.
+
+If you need to set a general limit on the number of ammos that a provider can issue, you should use the `limit` parameter.
+
+Example config:
+
+```yaml
+pools:
+  - ammo:
+      type: http/json     # ammo format
+      file: ./ammo.json   # ammo file path
+      limit: 0            # Limit limits total num of ammo. Unlimited if zero. Default: 0
+      passes: 0           # Passes limits ammo file passes. Unlimited if zero. Default: 0
+```
