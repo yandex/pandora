@@ -77,6 +77,6 @@ pools:
   - ammo:
       type: grpc/json     # ammo format
       file: ./ammo.json   # ammo file path
-      limit: 0            # Limit limits total num of ammo. Unlimited if zero. Default: 0
-      passes: 0           # Passes limits ammo file passes. Unlimited if zero. Default: 0
+      limit: 0            # Limit limits total num of ammo. Unlimited if zero. Default is 0
+      passes: 0           # Passes limits ammo file passes. Unlimited if zero. Default is 0
 ```
