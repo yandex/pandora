@@ -15,6 +15,8 @@ import (
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
 	"github.com/jhump/protoreflect/grpcreflect"
+	"github.com/yandex/pandora/components/answ/filter"
+	"github.com/yandex/pandora/components/answ/sampler"
 	ammo "github.com/yandex/pandora/components/providers/grpc"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
@@ -22,6 +24,7 @@ import (
 	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/lib/answlog"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -49,17 +52,11 @@ type GunConfig struct {
 	Timeout         time.Duration     `config:"timeout"` // grpc request timeout
 	TLS             bool              `config:"tls"`
 	DialOptions     GrpcDialOptions   `config:"dial_options"`
-	AnswLog         AnswLogConfig     `config:"answlog"`
+	AnswLog         answlog.Config    `config:"answlog"`
 	SharedClient    struct {
 		ClientNumber int  `config:"client-number,omitempty"`
 		Enabled      bool `config:"enabled"`
 	} `config:"shared-client,omitempty"`
-}
-
-type AnswLogConfig struct {
-	Enabled bool   `config:"enabled"`
-	Path    string `config:"path"`
-	Filter  string `config:"filter" valid:"oneof=all warning error"`
 }
 
 type Gun struct {
@@ -71,16 +68,22 @@ type Gun struct {
 	Stub     grpcdynamic.Stub
 	Services map[string]desc.MethodDescriptor
 
-	AnswLog *zap.Logger
+	AnswLog *answlog.Logger
 }
 
 func DefaultGunConfig() GunConfig {
 	return GunConfig{
 		Target: "default target",
-		AnswLog: AnswLogConfig{
-			Enabled: false,
+		AnswLog: answlog.Config{
+			Enabled: true,
 			Path:    "answ.log",
-			Filter:  "all",
+			Filter:  filter.FilterAll,
+			Sampling: answlog.Sampling{
+				Enabled: true,
+				Pattern: sampler.FactorPattern{
+					Factor: 10,
+				},
+			},
 		},
 	}
 }
@@ -158,7 +161,7 @@ func (g *Gun) prepareClientPool() (*clientpool.Pool[grpcdynamic.Stub], error) {
 }
 
 func NewGun(conf GunConfig) *Gun {
-	answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled)
+	answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled, answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)), answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 20), conf.AnswLog.Sampling.Enabled))
 	return &Gun{Conf: conf, AnswLog: answLog}
 }
 
@@ -237,35 +240,22 @@ func (g *Gun) shoot(ammo *ammo.Ammo) {
 		g.GunDeps.Log.Error("response error", zap.Error(grpcErr))
 	}
 
-	g.Answ(&method, message, ammo.Metadata, out, grpcErr, code)
+	g.AnswLogging(&method, message, ammo.Metadata, out, grpcErr)
 }
 
-func (g *Gun) Answ(method *desc.MethodDescriptor, message *dynamic.Message, metadata map[string]string, out proto.Message, grpcErr error, code int) {
-	if g.Conf.AnswLog.Enabled {
-		switch g.Conf.AnswLog.Filter {
-		case "all":
-			g.AnswLogging(g.AnswLog, method, message, metadata, out, grpcErr)
+func (g *Gun) AnswLogging(method *desc.MethodDescriptor, request proto.Message, metadata map[string]string, response proto.Message, grpcErr error) {
+	grpcCode := int(status.Convert(grpcErr).Code())
+	g.AnswLog.Report("REQUEST/RESPONSE", []zapcore.Field{zap.Int(answlog.FilterAndSampleGroup, grpcCode)}, func() []zapcore.Field {
+		var respField zapcore.Field
 
-		case "warning":
-			if code >= 400 {
-				g.AnswLogging(g.AnswLog, method, message, metadata, out, grpcErr)
-			}
-
-		case "error":
-			if code >= 500 {
-				g.AnswLogging(g.AnswLog, method, message, metadata, out, grpcErr)
-			}
+		if response != nil {
+			respField = zap.Stringer("resp", response)
+		} else {
+			respField = zap.String("resp", "empty")
 		}
-	}
-}
 
-func (g *Gun) AnswLogging(logger *zap.Logger, method *desc.MethodDescriptor, request proto.Message, metadata map[string]string, response proto.Message, grpcErr error) {
-	logger.Debug("Request:", zap.Stringer("method", method), zap.Stringer("message", request), zap.Any("metadata", metadata))
-	if response != nil {
-		logger.Debug("Response:", zap.Stringer("resp", response), zap.Error(grpcErr))
-	} else {
-		logger.Debug("Response:", zap.String("resp", "empty"), zap.Error(grpcErr))
-	}
+		return []zapcore.Field{zap.Stringer("method", method), zap.Stringer("req", request), zap.Any("metadata", metadata), respField, zap.Error(grpcErr)}
+	})
 }
 
 func (g *Gun) makeConnect() (conn *grpc.ClientConn, err error) {

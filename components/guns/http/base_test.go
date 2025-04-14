@@ -19,6 +19,7 @@ import (
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/coretest"
 	"github.com/yandex/pandora/core/engine"
+	"github.com/yandex/pandora/lib/answlog"
 	"github.com/yandex/pandora/lib/testutil"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -170,7 +171,7 @@ func (s *BaseGunSuite) Test_Shoot() {
 	s.Run("Do ok", func() {
 		beforeEachDoOk := func() {
 			body = ioutil.NopCloser(strings.NewReader("aaaaaaa"))
-			s.base.AnswLog = zap.NewNop()
+			s.base.AnswLog = answlog.NewNop()
 			s.base.Client = &testDecoratedClient{
 				before: func(doReq *http.Request) {
 					s.Require().Equal(req, doReq)

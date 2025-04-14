@@ -17,8 +17,10 @@ import (
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/clientpool"
 	"github.com/yandex/pandora/core/warmup"
+	"github.com/yandex/pandora/lib/answlog"
 	"github.com/yandex/pandora/lib/netutil"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -33,18 +35,12 @@ type AutoTagConfig struct {
 	NoTagOnly   bool `config:"no-tag-only"`                   // When true, autotagged only ammo that has no tag before.
 }
 
-type AnswLogConfig struct {
-	Enabled bool   `config:"enabled"`
-	Path    string `config:"path"`
-	Filter  string `config:"filter" valid:"oneof=all warning error"`
-}
-
 type HTTPTraceConfig struct {
 	DumpEnabled  bool `config:"dump"`
 	TraceEnabled bool `config:"trace"`
 }
 
-func NewBaseGun(clientConstructor ClientConstructor, cfg GunConfig, answLog *zap.Logger) *BaseGun {
+func NewBaseGun(clientConstructor ClientConstructor, cfg GunConfig, answLog *answlog.Logger) *BaseGun {
 	client := clientConstructor(cfg.Client, cfg.Target)
 	return &BaseGun{
 		Config: cfg,
@@ -66,7 +62,7 @@ type BaseGun struct {
 	Connect           func(ctx context.Context) error // Optional hook.
 	OnClose           func() error                    // Optional. Called on Close().
 	Aggregator        netsample.Aggregator            // Lazy set via BindResultTo.
-	AnswLog           *zap.Logger
+	AnswLog           *answlog.Logger
 	Client            Client
 	ClientConstructor func() Client
 
@@ -228,22 +224,8 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 	if b.DebugLog {
 		b.verboseLogging(res)
 	}
-	if b.Config.AnswLog.Enabled {
-		switch b.Config.AnswLog.Filter {
-		case "all":
-			b.answLogging(req, bodyBytes, res)
 
-		case "warning":
-			if res.StatusCode >= 400 {
-				b.answLogging(req, bodyBytes, res)
-			}
-
-		case "error":
-			if res.StatusCode >= 500 {
-				b.answLogging(req, bodyBytes, res)
-			}
-		}
-	}
+	b.answLogging(req, bodyBytes, res)
 
 	sample.SetProtoCode(res.StatusCode)
 	defer res.Body.Close()
@@ -295,24 +277,25 @@ func (b *BaseGun) verboseLogging(res *http.Response) {
 }
 
 func (b *BaseGun) answLogging(req *http.Request, bodyBytes []byte, res *http.Response) {
-	isBody := false
-	if bodyBytes != nil {
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-		isBody = true
-	}
-	dump, err := httputil.DumpRequestOut(req, isBody)
-	if err != nil {
-		zap.L().Error("Error dumping request: %s", zap.Error(err))
-	}
-	msg := fmt.Sprintf("REQUEST:\n%s\n\n", string(dump))
-	b.AnswLog.Debug(msg)
+	b.AnswLog.Report("REQUEST/RESPONSE", []zapcore.Field{zap.Int(answlog.FilterAndSampleGroup, res.StatusCode)}, func() []zapcore.Field {
+		isBody := false
+		if bodyBytes != nil {
+			req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			isBody = true
+		}
 
-	dump, err = httputil.DumpResponse(res, true)
-	if err != nil {
-		zap.L().Error("Error dumping response: %s", zap.Error(err))
-	}
-	msg = fmt.Sprintf("RESPONSE:\n%s", string(dump))
-	b.AnswLog.Debug(msg)
+		reqDump, err := httputil.DumpRequestOut(req, isBody)
+		if err != nil {
+			reqDump = fmt.Appendf(nil, "Error dumping request: %s", err.Error())
+		}
+
+		respDump, err := httputil.DumpResponse(res, true)
+		if err != nil {
+			respDump = fmt.Appendf(nil, "Error dumping response: %s", err.Error())
+		}
+
+		return []zapcore.Field{zap.String("req", string(reqDump)), zap.String("resp", string(respDump))}
+	})
 }
 
 func autotag(depth int, URL *url.URL) string {

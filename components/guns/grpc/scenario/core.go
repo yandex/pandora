@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/jhump/protoreflect/dynamic"
+	"github.com/yandex/pandora/components/answ/filter"
+	"github.com/yandex/pandora/components/answ/sampler"
 	grpcgun "github.com/yandex/pandora/components/guns/grpc"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
@@ -27,7 +29,7 @@ type GunConfig struct {
 	Timeout         time.Duration     `config:"timeout"` // grpc request timeout
 	TLS             bool              `config:"tls"`
 	DialOptions     GrpcDialOptions   `config:"dial_options"`
-	AnswLog         AnswLogConfig     `config:"answlog"`
+	AnswLog         answlog.Config    `config:"answlog"`
 }
 
 type GrpcDialOptions struct {
@@ -35,25 +37,25 @@ type GrpcDialOptions struct {
 	Timeout   time.Duration `config:"timeout"`
 }
 
-type AnswLogConfig struct {
-	Enabled bool   `config:"enabled"`
-	Path    string `config:"path"`
-	Filter  string `config:"filter" valid:"oneof=all warning error"`
-}
-
 func DefaultGunConfig() GunConfig {
 	return GunConfig{
 		Target: "default target",
-		AnswLog: AnswLogConfig{
-			Enabled: false,
+		AnswLog: answlog.Config{
+			Enabled: true,
 			Path:    "answ.log",
-			Filter:  "all",
+			Filter:  filter.FilterAll,
+			Sampling: answlog.Sampling{
+				Enabled: true,
+				Pattern: sampler.FactorPattern{
+					Factor: 10,
+				},
+			},
 		},
 	}
 }
 
 func NewGun(conf GunConfig) *Gun {
-	answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled)
+	answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled, answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)), answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 20), conf.AnswLog.Sampling.Enabled))
 	r := rand.New(rand.NewSource(0)) //TODO: use real random
 	return &Gun{
 		templ: NewTextTemplater(),
@@ -67,10 +69,11 @@ func NewGun(conf GunConfig) *Gun {
 				Authority: conf.DialOptions.Authority,
 				Timeout:   conf.DialOptions.Timeout,
 			},
-			AnswLog: grpcgun.AnswLogConfig{
-				Enabled: conf.AnswLog.Enabled,
-				Path:    conf.AnswLog.Path,
-				Filter:  conf.AnswLog.Filter,
+			AnswLog: answlog.Config{
+				Enabled:  conf.AnswLog.Enabled,
+				Path:     conf.AnswLog.Path,
+				Filter:   conf.AnswLog.Filter,
+				Sampling: conf.AnswLog.Sampling,
 			},
 		},
 			AnswLog: answLog},
@@ -204,7 +207,7 @@ func (g *Gun) shootStep(step *Call, sample *netsample.Sample, ammoName string, t
 		g.gun.GunDeps.Log.Error("response error", zap.Error(grpcErr))
 	}
 
-	g.gun.Answ(&method, message, step.Metadata, out, grpcErr, code)
+	g.gun.AnswLogging(&method, message, step.Metadata, out, grpcErr)
 
 	for _, postProcessor := range step.Postprocessors {
 		pp, err := postProcessor.Process(out, code)

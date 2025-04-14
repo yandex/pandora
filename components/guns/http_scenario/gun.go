@@ -17,7 +17,9 @@ import (
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/warmup"
+	"github.com/yandex/pandora/lib/answlog"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type Gun interface {
@@ -190,9 +192,8 @@ func (g *ScenarioGun) shootStep(step Request, sample *netsample.Sample, ammoName
 	if g.base.DebugLog {
 		g.verboseLogging(resp, reqBytes, respBodyBytes)
 	}
-	if g.base.Config.AnswLog.Enabled {
-		g.answReqRespLogging(reqBytes, resp, respBodyBytes, stepLogID)
-	}
+
+	g.answLogging(reqBytes, resp, respBodyBytes, stepLogID)
 
 	// Postprocessor
 	postprocessorVars := map[string]any{}
@@ -325,35 +326,18 @@ func (g *ScenarioGun) verboseLogging(resp *http.Response, reqBody, respBody []by
 }
 
 func (g *ScenarioGun) answLogging(bodyBytes []byte, resp *http.Response, respBytes []byte, stepName string) {
-	msg := fmt.Sprintf("REQUEST[%s]:\n%s\n", stepName, string(bodyBytes))
-	g.base.AnswLog.Debug(msg)
-
-	headers := ""
-	var writer bytes.Buffer
-	err := resp.Header.Write(&writer)
-	if err == nil {
-		headers = writer.String()
-	} else {
-		g.base.AnswLog.Error("error writing header", zap.Error(err))
-	}
-
-	msg = fmt.Sprintf("RESPONSE[%s]:\n%s %s\n%s\n%s\n", stepName, resp.Proto, resp.Status, headers, string(respBytes))
-	g.base.AnswLog.Debug(msg)
-}
-
-func (g *ScenarioGun) answReqRespLogging(reqBytes []byte, resp *http.Response, respBytes []byte, stepName string) {
-	switch g.base.Config.AnswLog.Filter {
-	case "all":
-		g.answLogging(reqBytes, resp, respBytes, stepName)
-	case "warning":
-		if resp.StatusCode >= 400 {
-			g.answLogging(reqBytes, resp, respBytes, stepName)
+	g.base.AnswLog.Report("REQUEST/RESPONSE", []zapcore.Field{zap.String("step name", stepName), zap.String("proto", resp.Proto), zap.Int(answlog.FilterAndSampleGroup, resp.StatusCode)}, func() []zapcore.Field {
+		headers := ""
+		var writer bytes.Buffer
+		err := resp.Header.Write(&writer)
+		if err == nil {
+			headers = writer.String()
+		} else {
+			headers = fmt.Sprintf("Error writing headers: %s", err.Error())
 		}
-	case "error":
-		if resp.StatusCode >= 500 {
-			g.answLogging(reqBytes, resp, respBytes, stepName)
-		}
-	}
+
+		return []zapcore.Field{zap.String("req", string(bodyBytes)), zap.String("headers", headers), zap.String("resp", string(respBytes))}
+	})
 }
 
 func (g *ScenarioGun) reportErr(sample *netsample.Sample, err error) {

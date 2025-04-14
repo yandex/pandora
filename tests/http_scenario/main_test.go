@@ -20,6 +20,7 @@ import (
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/plugin/pluginconfig"
 	"github.com/yandex/pandora/examples/http/server"
+	"github.com/yandex/pandora/lib/answlog"
 	"go.uber.org/zap"
 )
 
@@ -71,13 +72,13 @@ func (s *GunSuite) SetupTest() {
 
 func (s *GunSuite) Test_SuccessScenario() {
 	ctx := context.Background()
-	log := zap.NewNop()
 	g := httpscenario.NewHTTPGun(phttp.GunConfig{
 		Target:         s.addr,
 		TargetResolved: s.addr,
 		Client:         phttp.ClientConfig{},
-	}, log)
+	}, answlog.NewNop())
 
+	log := zap.NewNop()
 	gunDeps := core.GunDeps{Ctx: ctx, Log: log, PoolID: "pool_id", InstanceID: 1}
 	aggr := &Aggregator{}
 	err := g.Bind(aggr, gunDeps)

@@ -21,6 +21,7 @@ import (
 	"github.com/yandex/pandora/core/plugin/pluginconfig"
 	"github.com/yandex/pandora/core/warmup"
 	"github.com/yandex/pandora/examples/grpc/server"
+	"github.com/yandex/pandora/lib/answlog"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -84,7 +85,7 @@ func (s *GunSuite) Test_Scenario() {
 		Timeout:     0,
 		TLS:         false,
 		DialOptions: grpcscenario.GrpcDialOptions{},
-		AnswLog:     grpcscenario.AnswLogConfig{},
+		AnswLog:     answlog.Config{},
 	}
 	g := grpcscenario.NewGun(cfg)
 
@@ -144,7 +145,7 @@ func (s *GunSuite) Test_FullScenario() {
 		Timeout:     0,
 		TLS:         false,
 		DialOptions: grpcscenario.GrpcDialOptions{},
-		AnswLog:     grpcscenario.AnswLogConfig{},
+		AnswLog:     answlog.Config{},
 	}
 	g := grpcscenario.NewGun(gunConfig)
 
@@ -191,7 +192,7 @@ func (s *GunSuite) Test_ErrorScenario() {
 		Timeout:     0,
 		TLS:         false,
 		DialOptions: grpcscenario.GrpcDialOptions{},
-		AnswLog:     grpcscenario.AnswLogConfig{},
+		AnswLog:     answlog.Config{},
 	}
 	g := grpcscenario.NewGun(cfg)
 

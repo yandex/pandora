@@ -11,6 +11,7 @@ import (
 	ammomock "github.com/yandex/pandora/components/guns/http/mocks"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/config"
+	"github.com/yandex/pandora/lib/answlog"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
@@ -37,7 +38,7 @@ func TestBaseGun_integration(t *testing.T) {
 		actualReq = req
 	}))
 	defer server.Close()
-	log := zap.NewNop()
+	log := answlog.NewNop()
 	conf := DefaultHTTPGunConfig()
 	conf.Target = host + ":80"
 	targetResolved := strings.TrimPrefix(server.URL, "http://")
@@ -87,7 +88,7 @@ func TestHTTP(t *testing.T) {
 				server.Start()
 			}
 			defer server.Close()
-			log := zap.NewNop()
+			log := answlog.NewNop()
 			conf := DefaultHTTPGunConfig()
 			conf.Target = server.Listener.Addr().String()
 			conf.SSL = tt.https
@@ -129,7 +130,7 @@ func TestHTTP_Redirect(t *testing.T) {
 				}
 			}))
 			defer server.Close()
-			log := zap.NewNop()
+			log := answlog.NewNop()
 			conf := DefaultHTTPGunConfig()
 			conf.Target = server.Listener.Addr().String()
 			conf.Client.Redirect = tt.redirect
@@ -168,7 +169,7 @@ func TestHTTP_notSupportHTTP2(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, res.StatusCode, http.StatusForbidden)
 
-	log := zap.NewNop()
+	log := answlog.NewNop()
 	conf := DefaultHTTPGunConfig()
 	conf.Target = server.Listener.Addr().String()
 	conf.SSL = true
@@ -192,7 +193,7 @@ func TestHTTP2(t *testing.T) {
 			}
 		}))
 		defer server.Close()
-		log := zap.NewNop()
+		log := answlog.NewNop()
 		conf := DefaultHTTP2GunConfig()
 		conf.Target = server.Listener.Addr().String()
 		conf.TargetResolved = conf.Target
@@ -208,7 +209,7 @@ func TestHTTP2(t *testing.T) {
 			zap.S().Info("Served")
 		}))
 		defer server.Close()
-		log := zap.NewNop()
+		log := answlog.NewNop()
 		conf := DefaultHTTP2GunConfig()
 		conf.Target = server.Listener.Addr().String()
 		conf.TargetResolved = conf.Target
@@ -231,7 +232,7 @@ func TestHTTP2(t *testing.T) {
 			zap.S().Info("Served")
 		}))
 		defer server.Close()
-		log := zap.NewNop()
+		log := answlog.NewNop()
 		conf := DefaultHTTP2GunConfig()
 		conf.Target = server.Listener.Addr().String()
 		conf.SSL = false

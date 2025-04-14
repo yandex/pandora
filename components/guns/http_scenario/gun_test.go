@@ -14,6 +14,7 @@ import (
 	phttp "github.com/yandex/pandora/components/guns/http"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
+	"github.com/yandex/pandora/lib/answlog"
 	"go.uber.org/zap"
 )
 
@@ -188,7 +189,7 @@ func TestBaseGun_shoot(t *testing.T) {
 			aggregator := netsample.NewMockAggregator(t)
 			aggregator.On("Report", mock.Anything)
 
-			g := &ScenarioGun{base: &phttp.BaseGun{Aggregator: aggregator, Client: client}}
+			g := &ScenarioGun{base: &phttp.BaseGun{Aggregator: aggregator, Client: client, AnswLog: answlog.NewNop()}}
 			tt.wantErr(t, g.shoot(tt.ammoMock, tt.templateVars), fmt.Sprintf("shoot(%v)", tt.ammoMock))
 			require.Equal(t, tt.wantTempateVars, tt.templateVars)
 

@@ -10,11 +10,13 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
+	"github.com/yandex/pandora/components/answ/filter"
+	"github.com/yandex/pandora/components/answ/sampler"
+	"github.com/yandex/pandora/lib/answlog"
 	"github.com/yandex/pandora/lib/netutil"
-	"go.uber.org/zap"
 )
 
-func NewConnectGun(cfg GunConfig, answLog *zap.Logger) *BaseGun {
+func NewConnectGun(cfg GunConfig, answLog *answlog.Logger) *BaseGun {
 	if cfg.TargetResolved == "" {
 		cfg.TargetResolved = cfg.Target
 	}
@@ -31,10 +33,16 @@ func DefaultConnectGunConfig() GunConfig {
 			URIElements: 2,
 			NoTagOnly:   true,
 		},
-		AnswLog: AnswLogConfig{
-			Enabled: false,
+		AnswLog: answlog.Config{
+			Enabled: true,
 			Path:    "answ.log",
-			Filter:  "error",
+			Filter:  filter.FilterAll,
+			Sampling: answlog.Sampling{
+				Enabled: true,
+				Pattern: sampler.FactorPattern{
+					Factor: 10,
+				},
+			},
 		},
 		HTTPTrace: HTTPTraceConfig{
 			DumpEnabled:  false,

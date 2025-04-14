@@ -2,7 +2,9 @@ package phttp
 
 import (
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
+	"github.com/yandex/pandora/components/answ/filter"
+	"github.com/yandex/pandora/components/answ/sampler"
+	"github.com/yandex/pandora/lib/answlog"
 )
 
 type GunConfig struct {
@@ -12,7 +14,7 @@ type GunConfig struct {
 	SSL            bool
 
 	AutoTag      AutoTagConfig   `config:"auto-tag"`
-	AnswLog      AnswLogConfig   `config:"answlog"`
+	AnswLog      answlog.Config  `config:"answlog"`
 	HTTPTrace    HTTPTraceConfig `config:"httptrace"`
 	SharedClient struct {
 		ClientNumber int  `config:"client-number,omitempty"`
@@ -20,7 +22,7 @@ type GunConfig struct {
 	} `config:"shared-client,omitempty"`
 }
 
-func NewHTTP1Gun(cfg GunConfig, answLog *zap.Logger) *BaseGun {
+func NewHTTP1Gun(cfg GunConfig, answLog *answlog.Logger) *BaseGun {
 	return NewBaseGun(HTTP1ClientConstructor, cfg, answLog)
 }
 
@@ -33,7 +35,7 @@ func HTTP1ClientConstructor(clientConfig ClientConfig, target string) Client {
 var _ ClientConstructor = HTTP1ClientConstructor
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
-func NewHTTP2Gun(cfg GunConfig, answLog *zap.Logger) (*BaseGun, error) {
+func NewHTTP2Gun(cfg GunConfig, answLog *answlog.Logger) (*BaseGun, error) {
 	if !cfg.SSL {
 		// Open issue on github if you really need this feature.
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
@@ -59,10 +61,16 @@ func DefaultHTTPGunConfig() GunConfig {
 			URIElements: 2,
 			NoTagOnly:   true,
 		},
-		AnswLog: AnswLogConfig{
-			Enabled: false,
+		AnswLog: answlog.Config{
+			Enabled: true,
 			Path:    "answ.log",
-			Filter:  "error",
+			Filter:  filter.FilterAll,
+			Sampling: answlog.Sampling{
+				Enabled: true,
+				Pattern: sampler.FactorPattern{
+					Factor: 10,
+				},
+			},
 		},
 		HTTPTrace: HTTPTraceConfig{
 			DumpEnabled:  false,
@@ -79,10 +87,16 @@ func DefaultHTTP2GunConfig() GunConfig {
 			URIElements: 2,
 			NoTagOnly:   true,
 		},
-		AnswLog: AnswLogConfig{
-			Enabled: false,
+		AnswLog: answlog.Config{
+			Enabled: true,
 			Path:    "answ.log",
-			Filter:  "error",
+			Filter:  filter.FilterAll,
+			Sampling: answlog.Sampling{
+				Enabled: true,
+				Pattern: sampler.FactorPattern{
+					Factor: 10,
+				},
+			},
 		},
 		HTTPTrace: HTTPTraceConfig{
 			DumpEnabled:  false,
