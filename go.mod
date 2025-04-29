@@ -24,7 +24,7 @@ require (
 	github.com/zclconf/go-cty v1.13.2
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240707233637-46b078467d37
+	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
 	golang.org/x/net v0.35.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
 	google.golang.org/grpc v1.71.0
@@ -85,6 +85,8 @@ replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/grpc-ecosystem/g
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.22.0
 
+replace go.temporal.io/server => go.temporal.io/server v1.25.2
+
 replace github.com/jackc/pgtype => github.com/jackc/pgtype v1.12.0
 
 replace github.com/aws/aws-sdk-go => github.com/aws/aws-sdk-go v1.46.7
@@ -137,11 +139,9 @@ replace github.com/temporalio/features/features => github.com/temporalio/feature
 
 replace github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20231218231852-27c681667dae
 
-replace github.com/temporalio/omes => github.com/temporalio/omes v0.0.0-20240429210145-5fa5c107b7a8
+replace github.com/temporalio/omes => github.com/temporalio/omes v0.0.0-20240701113332-211647aa9dae
 
 replace github.com/aleroyer/rsyslog_exporter => github.com/prometheus-community/rsyslog_exporter v1.1.0
-
-replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.20.5
 
 replace github.com/prometheus/client_model => github.com/prometheus/client_model v0.6.1
 
@@ -152,7 +152,5 @@ replace github.com/distribution/reference => github.com/distribution/reference v
 replace github.com/jackc/pgconn => github.com/jackc/pgconn v1.14.0
 
 replace github.com/jackc/pgproto3/v2 => github.com/jackc/pgproto3/v2 v2.3.2
-
-replace github.com/nexus-rpc/sdk-go => github.com/nexus-rpc/sdk-go v0.0.7
 
 replace github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.24
