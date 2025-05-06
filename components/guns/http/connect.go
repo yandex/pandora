@@ -34,7 +34,7 @@ func DefaultConnectGunConfig() GunConfig {
 			NoTagOnly:   true,
 		},
 		AnswLog: answlog.Config{
-			Enabled: true,
+			Enabled: false,
 			Path:    "answ.log",
 			Filter:  filter.FilterAll,
 			Sampling: answlog.Sampling{

@@ -62,7 +62,7 @@ func DefaultHTTPGunConfig() GunConfig {
 			NoTagOnly:   true,
 		},
 		AnswLog: answlog.Config{
-			Enabled: true,
+			Enabled: false,
 			Path:    "answ.log",
 			Filter:  filter.FilterAll,
 			Sampling: answlog.Sampling{
@@ -88,7 +88,7 @@ func DefaultHTTP2GunConfig() GunConfig {
 			NoTagOnly:   true,
 		},
 		AnswLog: answlog.Config{
-			Enabled: true,
+			Enabled: false,
 			Path:    "answ.log",
 			Filter:  filter.FilterAll,
 			Sampling: answlog.Sampling{

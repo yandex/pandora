@@ -76,7 +76,7 @@ func DefaultGunConfig() GunConfig {
 	return GunConfig{
 		Target: "default target",
 		AnswLog: answlog.Config{
-			Enabled: true,
+			Enabled: false,
 			Path:    "answ.log",
 			Filter:  filter.FilterAll,
 			Sampling: answlog.Sampling{
