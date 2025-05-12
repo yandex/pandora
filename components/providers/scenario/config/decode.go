@@ -1,10 +1,14 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
 
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/spf13/afero"
 	"github.com/yandex/pandora/components/providers/scenario/vs"
 	"github.com/yandex/pandora/core/config"
 	"github.com/yandex/pandora/lib/math"
@@ -12,12 +16,31 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func ParseAmmoConfig(file io.Reader) (*AmmoConfig, error) {
-	const op = "scenario/decoder.ParseAmmoConfig"
+var ErrUnknownFormat = errors.New("Unknown file format, must be yaml or hcl")
+
+func ParseAmmoConfig(file afero.File) (*AmmoConfig, error) {
+	const op = "scenario/decode.ParseAmmoConfig"
+
 	bytes, err := io.ReadAll(file)
 	if err != nil {
-		return nil, fmt.Errorf("%s, io.ReadAll, %w", op, err)
+		return nil, fmt.Errorf("%s, cant read config file: %w", op, err)
 	}
+
+	var yamlData = make(map[string]any)
+	if err := yaml.Unmarshal(bytes, yamlData); err == nil {
+		return ParseYamlAmmoConfig(bytes)
+	}
+
+	if _, diag := hclsyntax.ParseConfig(bytes, file.Name(), hcl.InitialPos); !diag.HasErrors() {
+		return ParseHCLAmmoConfig(bytes, file.Name())
+	}
+
+	return nil, ErrUnknownFormat
+}
+
+func ParseYamlAmmoConfig(bytes []byte) (*AmmoConfig, error) {
+	const op = "scenario/decode.ParseYamlConfig"
+
 	cfg, err := DecodeMap(bytes)
 	if err != nil {
 		return nil, fmt.Errorf("%s, decodeMap, %w", op, err)
@@ -26,7 +49,8 @@ func ParseAmmoConfig(file io.Reader) (*AmmoConfig, error) {
 }
 
 func ConvertHCLToAmmo(ammo AmmoHCL) (*AmmoConfig, error) {
-	const op = "scenario.ConvertHCLToAmmo"
+	const op = "scenario/decode.ConvertHCLToAmmo"
+
 	bytes, err := yaml.Marshal(ammo)
 	if err != nil {
 		return nil, fmt.Errorf("%s, cant yaml.Marshal: %w", op, err)
@@ -39,7 +63,7 @@ func ConvertHCLToAmmo(ammo AmmoHCL) (*AmmoConfig, error) {
 }
 
 func DecodeMap(bytes []byte) (*AmmoConfig, error) {
-	const op = "scenario/decoder.decodeMap"
+	const op = "scenario/decode.decodeMap"
 
 	var ammoCfg AmmoConfig
 

@@ -172,6 +172,7 @@
   "components/providers/scenario/testdata/grpc_payload.yaml":"load/projects/pandora/components/providers/scenario/testdata/grpc_payload.yaml",
   "components/providers/scenario/testdata/http_payload.hcl":"load/projects/pandora/components/providers/scenario/testdata/http_payload.hcl",
   "components/providers/scenario/testdata/http_payload.yaml":"load/projects/pandora/components/providers/scenario/testdata/http_payload.yaml",
+  "components/providers/scenario/testdata/incorrect_payload":"load/projects/pandora/components/providers/scenario/testdata/incorrect_payload",
   "components/providers/scenario/vs/storage.go":"load/projects/pandora/components/providers/scenario/vs/storage.go",
   "components/providers/scenario/vs/vs.go":"load/projects/pandora/components/providers/scenario/vs/vs.go",
   "components/providers/scenario/vs/vs_csv.go":"load/projects/pandora/components/providers/scenario/vs/vs_csv.go",

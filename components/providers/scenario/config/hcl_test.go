@@ -1,6 +1,7 @@
 package config
 
 import (
+	"io"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -9,7 +10,7 @@ import (
 	"github.com/yandex/pandora/lib/pointer"
 )
 
-func TestParseHCLFile(t *testing.T) {
+func TestParseHCL(t *testing.T) {
 	fs := afero.NewOsFs()
 
 	t.Run("http", func(t *testing.T) {
@@ -17,7 +18,10 @@ func TestParseHCLFile(t *testing.T) {
 		require.NoError(t, err)
 		defer file.Close()
 
-		ammoHCL, err := ParseHCLFile(file)
+		bytes, err := io.ReadAll(file)
+		require.NoError(t, err)
+
+		ammoHCL, err := ParseHCL(bytes, "http_payload.hcl")
 		require.NoError(t, err)
 
 		assert.Len(t, ammoHCL.Scenarios, 2)
@@ -45,7 +49,10 @@ func TestParseHCLFile(t *testing.T) {
 		require.NoError(t, err)
 		defer file.Close()
 
-		ammoHCL, err := ParseHCLFile(file)
+		bytes, err := io.ReadAll(file)
+		require.NoError(t, err)
+
+		ammoHCL, err := ParseHCL(bytes, "grpc_payload.hcl")
 		require.NoError(t, err)
 
 		assert.Len(t, ammoHCL.Scenarios, 2)

@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/spf13/afero"
 	grpcgun "github.com/yandex/pandora/components/guns/grpc/scenario"
@@ -71,26 +70,8 @@ func ReadAmmoConfig(fs afero.Fs, fileName string) (ammoCfg *AmmoConfig, err erro
 			}
 		}
 	}()
-	stat, statErr := file.Stat()
-	if statErr != nil {
-		err = fmt.Errorf("%s file.Stat() %w", op, err)
-		return
-	}
-	lowerName := strings.ToLower(stat.Name())
-	switch {
-	case strings.HasSuffix(lowerName, ".hcl"):
-		ammoHcl, parseErr := ParseHCLFile(file)
-		if parseErr != nil {
-			err = fmt.Errorf("%s ParseHCLFile %w", op, parseErr)
-			return
-		}
-		ammoCfg, err = ConvertHCLToAmmo(ammoHcl)
-	case strings.HasSuffix(lowerName, ".yaml") || strings.HasPrefix(lowerName, ".yml"):
-		ammoCfg, err = ParseAmmoConfig(file)
-	default:
-		err = fmt.Errorf("%s file extension should be .yaml or .yml", op)
-		return
-	}
+
+	ammoCfg, err = ParseAmmoConfig(file)
 	if err != nil {
 		err = fmt.Errorf("%s ParseAmmoConfig %w", op, err)
 		return

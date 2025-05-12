@@ -158,3 +158,39 @@ scenarios:
 		})
 	}
 }
+
+func Test_ParseAmmoConfig(t *testing.T) {
+	_import.Import(testFS)
+	testOnce.Do(func() {
+		pluginconfig.AddHooks()
+	})
+
+	t.Run("yaml", func(t *testing.T) {
+		file, err := testFS.Open("../testdata/http_payload.yaml")
+		require.NoError(t, err)
+		defer file.Close()
+
+		_, err = config.ParseAmmoConfig(file)
+		require.NoError(t, err)
+	})
+
+	t.Run("hcl", func(t *testing.T) {
+		file, err := testFS.Open("../testdata/http_payload.hcl")
+		require.NoError(t, err)
+		defer file.Close()
+
+		_, err = config.ParseAmmoConfig(file)
+		require.NoError(t, err)
+	})
+
+	t.Run("incorrect_format", func(t *testing.T) {
+		file, err := testFS.Open("../testdata/incorrect_payload")
+		require.NoError(t, err)
+		defer file.Close()
+
+		_, err = config.ParseAmmoConfig(file)
+		require.Error(t, err)
+
+		assert.EqualError(t, err, "Unknown file format, must be yaml or hcl")
+	})
+}

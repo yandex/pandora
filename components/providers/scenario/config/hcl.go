@@ -2,12 +2,10 @@ package config
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclparse"
-	"github.com/spf13/afero"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
 	"github.com/zclconf/go-cty/cty/function/stdlib"
@@ -93,16 +91,26 @@ type CallPreprocessorHCL struct {
 	Mapping map[string]string `hcl:"mapping"`
 }
 
-func ParseHCLFile(file afero.File) (AmmoHCL, error) {
-	const op = "hcl.ParseHCLFile"
+func ParseHCLAmmoConfig(bytes []byte, filename string) (*AmmoConfig, error) {
+	const op = "scenario/hcl.ParseHclConfig"
 
-	bytes, err := io.ReadAll(file)
+	hclAmmo, err := ParseHCL(bytes, filename)
 	if err != nil {
-		return AmmoHCL{}, fmt.Errorf("%s, io.ReadAll, %w", op, err)
+		return nil, fmt.Errorf("%s, cant parse hcl: %w", op, err)
 	}
 
+	ammoCfg, err := ConvertHCLToAmmo(hclAmmo)
+	if err != nil {
+		return nil, fmt.Errorf("%s, cant convert hcl to ammo: %w", op, err)
+	}
+	return ammoCfg, nil
+}
+
+func ParseHCL(bytes []byte, filename string) (AmmoHCL, error) {
+	const op = "hcl.ParseHCL"
+
 	parser := hclparse.NewParser()
-	f, diag := parser.ParseHCL(bytes, file.Name())
+	f, diag := parser.ParseHCL(bytes, filename)
 	if diag.HasErrors() {
 		return AmmoHCL{}, diag
 	}
