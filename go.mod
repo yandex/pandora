@@ -55,7 +55,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
-	github.com/shopspring/decimal v1.3.1 // indirect
+	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
@@ -69,7 +69,7 @@ require (
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/tools v0.30.1-0.20250221230316-5055f70f240c // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250303144028-a0af3efb3deb // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -81,11 +81,11 @@ replace github.com/insomniacslk/dhcp => github.com/insomniacslk/dhcp v0.0.0-2021
 
 replace cloud.google.com/go/pubsub => cloud.google.com/go/pubsub v1.30.0
 
-replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
-
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.22.0
 
-replace go.temporal.io/server => go.temporal.io/server v1.25.2
+replace go.temporal.io/server => go.temporal.io/server v1.26.2
+
+replace go.temporal.io/sdk => go.temporal.io/sdk v1.31.0
 
 replace github.com/jackc/pgtype => github.com/jackc/pgtype v1.12.0
 
@@ -154,3 +154,7 @@ replace github.com/jackc/pgconn => github.com/jackc/pgconn v1.14.0
 replace github.com/jackc/pgproto3/v2 => github.com/jackc/pgproto3/v2 v2.3.2
 
 replace github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.24
+
+replace github.com/docker/docker => github.com/docker/docker v25.0.6+incompatible
+
+replace github.com/testcontainers/testcontainers-go => github.com/testcontainers/testcontainers-go v0.31.0
