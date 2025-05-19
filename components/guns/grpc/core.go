@@ -85,6 +85,7 @@ func DefaultGunConfig() GunConfig {
 					Factor: 10,
 				},
 			},
+			Masking: &answlog.PassAllMasker{},
 		},
 	}
 }
@@ -162,7 +163,13 @@ func (g *Gun) prepareClientPool() (*clientpool.Pool[grpcdynamic.Stub], error) {
 }
 
 func NewGun(conf GunConfig) *Gun {
-	answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled, answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)), answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 20), conf.AnswLog.Sampling.Enabled))
+	answLog := answlog.Init(
+		conf.AnswLog.Path,
+		conf.AnswLog.Enabled,
+		answlog.WithFilter(filter.NewGRPCStatusCodeFilter(conf.AnswLog.Filter)),
+		answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 20), conf.AnswLog.Sampling.Enabled),
+		answlog.WithMasker(conf.AnswLog.Masking),
+	)
 	return &Gun{Conf: conf, AnswLog: answLog}
 }
 

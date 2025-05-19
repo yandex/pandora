@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/spf13/afero"
 	"github.com/yandex/pandora/cli"
+	"github.com/yandex/pandora/components/answ"
 	grpc "github.com/yandex/pandora/components/grpc/import"
 	"github.com/yandex/pandora/components/guns"
 	phttp "github.com/yandex/pandora/components/phttp/import"
@@ -17,6 +18,7 @@ func main() {
 	phttp.Import(fs)
 	grpc.Import(fs)
 	guns.Import(fs)
+	answ.Import()
 
 	cli.Run()
 }

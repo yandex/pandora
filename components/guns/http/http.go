@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/components/answ/filter"
 	"github.com/yandex/pandora/components/answ/sampler"
+	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/lib/answlog"
 )
 
@@ -26,6 +27,19 @@ func NewHTTP1Gun(cfg GunConfig, answLog *answlog.Logger) *BaseGun {
 	return NewBaseGun(HTTP1ClientConstructor, cfg, answLog)
 }
 
+func NewHTTP1GunFactory(conf GunConfig) func() core.Gun {
+	targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Target)
+	conf.TargetResolved = targetResolved
+	answLog := answlog.Init(
+		conf.AnswLog.Path,
+		conf.AnswLog.Enabled,
+		answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)),
+		answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 600), conf.AnswLog.Sampling.Enabled),
+		answlog.WithMasker(conf.AnswLog.Masking),
+	)
+	return func() core.Gun { return WrapGun(NewHTTP1Gun(conf, answLog)) }
+}
+
 func HTTP1ClientConstructor(clientConfig ClientConfig, target string) Client {
 	transport := NewTransport(clientConfig.Transport, NewDialer(clientConfig.Dialer).DialContext, target)
 	client := NewRedirectingClient(transport, clientConfig.Redirect)
@@ -41,6 +55,22 @@ func NewHTTP2Gun(cfg GunConfig, answLog *answlog.Logger) (*BaseGun, error) {
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
 	}
 	return NewBaseGun(HTTP2ClientConstructor, cfg, answLog), nil
+}
+
+func NewHTTP2GunFactory(conf GunConfig) func() (core.Gun, error) {
+	targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Target)
+	conf.TargetResolved = targetResolved
+	answLog := answlog.Init(
+		conf.AnswLog.Path,
+		conf.AnswLog.Enabled,
+		answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)),
+		answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 600), conf.AnswLog.Sampling.Enabled),
+		answlog.WithMasker(conf.AnswLog.Masking),
+	)
+	return func() (core.Gun, error) {
+		gun, err := NewHTTP2Gun(conf, answLog)
+		return WrapGun(gun), err
+	}
 }
 
 func HTTP2ClientConstructor(clientConfig ClientConfig, target string) Client {
@@ -71,6 +101,7 @@ func DefaultHTTPGunConfig() GunConfig {
 					Factor: 10,
 				},
 			},
+			Masking: &answlog.PassAllMasker{},
 		},
 		HTTPTrace: HTTPTraceConfig{
 			DumpEnabled:  false,
@@ -97,6 +128,7 @@ func DefaultHTTP2GunConfig() GunConfig {
 					Factor: 10,
 				},
 			},
+			Masking: &answlog.PassAllMasker{},
 		},
 		HTTPTrace: HTTPTraceConfig{
 			DumpEnabled:  false,

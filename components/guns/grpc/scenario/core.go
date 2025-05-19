@@ -50,12 +50,19 @@ func DefaultGunConfig() GunConfig {
 					Factor: 10,
 				},
 			},
+			Masking: &answlog.PassAllMasker{},
 		},
 	}
 }
 
 func NewGun(conf GunConfig) *Gun {
-	answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled, answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)), answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 20), conf.AnswLog.Sampling.Enabled))
+	answLog := answlog.Init(
+		conf.AnswLog.Path,
+		conf.AnswLog.Enabled,
+		answlog.WithFilter(filter.NewGRPCStatusCodeFilter(conf.AnswLog.Filter)),
+		answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 20), conf.AnswLog.Sampling.Enabled),
+		answlog.WithMasker(conf.AnswLog.Masking),
+	)
 	r := rand.New(rand.NewSource(0)) //TODO: use real random
 	return &Gun{
 		templ: NewTextTemplater(),
@@ -74,6 +81,7 @@ func NewGun(conf GunConfig) *Gun {
 				Path:     conf.AnswLog.Path,
 				Filter:   conf.AnswLog.Filter,
 				Sampling: conf.AnswLog.Sampling,
+				Masking:  conf.AnswLog.Masking,
 			},
 		},
 			AnswLog: answLog},

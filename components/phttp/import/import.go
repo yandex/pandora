@@ -2,15 +2,11 @@ package phttp
 
 import (
 	"github.com/spf13/afero"
-	"github.com/yandex/pandora/components/answ/filter"
-	"github.com/yandex/pandora/components/answ/sampler"
 	phttp "github.com/yandex/pandora/components/guns/http"
 	scenarioGun "github.com/yandex/pandora/components/guns/http_scenario"
 	httpProvider "github.com/yandex/pandora/components/providers/http"
 	scenarioProvider "github.com/yandex/pandora/components/providers/scenario/import"
-	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/register"
-	"github.com/yandex/pandora/lib/answlog"
 )
 
 func Import(fs afero.Fs) {
@@ -18,29 +14,7 @@ func Import(fs afero.Fs) {
 	scenarioGun.Import(fs)
 	scenarioProvider.Import(fs)
 
-	register.Gun("http", func(conf phttp.GunConfig) func() core.Gun {
-		targetResolved, _ := phttp.PreResolveTargetAddr(&conf.Client, conf.Target)
-		conf.TargetResolved = targetResolved
-		answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled, answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)), answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 600), conf.AnswLog.Sampling.Enabled))
-		return func() core.Gun { return phttp.WrapGun(phttp.NewHTTP1Gun(conf, answLog)) }
-	}, phttp.DefaultHTTPGunConfig)
-
-	register.Gun("http2", func(conf phttp.GunConfig) func() (core.Gun, error) {
-		targetResolved, _ := phttp.PreResolveTargetAddr(&conf.Client, conf.Target)
-		conf.TargetResolved = targetResolved
-		answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled, answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)), answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 600), conf.AnswLog.Sampling.Enabled))
-		return func() (core.Gun, error) {
-			gun, err := phttp.NewHTTP2Gun(conf, answLog)
-			return phttp.WrapGun(gun), err
-		}
-	}, phttp.DefaultHTTP2GunConfig)
-
-	register.Gun("connect", func(conf phttp.GunConfig) func() core.Gun {
-		conf.Target, _ = phttp.PreResolveTargetAddr(&conf.Client, conf.Target)
-		conf.TargetResolved = conf.Target
-		answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled, answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)), answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 600), conf.AnswLog.Sampling.Enabled))
-		return func() core.Gun {
-			return phttp.WrapGun(phttp.NewConnectGun(conf, answLog))
-		}
-	}, phttp.DefaultConnectGunConfig)
+	register.Gun("http", phttp.NewHTTP1GunFactory, phttp.DefaultHTTPGunConfig)
+	register.Gun("http2", phttp.NewHTTP2GunFactory, phttp.DefaultHTTP2GunConfig)
+	register.Gun("connect", phttp.NewConnectGunFactory, phttp.DefaultConnectGunConfig)
 }

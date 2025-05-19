@@ -10,11 +10,9 @@ import (
 )
 
 func Import(fs afero.Fs) {
-
 	register.Provider("grpc/json", func(conf grpcjson.Config) core.Provider {
 		return grpcjson.NewProvider(fs, conf)
 	})
-
 	register.Gun("grpc", grpc.NewGun, grpc.DefaultGunConfig)
 	register.Gun("grpc/scenario", scenario.NewGun, scenario.DefaultGunConfig)
 }

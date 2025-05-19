@@ -38,3 +38,8 @@ func DataSink(name string, newDataSink interface{}, defaultConfigOptional ...int
 	var ptr *core.DataSink
 	RegisterPtr(ptr, name, newDataSink, defaultConfigOptional...)
 }
+
+func Plugin[T interface{}](name string, newPlugin interface{}, defaultConfigOptional ...interface{}) {
+	var ptr *T
+	RegisterPtr(ptr, name, newPlugin, defaultConfigOptional...)
+}

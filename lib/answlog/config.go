@@ -1,10 +1,11 @@
 package answlog
 
 type Config struct {
-	Enabled  bool     `config:"enabled"`
-	Path     string   `config:"path"`
-	Filter   string   `config:"filter" valid:"oneof=all warning error"`
-	Sampling Sampling `config:"sampling"`
+	Enabled  bool      `config:"enabled"`
+	Path     string    `config:"path"`
+	Filter   string    `config:"filter" valid:"oneof=all warning error"`
+	Sampling Sampling  `config:"sampling"`
+	Masking  LogMasker `config:"masking"`
 }
 
 type Sampling struct {

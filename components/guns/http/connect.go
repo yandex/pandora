@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/yandex/pandora/components/answ/filter"
 	"github.com/yandex/pandora/components/answ/sampler"
+	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/lib/answlog"
 	"github.com/yandex/pandora/lib/netutil"
 )
@@ -22,6 +23,21 @@ func NewConnectGun(cfg GunConfig, answLog *answlog.Logger) *BaseGun {
 	}
 
 	return NewBaseGun(newConnectClient, cfg, answLog)
+}
+
+func NewConnectGunFactory(conf GunConfig) func() core.Gun {
+	conf.Target, _ = PreResolveTargetAddr(&conf.Client, conf.Target)
+	conf.TargetResolved = conf.Target
+	answLog := answlog.Init(
+		conf.AnswLog.Path,
+		conf.AnswLog.Enabled,
+		answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)),
+		answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 600), conf.AnswLog.Sampling.Enabled),
+		answlog.WithMasker(conf.AnswLog.Masking),
+	)
+	return func() core.Gun {
+		return WrapGun(NewConnectGun(conf, answLog))
+	}
 }
 
 func DefaultConnectGunConfig() GunConfig {
@@ -43,6 +59,7 @@ func DefaultConnectGunConfig() GunConfig {
 					Factor: 10,
 				},
 			},
+			Masking: &answlog.PassAllMasker{},
 		},
 		HTTPTrace: HTTPTraceConfig{
 			DumpEnabled:  false,
