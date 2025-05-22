@@ -97,9 +97,13 @@ func Init(path string, enabled bool, opts ...LoggerOpt) *Logger {
 }
 
 func getAnswWriter(path string) zapcore.WriteSyncer {
-	if path == "" {
-		path = "./answ.log"
+	var file *os.File
+	if path != "" {
+		file, _ = os.Create(path)
+	} else {
+		pattern := "answ_" + "*" + ".log"
+		file, _ = os.CreateTemp(".", pattern)
 	}
-	file, _ := os.Create(path)
+
 	return zapcore.AddSync(file)
 }
