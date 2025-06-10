@@ -24,11 +24,11 @@ require (
 	github.com/zclconf/go-cty v1.13.2
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
-	golang.org/x/net v0.35.0
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
+	golang.org/x/net v0.40.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
 	google.golang.org/grpc v1.71.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.6
 	gopkg.in/bluesuncorp/validator.v9 v9.10.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -61,15 +61,15 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	go.opentelemetry.io/otel v1.35.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.35.0 // indirect
+	go.opentelemetry.io/otel v1.36.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.36.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/mod v0.23.0 // indirect
-	golang.org/x/sync v0.14.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
-	golang.org/x/tools v0.30.1-0.20250221230316-5055f70f240c // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250303144028-a0af3efb3deb // indirect
+	golang.org/x/mod v0.24.0 // indirect
+	golang.org/x/sync v0.15.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
+	golang.org/x/tools v0.31.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250324211829-b45e905df463 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -82,6 +82,8 @@ replace github.com/insomniacslk/dhcp => github.com/insomniacslk/dhcp v0.0.0-2021
 replace cloud.google.com/go/pubsub => cloud.google.com/go/pubsub v1.30.0
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.22.0
+
+replace go.temporal.io/api => go.temporal.io/api v1.43.2
 
 replace go.temporal.io/server => go.temporal.io/server v1.26.2
 
@@ -158,3 +160,11 @@ replace github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.24
 replace github.com/docker/docker => github.com/docker/docker v25.0.6+incompatible
 
 replace github.com/testcontainers/testcontainers-go => github.com/testcontainers/testcontainers-go v0.31.0
+
+replace github.com/grpc-ecosystem/go-grpc-middleware/v2 => github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.2.0
+
+replace github.com/vertica/vertica-sql-go => github.com/vertica/vertica-sql-go v1.2.2
+
+replace golang.org/x/tools => golang.org/x/tools v0.30.1-0.20250221230316-5055f70f240c
+
+replace sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.14.6
