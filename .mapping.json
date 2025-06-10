@@ -34,6 +34,7 @@
   ".changes/v0.5.34.md":"load/projects/pandora/.changes/v0.5.34.md",
   ".changes/v0.6.0.md":"load/projects/pandora/.changes/v0.6.0.md",
   ".changes/v0.6.1.md":"load/projects/pandora/.changes/v0.6.1.md",
+  ".changes/v0.6.2.md":"load/projects/pandora/.changes/v0.6.2.md",
   ".changie.yaml":"load/projects/pandora/.changie.yaml",
   ".github":"load/projects/pandora/.github",
   ".github/workflows":"load/projects/pandora/.github/workflows",
