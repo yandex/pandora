@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/core/aggregator/netsample"
-	"github.com/yandex/pandora/lib/answlog"
 )
 
 var tunnelHandler = func(t *testing.T, originURL string, compareURI bool) http.Handler {
@@ -96,10 +95,9 @@ func TestNewConnectGun(t *testing.T) {
 	proxy := httptest.NewServer(tunnelHandler(t, origin.URL, false))
 	defer proxy.Close()
 
-	log := answlog.NewNop()
 	conf := DefaultConnectGunConfig()
 	conf.Target = proxy.Listener.Addr().String()
-	connectGun := NewConnectGun(conf, log)
+	connectGun := NewConnectGun(conf)
 
 	results := &netsample.TestAggregator{}
 	_ = connectGun.Bind(results, testDeps())

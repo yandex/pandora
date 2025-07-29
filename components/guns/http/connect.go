@@ -17,26 +17,19 @@ import (
 	"github.com/yandex/pandora/lib/netutil"
 )
 
-func NewConnectGun(cfg GunConfig, answLog *answlog.Logger) *BaseGun {
+func NewConnectGun(cfg GunConfig) *BaseGun {
 	if cfg.TargetResolved == "" {
 		cfg.TargetResolved = cfg.Target
 	}
 
-	return NewBaseGun(newConnectClient, cfg, answLog)
+	return NewBaseGun(newConnectClient, cfg)
 }
 
 func NewConnectGunFactory(conf GunConfig) func() core.Gun {
 	conf.Target, _ = PreResolveTargetAddr(&conf.Client, conf.Target)
 	conf.TargetResolved = conf.Target
-	answLog := answlog.Init(
-		conf.AnswLog.Path,
-		conf.AnswLog.Enabled,
-		answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)),
-		answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 600), conf.AnswLog.Sampling.Enabled),
-		answlog.WithMasker(conf.AnswLog.Masking),
-	)
 	return func() core.Gun {
-		return WrapGun(NewConnectGun(conf, answLog))
+		return WrapGun(NewConnectGun(conf))
 	}
 }
 

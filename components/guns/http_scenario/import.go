@@ -2,13 +2,10 @@ package httpscenario
 
 import (
 	"github.com/spf13/afero"
-	"github.com/yandex/pandora/components/answ/filter"
-	"github.com/yandex/pandora/components/answ/sampler"
 	phttp "github.com/yandex/pandora/components/guns/http"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/register"
-	"github.com/yandex/pandora/lib/answlog"
 )
 
 func WrapGun(g Gun) core.Gun {
@@ -34,9 +31,8 @@ func Import(fs afero.Fs) {
 	register.Gun("http/scenario", func(conf phttp.GunConfig) func() core.Gun {
 		targetResolved, _ := phttp.PreResolveTargetAddr(&conf.Client, conf.Target)
 		conf.TargetResolved = targetResolved
-		answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled, answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)), answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 600), conf.AnswLog.Sampling.Enabled))
 		return func() core.Gun {
-			gun := NewHTTPGun(conf, answLog)
+			gun := NewHTTPGun(conf)
 			return WrapGun(gun)
 		}
 	}, phttp.DefaultHTTPGunConfig)
@@ -44,9 +40,8 @@ func Import(fs afero.Fs) {
 	register.Gun("http2/scenario", func(conf phttp.GunConfig) func() (core.Gun, error) {
 		targetResolved, _ := phttp.PreResolveTargetAddr(&conf.Client, conf.Target)
 		conf.TargetResolved = targetResolved
-		answLog := answlog.Init(conf.AnswLog.Path, conf.AnswLog.Enabled, answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)), answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 600), conf.AnswLog.Sampling.Enabled))
 		return func() (core.Gun, error) {
-			gun, err := NewHTTP2Gun(conf, answLog)
+			gun, err := NewHTTP2Gun(conf)
 			return WrapGun(gun), err
 		}
 	}, phttp.DefaultHTTP2GunConfig)

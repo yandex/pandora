@@ -23,21 +23,14 @@ type GunConfig struct {
 	} `config:"shared-client,omitempty"`
 }
 
-func NewHTTP1Gun(cfg GunConfig, answLog *answlog.Logger) *BaseGun {
-	return NewBaseGun(HTTP1ClientConstructor, cfg, answLog)
+func NewHTTP1Gun(cfg GunConfig) *BaseGun {
+	return NewBaseGun(HTTP1ClientConstructor, cfg)
 }
 
 func NewHTTP1GunFactory(conf GunConfig) func() core.Gun {
 	targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Target)
 	conf.TargetResolved = targetResolved
-	answLog := answlog.Init(
-		conf.AnswLog.Path,
-		conf.AnswLog.Enabled,
-		answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)),
-		answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 600), conf.AnswLog.Sampling.Enabled),
-		answlog.WithMasker(conf.AnswLog.Masking),
-	)
-	return func() core.Gun { return WrapGun(NewHTTP1Gun(conf, answLog)) }
+	return func() core.Gun { return WrapGun(NewHTTP1Gun(conf)) }
 }
 
 func HTTP1ClientConstructor(clientConfig ClientConfig, target string) Client {
@@ -49,26 +42,19 @@ func HTTP1ClientConstructor(clientConfig ClientConfig, target string) Client {
 var _ ClientConstructor = HTTP1ClientConstructor
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
-func NewHTTP2Gun(cfg GunConfig, answLog *answlog.Logger) (*BaseGun, error) {
+func NewHTTP2Gun(cfg GunConfig) (*BaseGun, error) {
 	if !cfg.SSL {
 		// Open issue on github if you really need this feature.
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
 	}
-	return NewBaseGun(HTTP2ClientConstructor, cfg, answLog), nil
+	return NewBaseGun(HTTP2ClientConstructor, cfg), nil
 }
 
 func NewHTTP2GunFactory(conf GunConfig) func() (core.Gun, error) {
 	targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Target)
 	conf.TargetResolved = targetResolved
-	answLog := answlog.Init(
-		conf.AnswLog.Path,
-		conf.AnswLog.Enabled,
-		answlog.WithFilter(filter.NewHTTPStatusCodeFilter(conf.AnswLog.Filter)),
-		answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 600), conf.AnswLog.Sampling.Enabled),
-		answlog.WithMasker(conf.AnswLog.Masking),
-	)
 	return func() (core.Gun, error) {
-		gun, err := NewHTTP2Gun(conf, answLog)
+		gun, err := NewHTTP2Gun(conf)
 		return WrapGun(gun), err
 	}
 }

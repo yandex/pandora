@@ -13,6 +13,8 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
+	"github.com/yandex/pandora/components/answ/filter"
+	"github.com/yandex/pandora/components/answ/sampler"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/clientpool"
@@ -40,7 +42,7 @@ type HTTPTraceConfig struct {
 	TraceEnabled bool `config:"trace"`
 }
 
-func NewBaseGun(clientConstructor ClientConstructor, cfg GunConfig, answLog *answlog.Logger) *BaseGun {
+func NewBaseGun(clientConstructor ClientConstructor, cfg GunConfig) *BaseGun {
 	client := clientConstructor(cfg.Client, cfg.Target)
 	return &BaseGun{
 		Config: cfg,
@@ -48,8 +50,7 @@ func NewBaseGun(clientConstructor ClientConstructor, cfg GunConfig, answLog *ans
 			client.CloseIdleConnections()
 			return nil
 		},
-		AnswLog: answLog,
-		Client:  client,
+		Client: client,
 		ClientConstructor: func() Client {
 			return clientConstructor(cfg.Client, cfg.Target)
 		},
@@ -74,6 +75,7 @@ var _ io.Closer = (*BaseGun)(nil)
 
 type SharedDeps struct {
 	clientPool *clientpool.Pool[Client]
+	answlog    *answlog.Logger
 }
 
 func (b *BaseGun) WarmUp(opts *warmup.Options) (any, error) {
@@ -87,6 +89,13 @@ func (b *BaseGun) createSharedDeps(opts *warmup.Options) (*SharedDeps, error) {
 	}
 	return &SharedDeps{
 		clientPool: clientPool,
+		answlog: answlog.Init(
+			b.Config.AnswLog.Path,
+			b.Config.AnswLog.Enabled,
+			answlog.WithFilter(filter.NewHTTPStatusCodeFilter(b.Config.AnswLog.Filter)),
+			answlog.WithSampler(sampler.NewStatusCodeSampler(b.Config.AnswLog.Sampling.Pattern, 600), b.Config.AnswLog.Sampling.Enabled),
+			answlog.WithMasker(b.Config.AnswLog.Masking),
+		),
 	}, nil
 }
 
@@ -114,6 +123,11 @@ func (b *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error
 	extraDeps, ok := deps.Shared.(*SharedDeps)
 	if ok && extraDeps.clientPool != nil {
 		b.Client = extraDeps.clientPool.Next()
+	}
+	if ok && extraDeps.answlog != nil {
+		b.AnswLog = extraDeps.answlog
+	} else if b.AnswLog == nil {
+		b.AnswLog = answlog.NewNop()
 	}
 
 	if b.Aggregator != nil {

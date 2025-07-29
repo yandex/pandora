@@ -105,6 +105,13 @@ func (g *Gun) createSharedDeps(opts *warmup.Options) (*SharedDeps, error) {
 	return &SharedDeps{
 		services:   services,
 		clientPool: clientPool,
+		answlog: answlog.Init(
+			g.Conf.AnswLog.Path,
+			g.Conf.AnswLog.Enabled,
+			answlog.WithFilter(filter.NewGRPCStatusCodeFilter(g.Conf.AnswLog.Filter)),
+			answlog.WithSampler(sampler.NewStatusCodeSampler(g.Conf.AnswLog.Sampling.Pattern, 20), g.Conf.AnswLog.Sampling.Enabled),
+			answlog.WithMasker(g.Conf.AnswLog.Masking),
+		),
 	}, nil
 }
 
@@ -162,14 +169,7 @@ func (g *Gun) prepareClientPool() (*clientpool.Pool[grpcdynamic.Stub], error) {
 }
 
 func NewGun(conf GunConfig) *Gun {
-	answLog := answlog.Init(
-		conf.AnswLog.Path,
-		conf.AnswLog.Enabled,
-		answlog.WithFilter(filter.NewGRPCStatusCodeFilter(conf.AnswLog.Filter)),
-		answlog.WithSampler(sampler.NewStatusCodeSampler(conf.AnswLog.Sampling.Pattern, 20), conf.AnswLog.Sampling.Enabled),
-		answlog.WithMasker(conf.AnswLog.Masking),
-	)
-	return &Gun{Conf: conf, AnswLog: answLog}
+	return &Gun{Conf: conf}
 }
 
 func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
@@ -186,6 +186,11 @@ func (g *Gun) Bind(aggr core.Aggregator, deps core.GunDeps) error {
 			return fmt.Errorf("makeGRPCConnect fail %w", err)
 		}
 		g.Stub = grpcdynamic.NewStub(conn)
+	}
+	if sharedDeps.answlog != nil {
+		g.AnswLog = sharedDeps.answlog
+	} else if g.AnswLog == nil {
+		g.AnswLog = answlog.NewNop()
 	}
 
 	g.Aggr = aggr
