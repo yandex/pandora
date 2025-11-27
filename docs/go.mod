@@ -1,4 +1,4 @@
-module github.com/yadnex/pandora/docs
+module github.com/yandex/pandora/docs
 
 go 1.12
 
