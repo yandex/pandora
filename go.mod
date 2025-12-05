@@ -92,17 +92,21 @@ replace github.com/jackc/pgtype => github.com/jackc/pgtype v1.12.0
 
 replace github.com/aws/aws-sdk-go => github.com/aws/aws-sdk-go v1.46.7
 
-replace k8s.io/api => k8s.io/api v0.26.1
+replace github.com/confluentinc/confluent-kafka-go/v2 => github.com/confluentinc/confluent-kafka-go/v2 v2.1.1
 
-replace k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.26.1
+replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.62.0
 
-replace k8s.io/apimachinery => k8s.io/apimachinery v0.26.1
+replace k8s.io/api => k8s.io/api v0.31.6
 
-replace k8s.io/apiserver => k8s.io/apiserver v0.26.1
+replace k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.31.6
 
-replace k8s.io/cli-runtime => k8s.io/cli-runtime v0.26.1
+replace k8s.io/apimachinery => k8s.io/apimachinery v0.31.6
 
-replace k8s.io/client-go => k8s.io/client-go v0.26.1
+replace k8s.io/apiserver => k8s.io/apiserver v0.31.6
+
+replace k8s.io/cli-runtime => k8s.io/cli-runtime v0.31.6
+
+replace k8s.io/client-go => k8s.io/client-go v0.31.6
 
 replace k8s.io/cloud-provider => k8s.io/cloud-provider v0.26.1
 
@@ -110,7 +114,7 @@ replace k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.26.1
 
 replace k8s.io/code-generator => k8s.io/code-generator v0.26.1
 
-replace k8s.io/component-base => k8s.io/component-base v0.26.1
+replace k8s.io/component-base => k8s.io/component-base v0.31.6
 
 replace k8s.io/cri-api => k8s.io/cri-api v0.23.5
 
@@ -166,7 +170,7 @@ replace github.com/grpc-ecosystem/go-grpc-middleware/v2 => github.com/grpc-ecosy
 
 replace github.com/vertica/vertica-sql-go => github.com/vertica/vertica-sql-go v1.2.2
 
-replace sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.14.6
+replace sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.19.6
 
 replace buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go => buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.4-20250130201111-63bb56e20495.1
 
