@@ -17,7 +17,7 @@ import (
 	"github.com/jhump/protoreflect/grpcreflect"
 	"github.com/yandex/pandora/components/answ/filter"
 	"github.com/yandex/pandora/components/answ/sampler"
-	ammo "github.com/yandex/pandora/components/providers/grpc"
+	"github.com/yandex/pandora/components/providers/grpc/ammo"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
 	"github.com/yandex/pandora/core/clientpool"

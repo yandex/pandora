@@ -7,7 +7,9 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	ammo "github.com/yandex/pandora/components/providers/grpc"
+	provider "github.com/yandex/pandora/components/providers/grpc"
+	"github.com/yandex/pandora/components/providers/grpc/ammo"
+	"github.com/yandex/pandora/components/providers/grpc/middleware"
 	"github.com/yandex/pandora/lib/confutil"
 	"go.uber.org/zap"
 )
@@ -18,14 +20,14 @@ func NewProvider(fs afero.Fs, conf Config) *Provider {
 		conf.File = conf.Source.Path
 	}
 	p = Provider{
-		Provider: ammo.NewProvider(fs, conf.File, p.start),
+		Provider: provider.NewProvider(fs, conf.File, p.start, conf.Middlewares),
 		Config:   conf,
 	}
 	return &p
 }
 
 type Provider struct {
-	ammo.Provider
+	provider.Provider
 	Config
 	log *zap.Logger
 }
@@ -46,6 +48,8 @@ type Config struct {
 	MaxAmmoSize int
 	Source      Source `config:"source"`
 	ChosenCases []string
+
+	Middlewares []middleware.Middleware
 }
 
 func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
