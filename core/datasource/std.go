@@ -3,7 +3,6 @@ package datasource
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"github.com/yandex/pandora/core"
@@ -24,7 +23,7 @@ func (b buffer) OpenSource() (wc io.ReadCloser, err error) {
 }
 
 // NewReader returns dummy core.DataSource that returns it on OpenSource call, wrapping it
-// ioutil.NopCloser if r is not io.Closer.
+// io.NopCloser if r is not io.Closer.
 // NOTE(skipor): such wrapping hides Seek and other methods that can be used.
 func NewReader(r io.Reader) core.DataSource {
 	return &readerSource{r}
@@ -46,7 +45,7 @@ func (r *readerSource) OpenSource() (rc io.ReadCloser, err error) {
 			ioutil2.NopCloser
 		}{ReadSeeker: rs}, nil
 	}
-	return ioutil.NopCloser(r.source), nil
+	return io.NopCloser(r.source), nil
 }
 
 func NewString(s string) core.DataSource {

@@ -5,7 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -221,7 +221,7 @@ func readConfig(args []string) *CliConfig {
 	log.Info("Pandora version", zap.String("version", Version))
 	if useStdinConfig {
 		v.SetConfigType("yaml")
-		configBuffer, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
+		configBuffer, err := io.ReadAll(bufio.NewReader(os.Stdin))
 		if err != nil {
 			log.Fatal("Cannot read from standard input", zap.Error(err))
 		}

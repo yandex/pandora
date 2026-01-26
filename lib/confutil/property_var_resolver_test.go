@@ -1,7 +1,6 @@
 package confutil
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -12,7 +11,7 @@ func TestPropertyTokenResolver(t *testing.T) {
 	fileContent := []byte(`name=John Doe
 age=25
 email=johndoe@example.com`)
-	tmpFile, err := ioutil.TempFile("", "testfile*.txt")
+	tmpFile, err := os.CreateTemp("", "testfile*.txt")
 	assert.NoError(t, err)
 	defer os.Remove(tmpFile.Name())
 	defer tmpFile.Close()

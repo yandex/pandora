@@ -2,7 +2,6 @@ package testutil
 
 import (
 	"io"
-	"io/ioutil"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -10,7 +9,7 @@ import (
 )
 
 func ReadString(t TestingT, r io.Reader) string {
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	require.NoError(t, err)
 	return string(data)
 }

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -244,7 +243,7 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 	sample.SetProtoCode(res.StatusCode)
 	defer res.Body.Close()
 	// TODO: measure body read time
-	_, err = io.Copy(ioutil.Discard, res.Body) // Buffers are pooled for ioutil.Discard
+	_, err = io.Copy(io.Discard, res.Body) // Buffers are pooled for io.Discard
 	if err != nil {
 		b.Log.Warn("Body read fail", zap.Error(err))
 		return
@@ -260,7 +259,7 @@ func (b *BaseGun) Close() error {
 
 func (b *BaseGun) verboseLogging(res *http.Response) {
 	if res.Request.Body != nil {
-		reqBody, err := ioutil.ReadAll(res.Request.Body)
+		reqBody, err := io.ReadAll(res.Request.Body)
 		if err != nil {
 			b.Log.Debug("Body read failed for verbose logging of Request")
 		} else {
@@ -275,7 +274,7 @@ func (b *BaseGun) verboseLogging(res *http.Response) {
 	)
 
 	if res.Body != nil {
-		respBody, err := ioutil.ReadAll(res.Body)
+		respBody, err := io.ReadAll(res.Body)
 		if err != nil {
 			b.Log.Debug("Body read failed for verbose logging of Response")
 		} else {
@@ -328,8 +327,8 @@ func autotag(depth int, URL *url.URL) string {
 
 func GetBody(req *http.Request) []byte {
 	if req.Body != nil && req.Body != http.NoBody {
-		bodyBytes, _ := ioutil.ReadAll(req.Body)
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+		bodyBytes, _ := io.ReadAll(req.Body)
+		req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		return bodyBytes
 	}
 

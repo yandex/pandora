@@ -2,7 +2,6 @@ package coretest
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -13,7 +12,7 @@ import (
 )
 
 func AssertSinkEqualStdStream(t *testing.T, expectedPtr **os.File, getSink func() core.DataSink) {
-	temp, err := ioutil.TempFile("", "")
+	temp, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 
 	backup := *expectedPtr
@@ -33,7 +32,7 @@ func AssertSinkEqualStdStream(t *testing.T, expectedPtr **os.File, getSink func(
 	require.NoError(t, err)
 
 	_, _ = temp.Seek(0, io.SeekStart)
-	data, _ := ioutil.ReadAll(temp)
+	data, _ := io.ReadAll(temp)
 	assert.Equal(t, testdata, string(data))
 }
 

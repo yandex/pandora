@@ -2,7 +2,6 @@ package coretest
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -14,7 +13,7 @@ import (
 )
 
 func AssertSourceEqualStdStream(t *testing.T, expectedPtr **os.File, getSource func() core.DataSource) {
-	temp, err := ioutil.TempFile("", "")
+	temp, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 
 	backup := *expectedPtr
@@ -33,7 +32,7 @@ func AssertSourceEqualStdStream(t *testing.T, expectedPtr **os.File, getSource f
 	require.NoError(t, err, "std stream should not be closed")
 
 	_, _ = temp.Seek(0, io.SeekStart)
-	data, _ := ioutil.ReadAll(temp)
+	data, _ := io.ReadAll(temp)
 	assert.Equal(t, testdata, string(data))
 }
 

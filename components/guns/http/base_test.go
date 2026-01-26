@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -160,7 +159,7 @@ func (s *BaseGunSuite) Test_Shoot() {
 		am.On("Request").Return(req, sample).Maybe()
 		res = &http.Response{
 			StatusCode: http.StatusNotFound,
-			Body:       ioutil.NopCloser(body),
+			Body:       io.NopCloser(body),
 			Request:    req,
 		}
 		s.base.Shoot(am)
@@ -170,7 +169,7 @@ func (s *BaseGunSuite) Test_Shoot() {
 
 	s.Run("Do ok", func() {
 		beforeEachDoOk := func() {
-			body = ioutil.NopCloser(strings.NewReader("aaaaaaa"))
+			body = io.NopCloser(strings.NewReader("aaaaaaa"))
 			s.base.AnswLog = answlog.NewNop()
 			s.base.Client = &testDecoratedClient{
 				before: func(doReq *http.Request) {
@@ -178,7 +177,7 @@ func (s *BaseGunSuite) Test_Shoot() {
 				},
 				returnRes: &http.Response{
 					StatusCode: http.StatusNotFound,
-					Body:       ioutil.NopCloser(body),
+					Body:       io.NopCloser(body),
 					Request:    req,
 				},
 			}
