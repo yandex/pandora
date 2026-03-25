@@ -1,6 +1,6 @@
 module github.com/yandex/pandora
 
-go 1.24.6
+go 1.25
 
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
@@ -23,12 +23,12 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/zclconf/go-cty v1.16.4
 	go.uber.org/atomic v1.11.0
-	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6
-	golang.org/x/net v0.44.0
+	go.uber.org/zap v1.27.1
+	golang.org/x/exp v0.0.0-20251113190631-e25ba8c21ef6
+	golang.org/x/net v0.49.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
-	google.golang.org/grpc v1.73.0
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/grpc v1.78.0
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/bluesuncorp/validator.v9 v9.10.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -43,7 +43,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-test/deep v1.1.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -57,18 +57,19 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	go.opentelemetry.io/otel v1.37.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.36.0 // indirect
+	go.opentelemetry.io/otel v1.39.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.39.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/mod v0.28.0 // indirect
-	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
-	golang.org/x/tools v0.36.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250528174236-200df99c418a // indirect
+	golang.org/x/mod v0.31.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/tools v0.40.0 // indirect
+	gonum.org/v1/gonum v0.17.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260203192932-546029d2fa20 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -82,11 +83,13 @@ replace github.com/insomniacslk/dhcp => github.com/insomniacslk/dhcp v0.0.0-2021
 
 replace cloud.google.com/go/pubsub => cloud.google.com/go/pubsub v1.30.0
 
-replace go.temporal.io/api => go.temporal.io/api v1.46.0
+replace go.temporal.io/api => go.temporal.io/api v1.50.1
 
-replace go.temporal.io/sdk => go.temporal.io/sdk v1.33.0
+replace go.temporal.io/sdk => go.temporal.io/sdk v1.34.0
 
-replace go.temporal.io/server => go.temporal.io/server v1.27.2
+replace go.temporal.io/server => go.temporal.io/server v1.28.2
+
+replace github.com/uber-go/tally/v4 => github.com/uber-go/tally/v4 v4.1.17-0.20240412215630-22fe011f5ff0
 
 replace github.com/jackc/pgtype => github.com/jackc/pgtype v1.12.0
 
@@ -179,3 +182,13 @@ replace github.com/bufbuild/protoyaml-go => buf.build/go/protoyaml v0.3.2
 replace golang.org/x/sync => golang.org/x/sync v0.15.0
 
 replace github.com/stretchr/testify => github.com/stretchr/testify v1.10.0
+
+replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0
+
+replace github.com/moby/buildkit => github.com/moby/buildkit v0.12.2
+
+replace github.com/tonistiigi/fsutil => github.com/tonistiigi/fsutil v0.0.0-20230629203738-36ef4d8c0dbb
+
+replace github.com/substrait-io/substrait-protobuf/go => github.com/substrait-io/substrait-protobuf/go v0.71.0
+
+replace github.com/substrait-io/substrait => github.com/substrait-io/substrait v0.69.0
