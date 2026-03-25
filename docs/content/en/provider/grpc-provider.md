@@ -26,7 +26,7 @@ Ammofile sample:
 
 Where:
    * `tag`: Request label used in the result display interface. It enables using different tags for requests to group and filter test results.
-   * `call`: Full name of the service and its called method. The service and method can be separated by `.` or `/`. For example, `api.Adder.Add` or `api.Adder/Add`.
+   * `call`: Full name of the service and its called method. The service and method can be separated by `.` or `/`. For example, `api.Adder.Add`, `api.Adder/Add` or `/api.Adder/Add`.
    * `metadata`: Used to send headers, e.g., `Authorization`.
    * `payload`: Request body.
 

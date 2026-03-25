@@ -141,8 +141,12 @@ func (g *Gun) prepareMethodList(opts *warmup.Options) (map[string]desc.MethodDes
 		}
 		listMethods := service.GetMethods()
 		for _, m := range listMethods {
+			// package.Service.Method
 			services[m.GetFullyQualifiedName()] = *m
+			// package.Service/Method
 			services[m.GetParent().GetFullyQualifiedName()+"/"+m.GetName()] = *m
+			// /package.Service/Method
+			services["/"+m.GetParent().GetFullyQualifiedName()+"/"+m.GetName()] = *m
 		}
 	}
 	return services, nil
