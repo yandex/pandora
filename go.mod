@@ -5,7 +5,7 @@ go 1.25
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/antchfx/htmlquery v1.3.2
-	github.com/antchfx/xpath v1.3.1
+	github.com/antchfx/xpath v1.3.6
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052
