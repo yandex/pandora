@@ -320,7 +320,7 @@ func (ah *runAwaitHandle) awaitRun() {
 					ah.instanceStartCancel()
 				}
 			} else if !errutil.IsCtxError(ah.runCtx, res.Err) {
-				ah.onErrAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %q run failed", res.ID)))
+				ah.onErrAwaited(errors.WithMessage(res.Err, fmt.Sprintf("instance %d run failed", res.ID)))
 			}
 			ah.checkAllInstancesAreFinished()
 		}
