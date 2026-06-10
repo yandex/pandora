@@ -143,7 +143,6 @@ func (b *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error
 
 // Shoot is thread safe iff Do and Connect hooks are thread safe.
 func (b *BaseGun) Shoot(ammo Ammo) {
-	var bodyBytes []byte
 	if b.Aggregator == nil {
 		zap.L().Panic("must bind before shoot")
 	}
@@ -183,10 +182,6 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 	if sample.Tags() == "" {
 		sample.AddTag(EmptyTag)
 	}
-	if b.Config.AnswLog.Enabled {
-		bodyBytes = GetBody(req)
-	}
-
 	var err error
 	defer func() {
 		if err != nil {
@@ -195,6 +190,20 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 		b.Aggregator.Report(sample)
 		err = errors.WithStack(err)
 	}()
+
+	if req.Body != nil && req.Body != http.NoBody && req.GetBody == nil {
+		b.Log.Warn("Ammo has Body without GetBody; setting fallback (ammo provider should set GetBody)", zap.Uint64("request", ammo.ID()))
+		bodyBytes, readErr := io.ReadAll(req.Body)
+		if readErr != nil {
+			err = fmt.Errorf("failed to read ammo body for GetBody fallback: %w", readErr)
+			b.Log.Warn("Ammo body read fail", zap.Error(err))
+			return
+		}
+		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		req.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(bodyBytes)), nil
+		}
+	}
 
 	var timings *TraceTimings
 	if b.Config.HTTPTrace.TraceEnabled {
@@ -238,7 +247,7 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 		b.verboseLogging(res)
 	}
 
-	b.answLogging(req, bodyBytes, res)
+	b.answLogging(req, res)
 
 	sample.SetProtoCode(res.StatusCode)
 	defer res.Body.Close()
@@ -289,12 +298,14 @@ func (b *BaseGun) verboseLogging(res *http.Response) {
 	)
 }
 
-func (b *BaseGun) answLogging(req *http.Request, bodyBytes []byte, res *http.Response) {
+func (b *BaseGun) answLogging(req *http.Request, res *http.Response) {
 	b.AnswLog.Report("REQUEST/RESPONSE", []zapcore.Field{zap.Int(answlog.FilterAndSampleGroup, res.StatusCode)}, func() []zapcore.Field {
 		isBody := false
-		if bodyBytes != nil {
-			req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-			isBody = true
+		if req.GetBody != nil {
+			if body, err := req.GetBody(); err == nil {
+				req.Body = body
+				isBody = true
+			}
 		}
 
 		reqDump, err := httputil.DumpRequestOut(req, isBody)
@@ -323,17 +334,6 @@ func autotag(depth int, URL *url.URL) string {
 		}
 	}
 	return path[:ind]
-}
-
-func GetBody(req *http.Request) []byte {
-	if req.Body != nil && req.Body != http.NoBody {
-		bodyBytes, _ := io.ReadAll(req.Body)
-		req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-		return bodyBytes
-	}
-
-	return nil
-
 }
 
 // DNS resolve optimisation.

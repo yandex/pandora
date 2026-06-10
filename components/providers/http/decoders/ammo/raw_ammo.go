@@ -1,7 +1,10 @@
 package ammo
 
 import (
+	"bytes"
+	"io"
 	"net/http"
+	"sync"
 
 	"github.com/yandex/pandora/components/providers/http/decoders/raw"
 	"github.com/yandex/pandora/components/providers/http/util"
@@ -19,6 +22,26 @@ func (a *RawAmmo) BuildRequest() (*http.Request, error) {
 	req, err := raw.DecodeRequest(a.buff)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to decode ammo with err: %w, at position: %v; data: %q", err, a.filePosition, a.buff)
+	}
+	if req.Body != nil && req.Body != http.NoBody && req.GetBody == nil {
+		buff := a.buff
+		var once sync.Once
+		var cachedBody []byte
+		var cachedErr error
+		req.GetBody = func() (io.ReadCloser, error) {
+			once.Do(func() {
+				r, err := raw.DecodeRequest(buff)
+				if err != nil {
+					cachedErr = err
+					return
+				}
+				cachedBody, cachedErr = io.ReadAll(r.Body)
+			})
+			if cachedErr != nil {
+				return nil, cachedErr
+			}
+			return io.NopCloser(bytes.NewReader(cachedBody)), nil
+		}
 	}
 	util.EnrichRequestWithHeaders(req, a.commonHeaders)
 	return req, nil

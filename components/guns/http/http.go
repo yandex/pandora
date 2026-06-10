@@ -1,7 +1,6 @@
 package phttp
 
 import (
-	"github.com/pkg/errors"
 	"github.com/yandex/pandora/components/answ/filter"
 	"github.com/yandex/pandora/components/answ/sampler"
 	"github.com/yandex/pandora/core"
@@ -44,8 +43,7 @@ var _ ClientConstructor = HTTP1ClientConstructor
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
 func NewHTTP2Gun(cfg GunConfig) (*BaseGun, error) {
 	if !cfg.SSL {
-		// Open issue on github if you really need this feature.
-		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default.")
+		return NewBaseGun(H2CClientConstructor, cfg), nil
 	}
 	return NewBaseGun(HTTP2ClientConstructor, cfg), nil
 }
@@ -66,7 +64,13 @@ func HTTP2ClientConstructor(clientConfig ClientConfig, target string) Client {
 	return &panicOnHTTP1Client{Client: client}
 }
 
+func H2CClientConstructor(clientConfig ClientConfig, target string) Client {
+	transport := NewH2CTransport(clientConfig.Transport, NewDialer(clientConfig.Dialer).DialContext, target)
+	return NewRedirectingClient(transport, clientConfig.Redirect)
+}
+
 var _ ClientConstructor = HTTP2ClientConstructor
+var _ ClientConstructor = H2CClientConstructor
 
 func DefaultHTTPGunConfig() GunConfig {
 	return GunConfig{

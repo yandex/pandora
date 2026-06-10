@@ -49,7 +49,7 @@ func newLogger(conf logConfig) *zap.Logger {
 	zapConf := zap.NewDevelopmentConfig()
 	zapConf.OutputPaths = []string{conf.File}
 	zapConf.Level.SetLevel(conf.Level)
-	log, err := zapConf.Build(zap.AddCaller())
+	log, err := zapConf.Build(zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))
 	if err != nil {
 		zap.L().Fatal("Logger build failed", zap.Error(err))
 	}

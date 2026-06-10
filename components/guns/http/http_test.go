@@ -1,11 +1,17 @@
 package phttp
 
 import (
+	"context"
 	"crypto/tls"
+	"errors"
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httptrace"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	ammomock "github.com/yandex/pandora/components/guns/http/mocks"
@@ -220,17 +226,149 @@ func TestHTTP2(t *testing.T) {
 		require.Contains(t, r, notHTTP2PanicMsg)
 	})
 
-	t.Run("no SSL construction fails", func(t *testing.T) {
-		server := httptest.NewTLSServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			zap.S().Info("Served")
-		}))
-		defer server.Close()
+	t.Run("no SSL constructs h2c gun", func(t *testing.T) {
 		conf := DefaultHTTP2GunConfig()
-		conf.Target = server.Listener.Addr().String()
+		conf.Target = "localhost:8080"
 		conf.SSL = false
 		conf.TargetResolved = conf.Target
-		_, err := NewHTTP2Gun(conf)
+		gun, err := NewHTTP2Gun(conf)
+		require.NoError(t, err)
+		require.NotNil(t, gun)
+	})
+}
+
+type fakeRT func(*http.Request) (*http.Response, error)
+
+func (f fakeRT) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
+
+func TestResponseHeaderTimeoutRT(t *testing.T) {
+	t.Run("fires when no response after write", func(t *testing.T) {
+		inner := fakeRT(func(req *http.Request) (*http.Response, error) {
+			tr := httptrace.ContextClientTrace(req.Context())
+			tr.WroteRequest(httptrace.WroteRequestInfo{})
+			<-req.Context().Done()
+			return nil, req.Context().Err()
+		})
+		rt := &responseHeaderTimeoutRT{rt: inner, timeout: 20 * time.Millisecond}
+		_, err := rt.RoundTrip(httptest.NewRequest("GET", "http://x/", nil))
 		require.Error(t, err)
+		require.Contains(t, err.Error(), "response header timeout exceeded")
+		var netErr net.Error
+		require.True(t, errors.As(err, &netErr))
+		require.True(t, netErr.Timeout())
+	})
+
+	t.Run("does not fire when headers arrive in time", func(t *testing.T) {
+		body := io.NopCloser(strings.NewReader("payload"))
+		want := &http.Response{StatusCode: 200, Body: body}
+		inner := fakeRT(func(req *http.Request) (*http.Response, error) {
+			tr := httptrace.ContextClientTrace(req.Context())
+			tr.WroteRequest(httptrace.WroteRequestInfo{})
+			tr.GotFirstResponseByte()
+			return want, nil
+		})
+		rt := &responseHeaderTimeoutRT{rt: inner, timeout: 50 * time.Millisecond}
+		resp, err := rt.RoundTrip(httptest.NewRequest("GET", "http://x/", nil))
+		require.NoError(t, err)
+		require.Same(t, want, resp)
+		data, readErr := io.ReadAll(resp.Body)
+		require.NoError(t, readErr)
+		require.Equal(t, "payload", string(data))
+		require.NoError(t, resp.Body.Close())
+		time.Sleep(80 * time.Millisecond)
+	})
+
+	t.Run("body close cancels context", func(t *testing.T) {
+		ctxCh := make(chan context.Context, 1)
+		inner := fakeRT(func(req *http.Request) (*http.Response, error) {
+			tr := httptrace.ContextClientTrace(req.Context())
+			tr.WroteRequest(httptrace.WroteRequestInfo{})
+			tr.GotFirstResponseByte()
+			ctxCh <- req.Context()
+			return &http.Response{StatusCode: 200, Body: http.NoBody}, nil
+		})
+		rt := &responseHeaderTimeoutRT{rt: inner, timeout: time.Hour}
+		resp, err := rt.RoundTrip(httptest.NewRequest("GET", "http://x/", nil))
+		require.NoError(t, err)
+		innerCtx := <-ctxCh
+		require.NoError(t, innerCtx.Err(), "ctx must be alive during body read")
+		require.NoError(t, resp.Body.Close())
+		require.ErrorIs(t, innerCtx.Err(), context.Canceled)
+	})
+
+	t.Run("preserves parent cancel error", func(t *testing.T) {
+		inner := fakeRT(func(req *http.Request) (*http.Response, error) {
+			<-req.Context().Done()
+			return nil, req.Context().Err()
+		})
+		rt := &responseHeaderTimeoutRT{rt: inner, timeout: time.Hour}
+		ctx, cancel := context.WithCancel(context.Background())
+		req := httptest.NewRequest("GET", "http://x/", nil).WithContext(ctx)
+		cancel()
+		_, err := rt.RoundTrip(req)
+		require.Error(t, err)
+		require.True(t, errors.Is(err, context.Canceled))
+		require.NotContains(t, err.Error(), "response header timeout exceeded")
+	})
+
+	t.Run("NewH2CTransport without timeout returns bare http2.Transport", func(t *testing.T) {
+		dial := func(ctx context.Context, network, addr string) (net.Conn, error) { return nil, nil }
+		rt := NewH2CTransport(TransportConfig{}, dial, "x:80")
+		_, wrapped := rt.(*responseHeaderTimeoutRT)
+		require.False(t, wrapped)
+		_, isH2 := rt.(*http2.Transport)
+		require.True(t, isH2)
+	})
+
+	t.Run("NewH2CTransport with timeout wraps", func(t *testing.T) {
+		dial := func(ctx context.Context, network, addr string) (net.Conn, error) { return nil, nil }
+		rt := NewH2CTransport(TransportConfig{ResponseHeaderTimeout: time.Second}, dial, "x:80")
+		w, ok := rt.(*responseHeaderTimeoutRT)
+		require.True(t, ok)
+		_, isH2 := w.rt.(*http2.Transport)
+		require.True(t, isH2)
+	})
+
+	t.Run("NewHTTP2Transport without timeout returns bare http.Transport", func(t *testing.T) {
+		dial := func(ctx context.Context, network, addr string) (net.Conn, error) { return nil, nil }
+		rt := NewHTTP2Transport(TransportConfig{}, dial, "x:443")
+		_, wrapped := rt.(*responseHeaderTimeoutRT)
+		require.False(t, wrapped)
+		_, isH1 := rt.(*http.Transport)
+		require.True(t, isH1)
+	})
+
+	t.Run("NewHTTP2Transport with timeout wraps", func(t *testing.T) {
+		dial := func(ctx context.Context, network, addr string) (net.Conn, error) { return nil, nil }
+		rt := NewHTTP2Transport(TransportConfig{ResponseHeaderTimeout: time.Second}, dial, "x:443")
+		w, ok := rt.(*responseHeaderTimeoutRT)
+		require.True(t, ok)
+		_, isH1 := w.rt.(*http.Transport)
+		require.True(t, isH1)
+	})
+
+	t.Run("CloseIdleConnectionsRoundTripper unwraps responseHeaderTimeoutRT", func(t *testing.T) {
+		inner := &http2.Transport{}
+		single := &responseHeaderTimeoutRT{rt: inner, timeout: time.Second}
+		nested := &responseHeaderTimeoutRT{rt: single, timeout: time.Second}
+		require.NotPanics(t, func() { CloseIdleConnectionsRoundTripper(single) })
+		require.NotPanics(t, func() { CloseIdleConnectionsRoundTripper(nested) })
+	})
+
+	t.Run("first byte before write done does not arm timer", func(t *testing.T) {
+		want := &http.Response{StatusCode: 200, Body: http.NoBody}
+		inner := fakeRT(func(req *http.Request) (*http.Response, error) {
+			tr := httptrace.ContextClientTrace(req.Context())
+			tr.GotFirstResponseByte()
+			tr.WroteRequest(httptrace.WroteRequestInfo{})
+			return want, nil
+		})
+		rt := &responseHeaderTimeoutRT{rt: inner, timeout: 20 * time.Millisecond}
+		resp, err := rt.RoundTrip(httptest.NewRequest("GET", "http://x/", nil))
+		require.NoError(t, err)
+		require.Same(t, want, resp)
+		time.Sleep(40 * time.Millisecond)
+		require.NoError(t, resp.Body.Close())
 	})
 }
 

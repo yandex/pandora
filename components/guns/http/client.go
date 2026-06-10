@@ -1,10 +1,15 @@
 package phttp
 
 import (
+	"context"
 	"crypto/tls"
+	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -96,7 +101,7 @@ func DefaultTransportConfig() TransportConfig {
 	}
 }
 
-func NewTransport(conf TransportConfig, dial netutil.DialerFunc, target string) *http.Transport {
+func NewTransport(conf TransportConfig, dial netutil.DialerFunc, target string) http.RoundTripper {
 	tr := &http.Transport{
 		TLSHandshakeTimeout:   conf.TLSHandshakeTimeout,
 		DisableKeepAlives:     conf.DisableKeepAlives,
@@ -120,33 +125,144 @@ func NewTransport(conf TransportConfig, dial netutil.DialerFunc, target string) 
 	return tr
 }
 
-func NewHTTP2Transport(conf TransportConfig, dial netutil.DialerFunc, target string) *http.Transport {
-	tr := NewTransport(conf, dial, target)
+func NewHTTP2Transport(conf TransportConfig, dial netutil.DialerFunc, target string) http.RoundTripper {
+	tr := NewTransport(conf, dial, target).(*http.Transport)
 	err := http2.ConfigureTransport(tr)
 	if err != nil {
 		zap.L().Panic("HTTP/2 transport configure fail", zap.Error(err))
 	}
+
 	tr.TLSClientConfig.NextProtos = []string{"h2"}
-	return tr
+	return withResponseHeaderTimeout(tr, conf.ResponseHeaderTimeout)
 }
 
-func NewRedirectingClient(tr *http.Transport, redirect bool) Client {
+func NewH2CTransport(conf TransportConfig, dial netutil.DialerFunc, target string) http.RoundTripper {
+	rt := &http2.Transport{
+		AllowHTTP: true,
+		DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+			return dial(ctx, network, addr)
+		},
+		DisableCompression: conf.DisableCompression,
+		IdleConnTimeout:    conf.IdleConnTimeout,
+	}
+	return withResponseHeaderTimeout(rt, conf.ResponseHeaderTimeout)
+}
+
+func withResponseHeaderTimeout(rt http.RoundTripper, timeout time.Duration) http.RoundTripper {
+	if timeout <= 0 {
+		return rt
+	}
+	return &responseHeaderTimeoutRT{rt: rt, timeout: timeout}
+}
+
+type responseHeaderTimeoutRT struct {
+	rt      http.RoundTripper
+	timeout time.Duration
+}
+
+func (t *responseHeaderTimeoutRT) RoundTrip(req *http.Request) (*http.Response, error) {
+	parent := req.Context()
+	ctx, cancel := context.WithCancel(parent)
+
+	var (
+		mu           sync.Mutex
+		gotFirstByte bool
+	)
+	timer := time.AfterFunc(t.timeout, cancel)
+	timer.Stop()
+
+	trace := &httptrace.ClientTrace{
+		WroteRequest: func(info httptrace.WroteRequestInfo) {
+			mu.Lock()
+			defer mu.Unlock()
+			if info.Err == nil && !gotFirstByte {
+				timer.Reset(t.timeout)
+			}
+		},
+		GotFirstResponseByte: func() {
+			mu.Lock()
+			defer mu.Unlock()
+			gotFirstByte = true
+			timer.Stop()
+		},
+	}
+
+	req = req.WithContext(httptrace.WithClientTrace(ctx, trace))
+	resp, err := t.rt.RoundTrip(req)
+	timer.Stop()
+
+	if err != nil {
+		timedOut := parent.Err() == nil && ctx.Err() != nil
+		cancel()
+		if timedOut {
+			return nil, &responseHeaderTimeoutError{timeout: t.timeout, cause: err}
+		}
+		return nil, err
+	}
+	resp.Body = &cancelOnCloseBody{ReadCloser: resp.Body, cancel: cancel}
+	return resp, nil
+}
+
+var _ net.Error = (*responseHeaderTimeoutError)(nil)
+
+type responseHeaderTimeoutError struct {
+	timeout time.Duration
+	cause   error
+}
+
+func (e *responseHeaderTimeoutError) Error() string {
+	return fmt.Sprintf("response header timeout exceeded (%s): %v", e.timeout, e.cause)
+}
+
+func (e *responseHeaderTimeoutError) Timeout() bool   { return true }
+func (e *responseHeaderTimeoutError) Temporary() bool { return false }
+func (e *responseHeaderTimeoutError) Unwrap() error   { return e.cause }
+
+type cancelOnCloseBody struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+	once   sync.Once
+}
+
+func (b *cancelOnCloseBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.once.Do(b.cancel)
+	return err
+}
+
+func NewRedirectingClient(tr http.RoundTripper, redirect bool) Client {
 	if redirect {
 		return redirectClient{&http.Client{Transport: tr}}
 	}
 	return noRedirectClient{tr}
 }
 
+func CloseIdleConnectionsRoundTripper(tr http.RoundTripper) {
+	switch v := tr.(type) {
+	case *http.Transport:
+		v.CloseIdleConnections()
+	case *http2.Transport:
+		v.CloseIdleConnections()
+	case *responseHeaderTimeoutRT:
+		CloseIdleConnectionsRoundTripper(v.rt)
+	default:
+	}
+}
+
 type redirectClient struct{ *http.Client }
 
 func (c redirectClient) CloseIdleConnections() {
-	c.Transport.(*http.Transport).CloseIdleConnections()
+	CloseIdleConnectionsRoundTripper(c.Transport)
 }
 
-type noRedirectClient struct{ *http.Transport }
+type noRedirectClient struct{ http.RoundTripper }
 
 func (c noRedirectClient) Do(req *http.Request) (*http.Response, error) {
-	return c.Transport.RoundTrip(req)
+	return c.RoundTripper.RoundTrip(req)
+}
+
+func (c noRedirectClient) CloseIdleConnections() {
+	CloseIdleConnectionsRoundTripper(c.RoundTripper)
 }
 
 // Used to cancel shooting in HTTP/2 gun, when target doesn't support HTTP/2
