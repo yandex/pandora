@@ -1,11 +1,11 @@
 module github.com/yandex/pandora
 
-go 1.25.8
+go 1.26.3
 
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/antchfx/htmlquery v1.3.2
-	github.com/antchfx/xpath v1.3.1
+	github.com/antchfx/xpath v1.3.6
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052
@@ -18,16 +18,16 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/afero v1.12.0
+	github.com/spf13/afero v1.15.0
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.11.1
 	github.com/zclconf/go-cty v1.17.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.27.1
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa
-	golang.org/x/net v0.51.0
+	golang.org/x/net v0.56.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
-	google.golang.org/grpc v1.79.3
+	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/bluesuncorp/validator.v9 v9.10.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -63,13 +63,12 @@ require (
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.43.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/mod v0.33.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
-	golang.org/x/tools v0.42.0 // indirect
-	gonum.org/v1/gonum v0.17.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260203192932-546029d2fa20 // indirect
+	golang.org/x/mod v0.37.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260427160629-7cedc36a6bc4 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -97,8 +96,6 @@ exclude (
 	github.com/docker/docker/api v1.54.1
 	github.com/docker/docker/api v1.54.2
 )
-
-exclude go.opentelemetry.io/contrib/processors/baggagecopy v0.16.1
 
 replace github.com/insomniacslk/dhcp => github.com/insomniacslk/dhcp v0.0.0-20210120172423-cc9239ac6294
 
@@ -218,7 +215,7 @@ replace github.com/google/go-tpm-tools => github.com/google/go-tpm-tools v0.4.2
 
 replace go.opentelemetry.io/collector/config/configtls => go.opentelemetry.io/collector/config/configtls v1.31.0
 
-replace go.opentelemetry.io/otel/exporters/prometheus => go.opentelemetry.io/otel/exporters/prometheus v0.58.0
+replace go.opentelemetry.io/otel/exporters/prometheus => go.opentelemetry.io/otel/exporters/prometheus v0.63.0
 
 replace github.com/jarcoal/httpmock => github.com/jarcoal/httpmock v1.3.1
 
@@ -229,5 +226,3 @@ replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20250626183228-af0a60a
 replace k8s.io/kubectl => k8s.io/kubectl v0.26.0
 
 replace github.com/go-resty/resty/v2 => github.com/go-resty/resty/v2 v2.16.3
-
-replace github.com/getsentry/sentry-go => github.com/getsentry/sentry-go v0.13.0
