@@ -28,16 +28,16 @@ type unlimitedSchedule struct {
 }
 
 func (s *unlimitedSchedule) Start(startAt time.Time) {
-	s.MarkStarted()
 	s.startOnce.Do(func() {
 		s.finish.Store(startAt.Add(s.duration))
 	})
+	s.MarkStarted()
 }
 
 func (s *unlimitedSchedule) Next() (tx time.Time, ok bool) {
 	s.startOnce.Do(func() {
-		s.MarkStarted()
 		s.finish.Store(time.Now().Add(s.duration))
+		s.MarkStarted()
 	})
 	now := time.Now()
 	if now.Before(s.finish.Load()) {

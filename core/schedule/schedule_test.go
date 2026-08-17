@@ -2,6 +2,8 @@ package schedule
 
 import (
 	"sort"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -30,6 +32,50 @@ func Test_unlimited(t *testing.T) {
 	}
 	assert.Equal(t, 0, testee.Left())
 	assert.Greater(t, i, 50)
+}
+
+func TestUnlimitedLeftRace(t *testing.T) {
+	const (
+		attempts = 2000
+		readers  = 8
+	)
+
+	for attempt := 0; attempt < attempts; attempt++ {
+		sched := NewUnlimited(time.Hour)
+
+		var barrier sync.WaitGroup
+		barrier.Add(1)
+
+		var wg sync.WaitGroup
+		wg.Add(readers + 1)
+
+		var prematureFinish int64
+
+		go func() {
+			defer wg.Done()
+			barrier.Wait()
+			_, _ = sched.Next()
+		}()
+
+		for r := 0; r < readers; r++ {
+			go func() {
+				defer wg.Done()
+				barrier.Wait()
+				if sched.Left() == 0 {
+					atomic.AddInt64(&prematureFinish, 1)
+				}
+			}()
+		}
+
+		barrier.Done()
+		wg.Wait()
+
+		if prematureFinish > 0 {
+			t.Fatalf("Left() reported 0 (finished) on a brand-new schedule (attempt %d) — "+
+				"this is the race that kills pandora instances instantly and destabilizes RPS",
+				attempt)
+		}
+	}
 }
 
 func TestOnce(t *testing.T) {
