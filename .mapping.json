@@ -60,6 +60,7 @@
   "components/answ/import.go":"load/projects/pandora/components/answ/import.go",
   "components/answ/sampler/config.go":"load/projects/pandora/components/answ/sampler/config.go",
   "components/answ/sampler/status_code_sampler.go":"load/projects/pandora/components/answ/sampler/status_code_sampler.go",
+  "components/answ/sampler/status_code_sampler_test.go":"load/projects/pandora/components/answ/sampler/status_code_sampler_test.go",
   "components/answ/utils.go":"load/projects/pandora/components/answ/utils.go",
   "components/grpc/import/import.go":"load/projects/pandora/components/grpc/import/import.go",
   "components/guns/dummy/generator.go":"load/projects/pandora/components/guns/dummy/generator.go",
