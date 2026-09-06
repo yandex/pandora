@@ -51,7 +51,7 @@ func TestProvider_runPreloaded(t *testing.T) {
 		},
 		{
 			name:           "context deadline exceeded",
-			contextTimeout: 15 * time.Millisecond,
+			contextTimeout: 150 * time.Millisecond,
 			cfg: config.Config{
 				Passes: 1,
 				Limit:  9,
@@ -91,7 +91,10 @@ func TestProvider_runPreloaded(t *testing.T) {
 						require.Equal(t, "PUT", req.Method)
 					}
 					i++
-					time.Sleep(10 * time.Millisecond) // for test context deadline exceeded
+					// Шаг 100 мс при дедлайне 150 мс: до него проходят ровно два патрона (0 и 100 мс),
+					// третий был бы на 200 мс. Запас 50 мс в обе стороны на планировщик — при 10/15 мс
+					// тест флапал под полной нагрузкой машины (LOAD-3595).
+					time.Sleep(100 * time.Millisecond)
 				}
 			}()
 
