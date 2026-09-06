@@ -172,3 +172,15 @@ func Benchmark_uriDecoder_Scan(b *testing.B) {
 		require.NoError(b, err)
 	}
 }
+
+func Test_uriDecoder_Scan_ErrorDoesNotLeakLine(t *testing.T) {
+	// A jsonline file fed as uri ammo: every line fails to parse, and the error
+	// must not carry the line itself (it may contain Authorization headers).
+	input := `{"uri": "/x", "headers": {"Authorization": "Bearer secret-token"}}
+`
+	decoder := newURIDecoder(strings.NewReader(input), config.Config{}, nil)
+	_, err := decoder.Scan(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "line 1")
+	assert.NotContains(t, err.Error(), "secret-token")
+}

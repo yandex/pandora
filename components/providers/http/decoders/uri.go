@@ -123,7 +123,7 @@ func (d *uriDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 		data := d.scanner.Text()
 		a, err := d.readLine(data, d.Header)
 		if err != nil {
-			return nil, fmt.Errorf("decode at line %d `%s` error: %w", d.line+1, data, err)
+			return nil, fmt.Errorf("decode at line %d error: %w", d.line+1, err)
 		}
 		if a != nil {
 			d.ammoNum++
