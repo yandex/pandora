@@ -12,7 +12,7 @@ Full http (http2) generator config
 gun:
   type: http
   target: '[hostname]:443'
-  ssl: true
+  ssl: true                     # With type: http2, false means h2c (cleartext HTTP/2)
   connect-ssl: false            # If true, Pandora accepts any certificate presented by the server and any host name in that certificate. Default: false
   tls-handshake-timeout: 1s     # Maximum waiting time for a TLS handshake. Default: 1s
   disable-keep-alives: false    # If true, disables HTTP keep-alives. Default: false

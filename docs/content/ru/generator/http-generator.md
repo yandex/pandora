@@ -12,7 +12,7 @@ weight: 1
 gun:
   type: http
   target: '[hostname]:443'
-  ssl: true
+  ssl: true                     # Для type: http2 значение false включает h2c, HTTP/2 без TLS
   connect-ssl: false            # If true, Pandora accepts any certificate presented by the server and any host name in that certificate. Default: false
   tls-handshake-timeout: 1s     # Maximum waiting time for a TLS handshake. Default: 1s
   disable-keep-alives: false    # If true, disables HTTP keep-alives. Default: false
