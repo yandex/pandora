@@ -328,6 +328,15 @@ func (ah *runAwaitHandle) awaitRun() {
 }
 
 func (ah *runAwaitHandle) onErrAwaited(err error) {
+	// Сначала неблокирующая попытка отдать ошибку: если Run ещё ждёт на awaitErr, она уходит ему всегда.
+	// Иначе при уже отменённом runCtx (все инстансы закончили раньше, чем агрегатор или провайдер
+	// вернул ошибку) select ниже выбирал ветку случайно и в половине случаев глушил настоящую ошибку —
+	// Run возвращал nil (LOAD-3602, флак Test_InstancePool/aggregator_failed под нагрузкой).
+	select {
+	case ah.awaitErr <- err:
+		return
+	default:
+	}
 	select {
 	case ah.awaitErr <- err:
 	case <-ah.runCtx.Done():
