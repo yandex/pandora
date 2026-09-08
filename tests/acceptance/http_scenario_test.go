@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/yandex/pandora/examples/http/server"
 	"github.com/yandex/pandora/lib/testutil"
 	"go.uber.org/zap"
+
+	"a.yandex-team.ru/library/go/test/portmanager"
 )
 
 func TestHTTPScenarioSuite(t *testing.T) {
@@ -36,9 +39,12 @@ func (s *HTTPScenarioSuite) SetupSuite() {
 	s.metrics = engine.NewMetrics("http_scenario_suite")
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	port := os.Getenv("PORT") // TODO: how to set free port in CI?
+	// Свободный порт вместо фиксированного 8886: под ya обе http-сюиты стартуют параллельно и
+	// дерутся за один порт — сервер второй молча не поднимается, стрельба уходит мимо (LOAD-3615).
+	// portmanager координируется через $PORT_SYNC_PATH и освобождает порт по концу теста.
+	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8886"
+		port = strconv.Itoa(portmanager.NewT(s.T()).GetPort())
 	}
 
 	s.addr = "localhost:" + port

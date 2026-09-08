@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -25,6 +26,8 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+
+	"a.yandex-team.ru/library/go/test/portmanager"
 )
 
 var testOnce = &sync.Once{}
@@ -48,9 +51,11 @@ func (s *GunSuite) SetupSuite() {
 		pluginconfig.AddHooks()
 	})
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	port := os.Getenv("PORT") // TODO: how to set free port in CI?
+	// Свободный порт вместо фиксированного 8884 — тот же класс, что LOAD-3615: под ya сюиты идут
+	// параллельно, а фиксированный порт может быть уже занят соседом.
+	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8884"
+		port = strconv.Itoa(portmanager.NewT(s.T()).GetPort())
 	}
 
 	s.grpcServer = grpc.NewServer()
