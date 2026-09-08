@@ -515,6 +515,7 @@
   "lib/math/gcd_lcm.go":"load/projects/pandora/lib/math/gcd_lcm.go",
   "lib/math/gcd_lcm_test.go":"load/projects/pandora/lib/math/gcd_lcm_test.go",
   "lib/monitoring/counter.go":"load/projects/pandora/lib/monitoring/counter.go",
+  "lib/monitoring/counter_test.go":"load/projects/pandora/lib/monitoring/counter_test.go",
   "lib/monitoring/instance.go":"load/projects/pandora/lib/monitoring/instance.go",
   "lib/mp/iterator.go":"load/projects/pandora/lib/mp/iterator.go",
   "lib/mp/map.go":"load/projects/pandora/lib/mp/map.go",
