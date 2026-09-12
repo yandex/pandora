@@ -72,6 +72,10 @@ type Gun struct {
 	AnswLog *answlog.Logger
 }
 
+// EmptyTag помечает выстрел, которого не было: патрон не разобрался, и настоящего тега у него нет.
+// Значение совпадает с HTTP-пушкой, чтобы отчёты обеих читались одинаково.
+const EmptyTag = "__EMPTY__"
+
 func DefaultGunConfig() GunConfig {
 	return GunConfig{
 		Target: "default target",
@@ -215,11 +219,22 @@ func (g *Gun) Shoot(am core.Ammo) {
 
 func (g *Gun) shoot(ammo *ammo.Ammo) {
 	code := 0
-	sample := netsample.Acquire(ammo.Tag)
+	tag := ammo.Tag
+	if ammo.IsInvalid() {
+		// Патрон не разобрался, и его поля — данные ПРЕДЫДУЩЕГО патрона из пула: стрелять ими
+		// нельзя, а тег прошлого выстрела нельзя ставить в отчёт (LOAD-3696). HTTP-пушка так
+		// поступает давно — см. guns/http/base.go.
+		tag = EmptyTag
+	}
+	sample := netsample.Acquire(tag)
 	defer func() {
 		sample.SetProtoCode(code)
 		g.Aggr.Report(sample)
 	}()
+	if ammo.IsInvalid() {
+		g.GunDeps.Log.Warn("invalid ammo", zap.Uint64("request", ammo.ID()))
+		return
+	}
 
 	method, ok := g.Services[ammo.Call]
 	if !ok {

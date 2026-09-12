@@ -45,3 +45,32 @@ func TestFactorSampler(t *testing.T) {
 		}
 	}
 }
+
+// Код ответа приходит из ответа цели, а бакеты выделены фиксированным числом: 600 у HTTP-пушки,
+// 20 у gRPC (guns/http/base.go, guns/grpc/core.go). Значение за границей раньше уходило прямо
+// в индекс массива и роняло горутину отстрела, то есть всю стрельбу посередине (LOAD-3696).
+func TestFactorSamplerOutOfRangeStatusDoesNotPanic(t *testing.T) {
+	fs := newFactorSampler(10, 20)
+
+	for _, code := range []int{-1, 20, 21, 600, 999, 1 << 20} {
+		assert.NotPanics(t, func() {
+			fs.SampleAnsw([]zapcore.Field{zap.Int(FilterAndSampleGroup, code)})
+		}, "код %d не должен ронять стрельбу", code)
+	}
+}
+
+// Ответ с неизвестным кодом сэмплировать нечем, поэтому он пишется в лог целиком — так же,
+// как ответ без группирующего поля вообще.
+func TestFactorSamplerOutOfRangeStatusIsSampled(t *testing.T) {
+	fs := newFactorSampler(10, 20)
+
+	assert.True(t, fs.SampleAnsw([]zapcore.Field{zap.Int(FilterAndSampleGroup, 999)}))
+}
+
+// Границы массива: последний валидный бакет обязан считаться как обычно.
+func TestFactorSamplerLastBucketStillCounted(t *testing.T) {
+	fs := newFactorSampler(10, 20)
+
+	assert.True(t, fs.SampleAnsw([]zapcore.Field{zap.Int(FilterAndSampleGroup, 19)}), "первый ответ в бакете пишется")
+	assert.False(t, fs.SampleAnsw([]zapcore.Field{zap.Int(FilterAndSampleGroup, 19)}), "второй уже сэмплируется")
+}

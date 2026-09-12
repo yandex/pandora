@@ -97,12 +97,16 @@ func (p *Provider) start(ctx context.Context, ammoFile afero.File) error {
 }
 
 func decodeAmmo(jsonDoc []byte, am *ammo.Ammo) (*ammo.Ammo, error) {
-	var ammo ammo.Ammo
-	err := jsoniter.Unmarshal(jsonDoc, &ammo)
+	var decoded ammo.Ammo
+	err := jsoniter.Unmarshal(jsonDoc, &decoded)
 	if err != nil {
+		// am взят из пула и несёт поля прошлого патрона. Возвращать его как есть нельзя:
+		// вызывающий отфильтрует патрон по чужому тегу, а пушка выстрелит чужим payload
+		// и запишет это в отчёт успехом (LOAD-3696).
+		am.Reset("", "", nil, nil)
 		return am, errors.WithStack(err)
 	}
 
-	am.Reset(ammo.Tag, ammo.Call, ammo.Metadata, ammo.Payload)
+	am.Reset(decoded.Tag, decoded.Call, decoded.Metadata, decoded.Payload)
 	return am, nil
 }

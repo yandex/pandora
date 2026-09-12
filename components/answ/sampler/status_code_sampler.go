@@ -59,6 +59,13 @@ func (s *factorSampler) SampleAnsw(fields []zapcore.Field) bool {
 	}
 
 	statusCode := field.Integer
+	// Код приходит из ответа цели, а бакеты выделены фиксированным числом (600 для HTTP-пушки,
+	// 20 для gRPC). Нестандартный код вроде 999 раньше давал index out of range прямо в горутине
+	// отстрела, то есть ронял всю стрельбу посередине (LOAD-3696). Такой ответ сэмплировать нечем,
+	// поэтому пишем его в лог целиком — как и ответ без группирующего поля выше.
+	if statusCode < 0 || statusCode >= int64(len(s.counter)) {
+		return true
+	}
 
 	s.counter[statusCode].Add(1)
 	c := s.counter[statusCode].Load()

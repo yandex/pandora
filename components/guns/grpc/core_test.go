@@ -1,11 +1,18 @@
 package grpc
 
 import (
+	"context"
 	"errors"
 	"testing"
 
+	"github.com/jhump/protoreflect/desc"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/components/answ/sampler"
+	"github.com/yandex/pandora/components/providers/grpc/ammo"
+	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/aggregator/netsample"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -112,4 +119,60 @@ func TestDefaultGunConfig(t *testing.T) {
 	pattern, ok := conf.AnswLog.Sampling.Pattern.(sampler.FactorPattern)
 	require.True(t, ok, "паттерн сэмплирования должен быть факторным")
 	require.Equal(t, 10, pattern.Factor)
+}
+
+// collectAggregator собирает отчёты вместо настоящего агрегатора: тесты ниже смотрят, ЧТО
+// уехало в отчёт по несостоявшемуся выстрелу.
+type collectAggregator struct {
+	samples []core.Sample
+}
+
+func (a *collectAggregator) Run(context.Context, core.AggregatorDeps) error { return nil }
+
+func (a *collectAggregator) Report(s core.Sample) { a.samples = append(a.samples, s) }
+
+func invalidAmmoGun(aggr core.Aggregator) *Gun {
+	return &Gun{
+		Aggr:    aggr,
+		GunDeps: core.GunDeps{Log: zap.NewNop()},
+		// Services пуст намеренно: если бы выстрел всё же начался, он свалился бы на
+		// «invalid ammo.Call» и тоже не дошёл до сети. Различаем случаи по тегу в отчёте.
+		Services: map[string]desc.MethodDescriptor{},
+	}
+}
+
+// Патрон, который не разобрался, приходит в пушку с полями ПРЕДЫДУЩЕГО патрона: провайдер берёт
+// объект из пула и при ошибке только помечает его Invalidate(), не очищая. HTTP-пушка этот флаг
+// проверяет давно (guns/http/base.go), gRPC — не проверяла, поэтому в цель уходил повтор прошлого
+// запроса и писался в отчёт как обычный выстрел (LOAD-3696).
+func TestShootSkipsInvalidAmmo(t *testing.T) {
+	aggr := &collectAggregator{}
+	gun := invalidAmmoGun(aggr)
+
+	am := &ammo.Ammo{}
+	am.Reset("prev-tag", "pkg.Service/Method", nil, map[string]interface{}{"id": 1})
+	am.Invalidate()
+
+	gun.shoot(am)
+
+	require.Len(t, aggr.samples, 1, "несостоявшийся выстрел всё равно попадает в отчёт")
+	reported := aggr.samples[0].(*netsample.Sample)
+	assert.Contains(t, reported.Tags(), EmptyTag, "в отчёт идёт пустой тег, а не тег прошлого патрона")
+	assert.Equal(t, 0, reported.ProtoCode(), "несостоявшийся выстрел не получает код ответа")
+}
+
+// Обратный случай: валидный патрон отчитывается своим тегом — фикс выше не глушит обычные выстрелы.
+func TestShootKeepsTagForValidAmmo(t *testing.T) {
+	aggr := &collectAggregator{}
+	gun := invalidAmmoGun(aggr)
+
+	am := &ammo.Ammo{}
+	am.Reset("my-tag", "pkg.Service/Unknown", nil, nil)
+
+	gun.shoot(am)
+
+	require.Len(t, aggr.samples, 1)
+	reported := aggr.samples[0].(*netsample.Sample)
+	assert.Contains(t, reported.Tags(), "my-tag")
+	assert.NotContains(t, reported.Tags(), EmptyTag)
 }
