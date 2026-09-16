@@ -88,13 +88,17 @@ func Run() {
 		flag.PrintDefaults()
 	}
 	var (
-		example bool
-		expvar  bool
-		version bool
+		example         bool
+		expvar          bool
+		version         bool
+		capabilities    bool
+		managedExpvarFD int
 	)
 	flag.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
 	flag.BoolVar(&version, "version", false, "print pandora core version")
 	flag.BoolVar(&expvar, "expvar", false, "enable expvar service (DEPRECATED, use monitoring config section instead)")
+	flag.BoolVar(&capabilities, "capabilities", false, "print machine-readable capabilities and exit")
+	flag.IntVar(&managedExpvarFD, "managed-expvar-fd", -1, "internal: report a loopback expvar endpoint to this file descriptor")
 	flag.Parse()
 
 	if expvar {
@@ -110,20 +114,52 @@ func Run() {
 		fmt.Fprintf(os.Stderr, "Pandora core/%s\n", Version)
 		return
 	}
+	if capabilities {
+		fmt.Println(`{"managed_expvar_fd":1}`)
+		return
+	}
+	var control *os.File
+	if managedExpvarFD != -1 {
+		var err error
+		control, err = openManagedControl(managedExpvarFD)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+	}
 
-	ReadConfigAndRunEngine()
+	readConfigAndRunEngine(control)
 }
 
 func ReadConfigAndRunEngine() {
+	readConfigAndRunEngine(nil)
+}
+
+func readConfigAndRunEngine(control *os.File) {
 	conf := readConfig(flag.Args())
 	log := newLogger(conf.Log)
 	zap.ReplaceGlobals(log)
 	zap.RedirectStdLog(log)
 
+	if control != nil {
+		if conf.Monitoring.Expvar != nil {
+			conf.Monitoring.Expvar.Enabled = false
+		}
+	}
 	closeMonitoring := startMonitoring(conf.Monitoring)
 	defer closeMonitoring()
 	m := engine.NewMetrics("engine")
 	startReport(m)
+	if control != nil {
+		stop, err := startManagedExpvar(control)
+		if err := control.Close(); err != nil {
+			log.Warn("Cannot close managed expvar control descriptor", zap.Error(err))
+		}
+		if err != nil {
+			log.Fatal("Managed expvar startup failed", zap.Error(err))
+		}
+		defer stop()
+	}
 
 	pandora := engine.New(log, m, conf.Engine)
 

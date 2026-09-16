@@ -55,6 +55,8 @@
   "acceptance_tests/http_test.go":"load/projects/pandora/acceptance_tests/http_test.go",
   "cli/cli.go":"load/projects/pandora/cli/cli.go",
   "cli/expvar.go":"load/projects/pandora/cli/expvar.go",
+  "cli/managed_expvar.go":"load/projects/pandora/cli/managed_expvar.go",
+  "cli/managed_expvar_test.go":"load/projects/pandora/cli/managed_expvar_test.go",
   "components/answ/filter/const.go":"load/projects/pandora/components/answ/filter/const.go",
   "components/answ/filter/status_code_filter.go":"load/projects/pandora/components/answ/filter/status_code_filter.go",
   "components/answ/import.go":"load/projects/pandora/components/answ/import.go",
