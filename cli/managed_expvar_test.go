@@ -149,7 +149,8 @@ func TestOpenManagedControlAcceptsInheritedPipe(t *testing.T) {
 }
 
 func TestRunRejectsMissingControlFD(t *testing.T) {
-	cmd := exec.Command(os.Args[0], "-test.run=TestManagedExpvarHelperProcess", "--", "-managed-expvar-fd=3", "-")
+	// Рантайм Go 1.25+ держит fd 3–4 под лимит CPU из cgroup, поэтому номер заведомо свободный.
+	cmd := exec.Command(os.Args[0], "-test.run=TestManagedExpvarHelperProcess", "--", "-managed-expvar-fd=1000", "-")
 	cmd.Env = append(os.Environ(), "PANDORA_MANAGED_EXPVAR_TEST_HELPER=missing-fd")
 	output, err := cmd.CombinedOutput()
 	if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 2 {
@@ -235,7 +236,7 @@ func TestManagedExpvarHelperProcess(t *testing.T) {
 	flag.CommandLine = flag.NewFlagSet("pandora", flag.ExitOnError)
 	switch mode {
 	case "missing-fd":
-		os.Args = []string{"pandora", "-managed-expvar-fd=3", "-"}
+		os.Args = []string{"pandora", "-managed-expvar-fd=1000", "-"}
 	case "capabilities":
 		os.Args = []string{"pandora", "-capabilities"}
 	case "inherited-fd":
