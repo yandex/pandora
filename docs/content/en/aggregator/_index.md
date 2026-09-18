@@ -16,7 +16,7 @@ result:
   type: phout
   destination: file_path.log
   id: false # Print ammo ids if true.
-  flush-time: 1s
+  flush-time: 1s    # Buffer flush period, a string with a unit: from 1ms to 1m.
   sample-queue-size: 262144
   buffer-size: 1048576
 ```

@@ -25,7 +25,7 @@ result:
   type: phout
   destination: file_path.log
   id: false    # Print ammo ids if true.
-  flush-time: 1s
+  flush-time: 1s    # Период сброса буфера в файл, строкой с единицей: от 1ms до 1m.
   sample-queue-size: 262144
   buffer-size: 1048576
 ```

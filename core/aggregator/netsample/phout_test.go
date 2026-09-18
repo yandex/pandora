@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yandex/pandora/core"
+	"github.com/yandex/pandora/core/config"
 )
 
 func TestPhout(t *testing.T) {
@@ -82,4 +83,74 @@ func newTestSample() *Sample {
 	s.set(keyErrno, 13)
 	s.set(keyProtoCode, ProtoCodeError)
 	return s
+}
+
+// Голое число в YAML даёт НАНОСЕКУНДЫ: хук разбора (core/config/config.go:102) ловит только строки.
+// Из-за этого flush-time: 1, написанный как «одна секунда», значит 1 нс — и его должен срезать валидатор.
+func TestPhoutConfigFlushTimeValidation(t *testing.T) {
+	decode := func(v interface{}) (PhoutConfig, error) {
+		conf := DefaultPhoutConfig()
+		conf.Destination = "out.txt"
+		err := config.DecodeAndValidate(map[string]interface{}{"destination": "out.txt", "flush-time": v}, &conf)
+		return conf, err
+	}
+
+	conf, err := decode("1s")
+	require.NoError(t, err)
+	require.Equal(t, time.Second, conf.FlushTime)
+
+	// голое число = 1 нс
+	_, err = decode(1)
+	require.Error(t, err)
+
+	// NewTicker на таком значении паникует
+	_, err = decode("0s")
+	require.Error(t, err)
+
+	// флаш реже минуты бессмысленен: буфер всё равно сбросится по заполнению
+	_, err = decode("5m")
+	require.Error(t, err)
+}
+
+// Период флаша берётся из конфига, а не из зашитой секунды: с flush-time 20 мс данные должны
+// оказаться в файле задолго до неё. Тест смотрит на файл, а не на поле конфига, иначе он не
+// поймает возврат константы в NewTicker.
+func TestPhoutFlushTimeUsed(t *testing.T) {
+	const fileName = "flushed.txt"
+	fs := afero.NewMemMapFs()
+	conf := DefaultPhoutConfig()
+	conf.Destination = fileName
+	conf.FlushTime = 20 * time.Millisecond
+
+	testee, err := NewPhout(fs, conf)
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	runErr := make(chan error, 1)
+	go func() { runErr <- testee.Run(ctx, core.AggregatorDeps{}) }()
+
+	testee.Report(newTestSample())
+
+	// ждём флаша по тикеру, но заметно меньше секунды
+	var data []byte
+	require.Eventually(t, func() bool {
+		data, _ = afero.ReadFile(fs, fileName)
+		return len(data) > 0
+	}, 400*time.Millisecond, 5*time.Millisecond, "сэмпл не сброшен в файл за 400 мс")
+	require.Contains(t, string(data), testSampleNoIDPhout)
+
+	cancel()
+	<-runErr
+}
+
+// PhoutConfig могут собрать в коде мимо DefaultPhoutConfig — NewTicker(0) паникует.
+func TestPhoutZeroFlushTimeFallsBackToSecond(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	conf := DefaultPhoutConfig()
+	conf.Destination = "zero.txt"
+	conf.FlushTime = 0
+
+	testee, err := NewPhout(fs, conf)
+	require.NoError(t, err)
+	require.Equal(t, time.Second, testee.(*phoutAggregator).config.FlushTime)
 }

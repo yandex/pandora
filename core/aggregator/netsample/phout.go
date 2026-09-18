@@ -18,7 +18,7 @@ import (
 type PhoutConfig struct {
 	Destination     string                    // Destination file name
 	ID              bool                      // Print ammo ids if true.
-	FlushTime       time.Duration             `config:"flush-time"`
+	FlushTime       time.Duration             `config:"flush-time" validate:"min-time=1ms,max-time=1m"`
 	SampleQueueSize int                       `config:"sample-queue-size"`
 	Buffer          coreutil.BufferSizeConfig `config:",squash"`
 }
@@ -34,6 +34,10 @@ func DefaultPhoutConfig() PhoutConfig {
 }
 
 func NewPhout(fs afero.Fs, conf PhoutConfig) (a Aggregator, err error) {
+	if conf.FlushTime <= 0 {
+		// Конфиг мог собраться в коде мимо DefaultPhoutConfig, а NewTicker(0) паникует.
+		conf.FlushTime = time.Second
+	}
 	filename := conf.Destination
 	var file afero.File = os.Stdout
 	if filename != "" {
@@ -64,7 +68,7 @@ type phoutAggregator struct {
 func (a *phoutAggregator) Report(s *Sample) { a.sink <- s }
 
 func (a *phoutAggregator) Run(ctx context.Context, _ core.AggregatorDeps) error {
-	shouldFlush := time.NewTicker(1 * time.Second)
+	shouldFlush := time.NewTicker(a.config.FlushTime)
 	defer func() {
 		_ = a.writer.Flush()
 		_ = a.file.Close()
