@@ -23,6 +23,22 @@ var (
 // BenchmarkRawDecoder-12               	 9371816	      1426 ns/op	    5122 B/op	      10 allocs/op
 // BenchmarkRawDecoderWithHeaders-12    	 6145189	      1886 ns/op	    5122 B/op	      10 allocs/op
 
+// Большой патрон: буфер "ровно по размеру патрона" здесь на порядок хуже дефолтных 4096 Б.
+var benchTestBigRequest = func() []byte {
+	body := make([]byte, 256<<10)
+	for i := range body {
+		body[i] = 'x'
+	}
+	return append([]byte("POST /upload HTTP/1.1\r\nHost: yourhost.tld\r\nContent-Length: 262144\r\n\r\n"), body...)
+}()
+
+func BenchmarkRawDecoderBigAmmo(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = DecodeRequest(benchTestBigRequest)
+	}
+}
+
 func BenchmarkRawDecoder(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, _ = DecodeRequest(benchTestRequest)

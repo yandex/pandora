@@ -77,12 +77,7 @@ loop:
 			if err := a.handle(r); err != nil {
 				return err
 			}
-			select {
-			case <-shouldFlush.C:
-				_ = a.writer.Flush()
-			default:
-			}
-		case <-time.After(1 * time.Second):
+		case <-shouldFlush.C:
 			_ = a.writer.Flush()
 		case <-ctx.Done():
 			// Context is done, but we should read all data from sink

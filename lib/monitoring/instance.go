@@ -3,46 +3,42 @@ package monitoring
 import (
 	"expvar"
 	"strconv"
-	"sync"
+	"sync/atomic"
 )
 
-const defaultInstCapacity = 10000
-
 func NewInstanceTracker(name string) *InstanceTracker {
-	v := &InstanceTracker{ids: make(map[int]struct{}, defaultInstCapacity)}
+	v := &InstanceTracker{}
 	expvar.Publish(name, v)
 	return v
 }
 
+// Два счётчика вместо множества id под общим мьютексом: id не использовался,
+// а OnStart/OnFinish зовутся дважды на каждый выстрел из всех инстансов сразу.
 type InstanceTracker struct {
-	mu  sync.Mutex
-	ids map[int]struct{}
-	max int
+	cur atomic.Int64
+	max atomic.Int64
 }
 
 func (u *InstanceTracker) String() string {
-	u.mu.Lock()
-	defer u.mu.Unlock()
-	return strconv.Itoa(len(u.ids))
+	return strconv.FormatInt(u.cur.Load(), 10)
 }
 
-func (u *InstanceTracker) OnStart(id int) {
-	u.mu.Lock()
-	defer u.mu.Unlock()
-	u.ids[id] = struct{}{}
-	u.max = max(u.max, len(u.ids))
+func (u *InstanceTracker) OnStart(_ int) {
+	cur := u.cur.Add(1)
+	for {
+		m := u.max.Load()
+		if cur <= m || u.max.CompareAndSwap(m, cur) {
+			return
+		}
+	}
 }
 
-func (u *InstanceTracker) OnFinish(id int) {
-	u.mu.Lock()
-	defer u.mu.Unlock()
-	delete(u.ids, id)
+func (u *InstanceTracker) OnFinish(_ int) {
+	u.cur.Add(-1)
 }
 
+// Пара Load+Swap не атомарна: пик, набранный ровно между ними, уедет в следующее окно.
+// Для гейджа "занято инстансов" это терпимо, мьютекс ради точности тут дороже.
 func (u *InstanceTracker) Flush() int {
-	u.mu.Lock()
-	defer u.mu.Unlock()
-	res := u.max
-	u.max = len(u.ids)
-	return res
+	return int(u.max.Swap(u.cur.Load()))
 }

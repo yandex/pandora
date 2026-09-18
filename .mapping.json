@@ -520,6 +520,7 @@
   "lib/monitoring/counter.go":"load/projects/pandora/lib/monitoring/counter.go",
   "lib/monitoring/counter_test.go":"load/projects/pandora/lib/monitoring/counter_test.go",
   "lib/monitoring/instance.go":"load/projects/pandora/lib/monitoring/instance.go",
+  "lib/monitoring/instance_test.go":"load/projects/pandora/lib/monitoring/instance_test.go",
   "lib/mp/iterator.go":"load/projects/pandora/lib/mp/iterator.go",
   "lib/mp/map.go":"load/projects/pandora/lib/mp/map.go",
   "lib/mp/map_test.go":"load/projects/pandora/lib/mp/map_test.go",

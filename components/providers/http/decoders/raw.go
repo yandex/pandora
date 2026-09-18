@@ -60,6 +60,9 @@ type rawDecoder struct {
 	protoDecoder
 	reader *bufio.Reader
 	pool   *sync.Pool
+	// Позиция в файле, которую мы ведём сами: filePosition() — это lseek на каждый
+	// выстрел, и он к тому же врёт на размер буфера bufio.
+	position int64
 }
 
 func (d *rawDecoder) LoadAmmo(ctx context.Context) ([]DecodedAmmo, error) {
@@ -99,9 +102,11 @@ func (d *rawDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 				return nil, err
 			}
 			d.reader.Reset(d.file)
+			d.position = 0
 			continue
 		}
-		position := filePosition(d.file)
+		d.position += int64(len(data))
+		position := d.position
 		if err != nil {
 			return nil, xerrors.Errorf("reading ammo failed with err: %w, at position: %v", err, position)
 		}
@@ -118,7 +123,9 @@ func (d *rawDecoder) Scan(ctx context.Context) (DecodedAmmo, error) {
 		a := d.pool.Get().(*ammo.RawAmmo)
 		if reqSize != 0 {
 			buff := make([]byte, reqSize)
-			if n, err := io.ReadFull(d.reader, buff); err != nil {
+			n, err := io.ReadFull(d.reader, buff)
+			d.position += int64(n)
+			if err != nil {
 				return nil, xerrors.Errorf("failed to read ammo with err: %w, at position: %v; tried to read: %v; have read: %v", err, position, reqSize, n)
 			}
 

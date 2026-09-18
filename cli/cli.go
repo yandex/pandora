@@ -3,10 +3,12 @@ package cli
 import (
 	"bufio"
 	"context"
+	"expvar"
 	"flag"
 	"fmt"
 	"io"
 	"net/http"
+	httppprof "net/http/pprof"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -300,9 +302,12 @@ func newViper() *viper.Viper {
 }
 
 type monitoringConfig struct {
-	Expvar     *expvarConfig
-	CPUProfile *cpuprofileConfig
-	MemProfile *memprofileConfig
+	Expvar     *expvarConfig     `config:"expvar"`
+	CPUProfile *cpuprofileConfig `config:"cpuprofile"`
+	MemProfile *memprofileConfig `config:"memprofile"`
+	// Снимаются с /debug/pprof на порту expvar. 0 — выключено, профилирование блокировок платное.
+	MutexProfileFraction int `config:"mutex-profile-fraction"`
+	BlockProfileRate     int `config:"block-profile-rate"`
 }
 
 type expvarConfig struct {
@@ -322,10 +327,27 @@ type memprofileConfig struct {
 
 func startMonitoring(conf monitoringConfig) (stop func()) {
 	zap.L().Debug("Start monitoring", zap.Reflect("conf", conf))
+	// Не внутри Expvar.Enabled: в managed-режиме он принудительно гасится, а pprof там отдаёт
+	// managed-сервер, и профиль пришёл бы пустым. Ненулевое значение — явная просьба пользователя.
+	if conf.MutexProfileFraction > 0 {
+		runtime.SetMutexProfileFraction(conf.MutexProfileFraction)
+	}
+	if conf.BlockProfileRate > 0 {
+		runtime.SetBlockProfileRate(conf.BlockProfileRate)
+	}
 	if conf.Expvar != nil {
 		if conf.Expvar.Enabled {
 			go func() {
-				err := http.ListenAndServe(":"+strconv.Itoa(conf.Expvar.Port), nil)
+				// Свой mux и только loopback: expvar читает танк с localhost, а /debug/pprof
+				// наружу даёт любому хосту в сети держать профайлер на агенте и портить замер.
+				mux := http.NewServeMux()
+				mux.Handle("GET /debug/vars", expvar.Handler())
+				mux.HandleFunc("GET /debug/pprof/", httppprof.Index)
+				mux.HandleFunc("GET /debug/pprof/cmdline", httppprof.Cmdline)
+				mux.HandleFunc("GET /debug/pprof/profile", httppprof.Profile)
+				mux.HandleFunc("GET /debug/pprof/symbol", httppprof.Symbol)
+				mux.HandleFunc("GET /debug/pprof/trace", httppprof.Trace)
+				err := http.ListenAndServe("127.0.0.1:"+strconv.Itoa(conf.Expvar.Port), mux)
 				zap.L().Fatal("Monitoring server failed", zap.Error(err))
 			}()
 		}

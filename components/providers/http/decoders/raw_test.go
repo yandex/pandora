@@ -135,3 +135,48 @@ func Benchmark_rawDecoder_Scan(b *testing.B) {
 		require.NoError(b, err)
 	}
 }
+
+// Позиция в ammofile ведётся счётчиком (раньше был lseek), а уходит она только в тексты ошибок —
+// поэтому разъехаться может молча.
+func Test_rawDecoder_position(t *testing.T) {
+	const input = "10 t1\n0123456789\n5 t2\n01234\n"
+	d := newRawDecoder(strings.NewReader(input), config.Config{}, http.Header{})
+	ctx := context.Background()
+
+	_, err := d.Scan(ctx)
+	require.NoError(t, err)
+	// заголовок "10 t1\n" (6) + тело (10)
+	require.Equal(t, int64(16), d.position)
+
+	_, err = d.Scan(ctx)
+	require.NoError(t, err)
+	// + пустая строка после тела (1) + заголовок "5 t2\n" (5) + тело (5)
+	require.Equal(t, int64(27), d.position)
+}
+
+func Test_rawDecoder_positionOnTruncatedAmmo(t *testing.T) {
+	// reqSize больше, чем осталось байт в файле
+	const input = "100 t1\nshort"
+	d := newRawDecoder(strings.NewReader(input), config.Config{}, http.Header{})
+
+	_, err := d.Scan(context.Background())
+	require.Error(t, err)
+	// позиция сразу за строкой заголовка: len("100 t1\n")
+	require.Contains(t, err.Error(), "at position: 7")
+}
+
+// Сброс позиции на обороте файла: единственное место, где счётчик может разъехаться навсегда.
+func Test_rawDecoder_positionResetOnRewind(t *testing.T) {
+	const input = "10 t1\n0123456789\n"
+	d := newRawDecoder(strings.NewReader(input), config.Config{Passes: 2}, http.Header{})
+	ctx := context.Background()
+
+	_, err := d.Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, int64(16), d.position)
+
+	// второй проход: позиция должна начаться с нуля, а не продолжить расти
+	_, err = d.Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, int64(16), d.position)
+}

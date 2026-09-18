@@ -10,6 +10,9 @@ import (
 	"strings"
 )
 
+// Столько же, сколько берёт bufio.NewReader по умолчанию.
+const defaultBufSize = 4096
+
 func DecodeHeader(headerString string) (reqSize int, tag string, err error) {
 	var sizeStr string
 	sizeStr, tag, _ = strings.Cut(headerString, " ")
@@ -21,7 +24,9 @@ func DecodeHeader(headerString string) (reqSize int, tag string, err error) {
 }
 
 func DecodeRequest(reqString []byte) (req *http.Request, err error) {
-	reader := bufio.NewReader(bytes.NewReader(reqString))
+	// Буфер под размер патрона, но не больше дефолтных 4096 Б: маленький патрон не должен
+	// тащить буфер на 4 КБ, большой — буфер размером с себя. Выделяется на каждый выстрел.
+	reader := bufio.NewReaderSize(bytes.NewReader(reqString), min(len(reqString), defaultBufSize))
 	req, err = http.ReadRequest(reader)
 	if err != nil {
 		return

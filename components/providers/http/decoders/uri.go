@@ -80,7 +80,7 @@ func (d *uriDecoder) readLine(data string, commonHeader http.Header) (DecodedAmm
 func (d *uriDecoder) Release(a core.Ammo) {
 	if am, ok := a.(*ammo.Ammo); ok {
 		am.Reset()
-		d.pool.Put(*am)
+		d.pool.Put(am)
 	}
 }
 
