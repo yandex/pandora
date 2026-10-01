@@ -25,12 +25,15 @@ func NewConnectGun(cfg GunConfig) *BaseGun {
 	return NewBaseGun(newConnectClient, cfg)
 }
 
-func NewConnectGunFactory(conf GunConfig) func() core.Gun {
+func NewConnectGunFactory(conf GunConfig) (func() core.Gun, error) {
+	if err := ValidateResponseCode(conf.ResponseCode, false); err != nil {
+		return nil, err
+	}
 	conf.Target, _ = PreResolveTargetAddr(&conf.Client, conf.Target)
 	conf.TargetResolved = conf.Target
 	return func() core.Gun {
 		return WrapGun(NewConnectGun(conf))
-	}
+	}, nil
 }
 
 func DefaultConnectGunConfig() GunConfig {

@@ -17,6 +17,7 @@ import (
 	"github.com/jhump/protoreflect/grpcreflect"
 	"github.com/yandex/pandora/components/answ/filter"
 	"github.com/yandex/pandora/components/answ/sampler"
+	"github.com/yandex/pandora/components/grpcstatus"
 	"github.com/yandex/pandora/components/providers/grpc/ammo"
 	"github.com/yandex/pandora/core"
 	"github.com/yandex/pandora/core/aggregator/netsample"
@@ -27,7 +28,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
@@ -322,40 +322,7 @@ func MakeGRPCConnect(target string, isTLS bool, dialOptions GrpcDialOptions) (co
 }
 
 func ConvertGrpcStatus(err error) int {
-	s := status.Convert(err)
-
-	switch s.Code() {
-	case codes.OK:
-		return 200
-	case codes.Canceled:
-		return 499
-	case codes.InvalidArgument:
-		return 400
-	case codes.DeadlineExceeded:
-		return 504
-	case codes.NotFound:
-		return 404
-	case codes.AlreadyExists:
-		return 409
-	case codes.PermissionDenied:
-		return 403
-	case codes.ResourceExhausted:
-		return 429
-	case codes.FailedPrecondition:
-		return 400
-	case codes.Aborted:
-		return 409
-	case codes.OutOfRange:
-		return 400
-	case codes.Unimplemented:
-		return 501
-	case codes.Unavailable:
-		return 503
-	case codes.Unauthenticated:
-		return 401
-	default:
-		return 500
-	}
+	return grpcstatus.ToHTTPCode(status.Convert(err).Code())
 }
 
 func replacePort(host string, port int64) string {

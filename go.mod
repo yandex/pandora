@@ -27,6 +27,7 @@ require (
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa
 	golang.org/x/net v0.58.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260427160629-7cedc36a6bc4
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	gopkg.in/bluesuncorp/validator.v9 v9.10.0
@@ -68,7 +69,6 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260427160629-7cedc36a6bc4 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptrace"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -228,6 +229,23 @@ func (b *cancelOnCloseBody) Close() error {
 	err := b.ReadCloser.Close()
 	b.once.Do(b.cancel)
 	return err
+}
+
+func endedAtResponseHeaders(body io.ReadCloser) bool {
+	if body == nil {
+		return false
+	}
+	if body == http.NoBody {
+		return true
+	}
+	if wrapped, ok := body.(*cancelOnCloseBody); ok {
+		return endedAtResponseHeaders(wrapped.ReadCloser)
+	}
+	// x/net/http2 exposes no END_STREAM bit in http.Response. For a gRPC POST
+	// response it uses its private noBodyReader when initial HEADERS ended the stream.
+	// An unknown transport representation fails closed until its behavior is tested.
+	t := reflect.TypeOf(body)
+	return t.PkgPath() == "golang.org/x/net/http2" && t.Name() == "noBodyReader"
 }
 
 func NewRedirectingClient(tr http.RoundTripper, redirect bool) Client {

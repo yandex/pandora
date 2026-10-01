@@ -12,6 +12,9 @@ func NewHTTPGun(conf phttp.GunConfig) *ScenarioGun {
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
 func NewHTTP2Gun(conf phttp.GunConfig) (*ScenarioGun, error) {
+	if err := phttp.ValidateResponseCode(conf.ResponseCode, false); err != nil {
+		return nil, err
+	}
 	if !conf.SSL {
 		// Open issue on github if you really need this feature.
 		return nil, errors.New("HTTP/2.0 over TCP is not supported. Please leave SSL option true by default")

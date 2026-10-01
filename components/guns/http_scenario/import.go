@@ -28,21 +28,27 @@ func (g *gunWrapper) Bind(a core.Aggregator, deps core.GunDeps) error {
 }
 
 func Import(fs afero.Fs) {
-	register.Gun("http/scenario", func(conf phttp.GunConfig) func() core.Gun {
+	register.Gun("http/scenario", func(conf phttp.GunConfig) (func() core.Gun, error) {
+		if err := phttp.ValidateResponseCode(conf.ResponseCode, false); err != nil {
+			return nil, err
+		}
 		targetResolved, _ := phttp.PreResolveTargetAddr(&conf.Client, conf.Target)
 		conf.TargetResolved = targetResolved
 		return func() core.Gun {
 			gun := NewHTTPGun(conf)
 			return WrapGun(gun)
-		}
+		}, nil
 	}, phttp.DefaultHTTPGunConfig)
 
-	register.Gun("http2/scenario", func(conf phttp.GunConfig) func() (core.Gun, error) {
+	register.Gun("http2/scenario", func(conf phttp.GunConfig) (func() (core.Gun, error), error) {
+		if err := phttp.ValidateResponseCode(conf.ResponseCode, false); err != nil {
+			return nil, err
+		}
 		targetResolved, _ := phttp.PreResolveTargetAddr(&conf.Client, conf.Target)
 		conf.TargetResolved = targetResolved
 		return func() (core.Gun, error) {
 			gun, err := NewHTTP2Gun(conf)
 			return WrapGun(gun), err
-		}
+		}, nil
 	}, phttp.DefaultHTTP2GunConfig)
 }

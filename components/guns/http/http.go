@@ -1,6 +1,8 @@
 package phttp
 
 import (
+	"fmt"
+
 	"github.com/yandex/pandora/components/answ/filter"
 	"github.com/yandex/pandora/components/answ/sampler"
 	"github.com/yandex/pandora/core"
@@ -12,6 +14,7 @@ type GunConfig struct {
 	Target         string       `validate:"endpoint,required"`
 	TargetResolved string       `config:"-"`
 	SSL            bool
+	ResponseCode   string `config:"response-code"`
 
 	AutoTag      AutoTagConfig   `config:"auto-tag"`
 	AnswLog      answlog.Config  `config:"answlog"`
@@ -26,10 +29,13 @@ func NewHTTP1Gun(cfg GunConfig) *BaseGun {
 	return NewBaseGun(HTTP1ClientConstructor, cfg)
 }
 
-func NewHTTP1GunFactory(conf GunConfig) func() core.Gun {
+func NewHTTP1GunFactory(conf GunConfig) (func() core.Gun, error) {
+	if err := ValidateResponseCode(conf.ResponseCode, false); err != nil {
+		return nil, err
+	}
 	targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Target)
 	conf.TargetResolved = targetResolved
-	return func() core.Gun { return WrapGun(NewHTTP1Gun(conf)) }
+	return func() core.Gun { return WrapGun(NewHTTP1Gun(conf)) }, nil
 }
 
 func HTTP1ClientConstructor(clientConfig ClientConfig, target string) Client {
@@ -42,19 +48,44 @@ var _ ClientConstructor = HTTP1ClientConstructor
 
 // NewHTTP2Gun return simple HTTP/2 gun that can shoot sequentially through one connection.
 func NewHTTP2Gun(cfg GunConfig) (*BaseGun, error) {
-	if !cfg.SSL {
-		return NewBaseGun(H2CClientConstructor, cfg), nil
+	if err := ValidateResponseCode(cfg.ResponseCode, true); err != nil {
+		return nil, err
 	}
-	return NewBaseGun(HTTP2ClientConstructor, cfg), nil
+	if !cfg.SSL {
+		gun := NewBaseGun(H2CClientConstructor, cfg)
+		gun.supportsGRPCResponseCode = true
+		return gun, nil
+	}
+	gun := NewBaseGun(HTTP2ClientConstructor, cfg)
+	gun.supportsGRPCResponseCode = true
+	return gun, nil
 }
 
-func NewHTTP2GunFactory(conf GunConfig) func() (core.Gun, error) {
+// ValidateResponseCode checks a shared GunConfig against the selected gun's response capability.
+func ValidateResponseCode(mode string, supportsGRPC bool) error {
+	switch mode {
+	case "", "http":
+		return nil
+	case "grpc":
+		if supportsGRPC {
+			return nil
+		}
+		return fmt.Errorf("response-code %q requires gun type http2", mode)
+	default:
+		return fmt.Errorf("unsupported response-code %q", mode)
+	}
+}
+
+func NewHTTP2GunFactory(conf GunConfig) (func() (core.Gun, error), error) {
+	if err := ValidateResponseCode(conf.ResponseCode, true); err != nil {
+		return nil, err
+	}
 	targetResolved, _ := PreResolveTargetAddr(&conf.Client, conf.Target)
 	conf.TargetResolved = targetResolved
 	return func() (core.Gun, error) {
 		gun, err := NewHTTP2Gun(conf)
 		return WrapGun(gun), err
-	}
+	}, nil
 }
 
 func HTTP2ClientConstructor(clientConfig ClientConfig, target string) Client {
@@ -74,8 +105,9 @@ var _ ClientConstructor = H2CClientConstructor
 
 func DefaultHTTPGunConfig() GunConfig {
 	return GunConfig{
-		SSL:    false,
-		Client: DefaultClientConfig(),
+		SSL:          false,
+		ResponseCode: "http",
+		Client:       DefaultClientConfig(),
 		AutoTag: AutoTagConfig{
 			Enabled:     false,
 			URIElements: 2,
@@ -101,7 +133,8 @@ func DefaultHTTPGunConfig() GunConfig {
 
 func DefaultHTTP2GunConfig() GunConfig {
 	return GunConfig{
-		Client: DefaultClientConfig(),
+		Client:       DefaultClientConfig(),
+		ResponseCode: "http",
 		AutoTag: AutoTagConfig{
 			Enabled:     false,
 			URIElements: 2,

@@ -67,6 +67,7 @@ type BaseGun struct {
 	ClientConstructor func() Client
 
 	core.GunDeps
+	supportsGRPCResponseCode bool
 }
 
 var _ Gun = (*BaseGun)(nil)
@@ -86,13 +87,19 @@ func (b *BaseGun) createSharedDeps(opts *warmup.Options) (*SharedDeps, error) {
 	if err != nil {
 		return nil, err
 	}
+	statusFilter := filter.NewHTTPStatusCodeFilter(b.Config.AnswLog.Filter)
+	samplerBuckets := 600
+	if b.Config.ResponseCode == "grpc" {
+		statusFilter = filter.NewGRPCStatusCodeFilter(b.Config.AnswLog.Filter)
+		samplerBuckets = 20
+	}
 	return &SharedDeps{
 		clientPool: clientPool,
 		answlog: answlog.Init(
 			b.Config.AnswLog.Path,
 			b.Config.AnswLog.Enabled,
-			answlog.WithFilter(filter.NewHTTPStatusCodeFilter(b.Config.AnswLog.Filter)),
-			answlog.WithSampler(sampler.NewStatusCodeSampler(b.Config.AnswLog.Sampling.Pattern, 600), b.Config.AnswLog.Sampling.Enabled),
+			answlog.WithFilter(statusFilter),
+			answlog.WithSampler(sampler.NewStatusCodeSampler(b.Config.AnswLog.Sampling.Pattern, samplerBuckets), b.Config.AnswLog.Sampling.Enabled),
 			answlog.WithMasker(b.Config.AnswLog.Masking),
 		),
 	}, nil
@@ -114,6 +121,9 @@ func (b *BaseGun) prepareClientPool() (*clientpool.Pool[Client], error) {
 }
 
 func (b *BaseGun) Bind(aggregator netsample.Aggregator, deps core.GunDeps) error {
+	if err := ValidateResponseCode(b.Config.ResponseCode, b.supportsGRPCResponseCode); err != nil {
+		return err
+	}
 	log := deps.Log
 	if ent := log.Check(zap.DebugLevel, "Gun bind"); ent != nil {
 		// Enable debug level logging during shooting. Creating log entries isn't free.
@@ -221,10 +231,14 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 	}
 	var res *http.Response
 	res, err = b.Client.Do(req)
+	if err == nil && res != nil && b.Config.ResponseCode == "grpc" {
+		// Preserve the historical header RTT while the final gRPC status arrives later.
+		sample.SetProtoCode(res.StatusCode)
+	}
 	if b.Config.HTTPTrace.TraceEnabled && timings != nil {
 		sample.SetReceiveTime(timings.GetReceiveTime())
 	}
-	if b.Config.HTTPTrace.DumpEnabled && res != nil {
+	if b.Config.HTTPTrace.DumpEnabled && res != nil && b.Config.ResponseCode != "grpc" {
 		responseDump, err := httputil.DumpResponse(res, true)
 		if err != nil {
 			b.Log.Error("DumpResponse error", zap.Error(err))
@@ -240,6 +254,14 @@ func (b *BaseGun) Shoot(ammo Ammo) {
 
 	if err != nil {
 		b.Log.Warn("Request fail", zap.Error(err))
+		return
+	}
+	if res == nil {
+		err = fmt.Errorf("HTTP client returned no response")
+		return
+	}
+	if b.Config.ResponseCode == "grpc" {
+		err = b.processGRPCResponse(req, res, sample)
 		return
 	}
 
