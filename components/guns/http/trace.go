@@ -17,19 +17,27 @@ type TraceTimings struct {
 }
 
 func (t *TraceTimings) GetReceiveTime() time.Duration {
-	return time.Since(t.GotFirstResponseByte)
+	return between(t.GotFirstResponseByte, time.Now())
 }
 
 func (t *TraceTimings) GetConnectTime() time.Duration {
-	return t.GotConnTime.Sub(t.GetConnTime)
+	return between(t.GetConnTime, t.GotConnTime)
 }
 
 func (t *TraceTimings) GetSendTime() time.Duration {
-	return t.WroteRequestTime.Sub(t.GotConnTime)
+	return between(t.GotConnTime, t.WroteRequestTime)
 }
 
 func (t *TraceTimings) GetLatency() time.Duration {
-	return t.GotFirstResponseByte.Sub(t.WroteRequestTime)
+	return between(t.WroteRequestTime, t.GotFirstResponseByte)
+}
+
+// Событие, которое не наступило (запрос упал раньше), даёт 0: Sub от нулевого time.Time насыщается до ±2^63 нс.
+func between(from, to time.Time) time.Duration {
+	if from.IsZero() || to.IsZero() {
+		return 0
+	}
+	return to.Sub(from)
 }
 
 func CreateHTTPTrace() (*httptrace.ClientTrace, *TraceTimings) {

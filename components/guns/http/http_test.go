@@ -64,6 +64,47 @@ func TestBaseGun_integration(t *testing.T) {
 	require.Equal(t, actualReq.URL.Path, path)
 }
 
+// Не наступившее событие httptrace давало в phout ±2^63 нс, и бэкенд отклонял трейл (LOAD-3901).
+func TestBaseGun_TraceTimingsOnFailedRequest(t *testing.T) {
+	slow := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+	}))
+	defer slow.Close()
+	closed, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	refused := closed.Addr().String()
+	require.NoError(t, closed.Close())
+
+	for name, target := range map[string]string{
+		"response header timeout": strings.TrimPrefix(slow.URL, "http://"),
+		"connection refused":      refused,
+	} {
+		t.Run(name, func(t *testing.T) {
+			conf := DefaultHTTPGunConfig()
+			conf.Target = target
+			conf.TargetResolved = target
+			conf.Client.Transport.ResponseHeaderTimeout = 20 * time.Millisecond
+			conf.HTTPTrace.TraceEnabled = true
+			results := &netsample.TestAggregator{}
+			gun := NewHTTP1Gun(conf)
+			require.NoError(t, gun.Bind(results, testDeps()))
+
+			req, err := http.NewRequest("GET", "http://"+target+"/", nil)
+			require.NoError(t, err)
+			gun.Shoot(newAmmoReq(t, req))
+
+			s := results.Samples[0]
+			require.Error(t, s.Err())
+			for _, us := range []int{s.GetConnectTimeMicroseconds(), s.GetSendTimeMicroseconds(),
+				s.GetLatencyMicroseconds(), s.GetReceiveTimeMicroseconds()} {
+				require.True(t, us >= 0 && us < int(time.Second/time.Microsecond),
+					"connect=%d send=%d latency=%d receive=%d", s.GetConnectTimeMicroseconds(),
+					s.GetSendTimeMicroseconds(), s.GetLatencyMicroseconds(), s.GetReceiveTimeMicroseconds())
+			}
+		})
+	}
+}
+
 func TestHTTP(t *testing.T) {
 	tests := []struct {
 		name  string
