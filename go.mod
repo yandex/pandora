@@ -1,6 +1,6 @@
 module github.com/yandex/pandora
 
-go 1.26.3
+go 1.27.1
 
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
